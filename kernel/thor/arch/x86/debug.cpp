@@ -7,24 +7,24 @@ namespace thor {
 
 constinit PIOLogHandler pioLogHandler;
 
-inline constexpr arch::scalar_register<uint8_t> data(0);
-inline constexpr arch::scalar_register<uint8_t> baudLow(0);
-inline constexpr arch::scalar_register<uint8_t> baudHigh(1);
-inline constexpr arch::bit_register<uint8_t> lineControl(3);
-inline constexpr arch::bit_register<uint8_t> lineStatus(5);
+constexpr inline arch::scalar_register<uint8_t> data(0);
+constexpr inline arch::scalar_register<uint8_t> baudLow(0);
+constexpr inline arch::scalar_register<uint8_t> baudHigh(1);
+constexpr inline arch::bit_register<uint8_t> lineControl(3);
+constexpr inline arch::bit_register<uint8_t> lineStatus(5);
 
-inline constexpr arch::field<uint8_t, bool> txReady(5, 1);
+constexpr inline arch::field<uint8_t, bool> txReady(5, 1);
 
-inline constexpr arch::field<uint8_t, int> dataBits(0, 2);
-inline constexpr arch::field<uint8_t, bool> stopBit(2, 1);
-inline constexpr arch::field<uint8_t, int> parityBits(3, 3);
-inline constexpr arch::field<uint8_t, bool> dlab(7, 1);
+constexpr inline arch::field<uint8_t, int> dataBits(0, 2);
+constexpr inline arch::field<uint8_t, bool> stopBit(2, 1);
+constexpr inline arch::field<uint8_t, int> parityBits(3, 3);
+constexpr inline arch::field<uint8_t, bool> dlab(7, 1);
 
 extern bool debugToSerial;
 extern bool debugToBochs;
 
 void setupDebugging() {
-	if(debugToSerial) {
+	if (debugToSerial) {
 		auto base = arch::global_io.subspace(0x3F8);
 
 		// Set the baud rate.
@@ -45,7 +45,7 @@ void PIOLogHandler::printChar(char c) {
 
 		serialBuffer[serialBufferIndex++] = val;
 		if (serialBufferIndex == 16) {
-			while(!(base.load(lineStatus) & txReady)) {
+			while (!(base.load(lineStatus) & txReady)) {
 				// do nothing until the UART is ready to transmit.
 			}
 			base.store_iterative(data, serialBuffer, 16);
@@ -53,18 +53,18 @@ void PIOLogHandler::printChar(char c) {
 		}
 	};
 
-	if(debugToSerial) {
-		if(c == '\n') {
+	if (debugToSerial) {
+		if (c == '\n') {
 			sendByteSerial('\r');
 		}
 
 		sendByteSerial(c);
 	}
 
-	if(debugToBochs) {
+	if (debugToBochs) {
 		auto base = arch::global_io.subspace(0xE9);
 		base.store(data, c);
 	}
 }
 
-} // namespace thor
+}  // namespace thor

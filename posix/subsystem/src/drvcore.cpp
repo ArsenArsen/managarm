@@ -1,9 +1,10 @@
 
+#include "drvcore.hpp"
+
+#include "nl-socket.hpp"
+
 #include <linux/netlink.h>
 #include <sstream>
-
-#include "drvcore.hpp"
-#include "nl-socket.hpp"
 
 namespace drvcore {
 
@@ -36,8 +37,7 @@ struct UeventAttribute : sysfs::Attribute {
 	}
 
 private:
-	UeventAttribute()
-	: sysfs::Attribute("uevent", true) { }
+	UeventAttribute() : sysfs::Attribute("uevent", true) {}
 
 public:
 	virtual async::result<std::string> show(sysfs::Object *object) override {
@@ -48,7 +48,7 @@ public:
 		device->composeUevent(ue);
 
 		std::stringstream ss;
-		for(const auto &[name, value] : ue)
+		for (const auto &[name, value] : ue)
 			ss << name << '=' << value << '\n';
 
 		co_return ss.str();
@@ -67,7 +67,7 @@ public:
 		ss << "ACTION=add" << '\0';
 		ss << "DEVPATH=/" << sysfs_path << '\0';
 		ss << "SEQNUM=" << drvcore::makeHotplugSeqnum() << '\0';
-		for(const auto &[name, value] : ue)
+		for (const auto &[name, value] : ue)
 			ss << name << '=' << value << '\0';
 		drvcore::emitHotplug(ss.str());
 		co_return;
@@ -79,16 +79,17 @@ public:
 //-----------------------------------------------------------------------------
 
 Device::Device(std::shared_ptr<Device> parent, std::string name, UnixDevice *unix_device)
-: sysfs::Object{parent ? parent : globalDevicesObject, std::move(name)},
-		_unixDevice{unix_device}, _parentDevice{std::move(parent)} { }
+        : sysfs::Object { parent ? parent : globalDevicesObject, std::move(name) }
+        , _unixDevice { unix_device }
+        , _parentDevice { std::move(parent) } {}
 
 std::string Device::getSysfsPath() {
 	std::string path = name();
 	auto parent = directoryNode()->treeLink()->getOwner();
 	auto link = parent->treeLink().get();
-	while(true) {
+	while (true) {
 		auto owner = link->getOwner();
-		if(!owner)
+		if (!owner)
 			break;
 		path = link->getName() + '/' + path;
 		link = owner->treeLink().get();
@@ -98,9 +99,9 @@ std::string Device::getSysfsPath() {
 }
 
 void Device::composeStandardUevent(UeventProperties &ue) {
-	if(auto unix_dev = unixDevice(); unix_dev) {
+	if (auto unix_dev = unixDevice(); unix_dev) {
 		auto node_path = unix_dev->nodePath();
-		if(!node_path.empty())
+		if (!node_path.empty())
 			ue.set("DEVNAME", node_path);
 		ue.set("MAJOR", std::to_string(unix_dev->getId().first));
 		ue.set("MINOR", std::to_string(unix_dev->getId().second));
@@ -116,7 +117,7 @@ void Device::linkToSubsystem() {
 //-----------------------------------------------------------------------------
 
 BusSubsystem::BusSubsystem(std::string name)
-: _object{std::make_shared<sysfs::Object>(globalBusObject, std::move(name))} {
+        : _object { std::make_shared<sysfs::Object>(globalBusObject, std::move(name)) } {
 	_object->addObject();
 	_devicesObject = std::make_shared<sysfs::Object>(_object, "devices");
 	_devicesObject->addObject();
@@ -124,10 +125,9 @@ BusSubsystem::BusSubsystem(std::string name)
 	_driversObject->addObject();
 }
 
-BusDevice::BusDevice(BusSubsystem *subsystem, std::string name,
-		UnixDevice *unix_device)
-: Device{nullptr, std::move(name), unix_device},
-		_subsystem{subsystem} { }
+BusDevice::BusDevice(BusSubsystem *subsystem, std::string name, UnixDevice *unix_device)
+        : Device { nullptr, std::move(name), unix_device }
+        , _subsystem { subsystem } {}
 
 void BusDevice::linkToSubsystem() {
 	auto devices_object = _subsystem->devicesObject();
@@ -140,19 +140,23 @@ void BusDevice::linkToSubsystem() {
 //-----------------------------------------------------------------------------
 
 ClassSubsystem::ClassSubsystem(std::string name)
-: _object{std::make_shared<sysfs::Object>(globalClassObject, std::move(name))} {
+        : _object { std::make_shared<sysfs::Object>(globalClassObject, std::move(name)) } {
 	_object->addObject();
 }
 
-ClassDevice::ClassDevice(ClassSubsystem *subsystem, std::shared_ptr<Device> parent,
-		std::string name, UnixDevice *unix_device)
-: Device{std::move(parent), std::move(name), unix_device},
-		_subsystem{subsystem} { }
+ClassDevice::ClassDevice(
+        ClassSubsystem *subsystem,
+        std::shared_ptr<Device> parent,
+        std::string name,
+        UnixDevice *unix_device
+)
+        : Device { std::move(parent), std::move(name), unix_device }
+        , _subsystem { subsystem } {}
 
 void ClassDevice::linkToSubsystem() {
 	auto subsystem_object = _subsystem->object();
 	subsystem_object->createSymlink(name(), devicePtr());
-	if(auto parent = parentDevice(); parent)
+	if (auto parent = parentDevice(); parent)
 		createSymlink("device", std::move(parent));
 	createSymlink("subsystem", subsystem_object);
 }
@@ -161,10 +165,14 @@ void ClassDevice::linkToSubsystem() {
 // BlockDevice implementation.
 //-----------------------------------------------------------------------------
 
-BlockDevice::BlockDevice(ClassSubsystem *subsystem, std::shared_ptr<Device> parent,
-		std::string name, UnixDevice *unix_device)
-: Device{std::move(parent), std::move(name), unix_device},
-	_subsystem{subsystem} { }
+BlockDevice::BlockDevice(
+        ClassSubsystem *subsystem,
+        std::shared_ptr<Device> parent,
+        std::string name,
+        UnixDevice *unix_device
+)
+        : Device { std::move(parent), std::move(name), unix_device }
+        , _subsystem { subsystem } {}
 
 void BlockDevice::linkToSubsystem() {
 	auto subsystem_object = _subsystem->object();
@@ -198,7 +206,7 @@ void initialize() {
 	globalClassObject->addObject();
 	globalBlockObject->addObject();
 	dev_object->addObject();
-	globalCharObject->addObject(); // TODO: Do this before dev_object is visible.
+	globalCharObject->addObject();  // TODO: Do this before dev_object is visible.
 	globalBlockDevObject->addObject();
 }
 
@@ -210,7 +218,7 @@ void installDevice(std::shared_ptr<Device> device) {
 	device->linkToSubsystem();
 	device->realizeAttribute(UeventAttribute::singleton());
 
-	if(auto unix_dev = device->unixDevice(); unix_dev) {
+	if (auto unix_dev = device->unixDevice(); unix_dev) {
 		std::stringstream id_ss;
 		id_ss << unix_dev->getId().first << ":" << unix_dev->getId().second;
 		if (unix_dev->type() == VfsType::charDevice)
@@ -231,7 +239,7 @@ void installDevice(std::shared_ptr<Device> device) {
 	ss << "ACTION=add" << '\0';
 	ss << "DEVPATH=/" << sysfs_path << '\0';
 	ss << "SEQNUM=" << drvcore::makeHotplugSeqnum() << '\0';
-	for(const auto &[name, value] : ue)
+	for (const auto &[name, value] : ue)
 		ss << name << '=' << value << '\0';
 	drvcore::emitHotplug(ss.str());
 }
@@ -247,5 +255,4 @@ void emitHotplug(std::string buffer) {
 	nl_socket::broadcast(NETLINK_KOBJECT_UEVENT, 1, std::move(buffer));
 }
 
-} // namespace drvcore
-
+}  // namespace drvcore

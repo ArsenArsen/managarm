@@ -1,24 +1,22 @@
 
 #pragma once
 
-#include <queue>
-#include <map>
-#include <unordered_map>
-#include <optional>
-
-#include <arch/mem_space.hpp>
-#include <async/cancellation.hpp>
-#include <async/recurring-event.hpp>
-#include <async/oneshot-event.hpp>
-#include <async/mutex.hpp>
-#include <async/result.hpp>
-#include <helix/memory.hpp>
-
 #include "id-allocator.hpp"
 #include "range-allocator.hpp"
 
+#include <arch/mem_space.hpp>
+#include <async/cancellation.hpp>
+#include <async/mutex.hpp>
+#include <async/oneshot-event.hpp>
+#include <async/recurring-event.hpp>
+#include <async/result.hpp>
+#include <helix/memory.hpp>
 #include <libdrm/drm.h>
 #include <libdrm/drm_mode.h>
+#include <map>
+#include <optional>
+#include <queue>
+#include <unordered_map>
 
 namespace drm_core {
 
@@ -42,28 +40,16 @@ enum struct ObjectType {
 	plane
 };
 
-struct IntPropertyType {
+struct IntPropertyType {};
 
-};
+struct ObjectPropertyType {};
 
-struct ObjectPropertyType {
+struct BlobPropertyType {};
 
-};
+struct EnumPropertyType {};
 
-struct BlobPropertyType {
-
-};
-
-struct EnumPropertyType {
-
-};
-
-using PropertyType = std::variant<
-	IntPropertyType,
-	ObjectPropertyType,
-	BlobPropertyType,
-	EnumPropertyType
->;
+using PropertyType =
+        std::variant<IntPropertyType, ObjectPropertyType, BlobPropertyType, EnumPropertyType>;
 
 struct Event {
 	uint64_t cookie;
@@ -90,27 +76,31 @@ enum PropertyId {
 };
 
 struct Property {
-	Property(PropertyId id, PropertyType property_type, std::string name) : Property(id, property_type, name, 0) { }
+	Property(PropertyId id, PropertyType property_type, std::string name)
+	        : Property(id, property_type, name, 0) {}
 
 	Property(PropertyId id, PropertyType property_type, std::string name, uint32_t flags)
-	: _id(id), _flags(flags), _propertyType(property_type), _name(name) {
+	        : _id(id)
+	        , _flags(flags)
+	        , _propertyType(property_type)
+	        , _name(name) {
 		assert(name.length() < DRM_PROP_NAME_LEN);
 
-		if(std::holds_alternative<EnumPropertyType>(_propertyType)) {
+		if (std::holds_alternative<EnumPropertyType>(_propertyType)) {
 			_flags |= DRM_MODE_PROP_ENUM;
 		}
 	}
 
 	virtual ~Property() = default;
 
-	virtual bool validate(const Assignment& assignment);
+	virtual bool validate(const Assignment &assignment);
 
 	PropertyId id();
 	uint32_t flags();
 	PropertyType propertyType();
 	std::string name();
 	void addEnumInfo(uint64_t value, std::string name);
-	const std::unordered_map<uint64_t, std::string>& enumInfo();
+	const std::unordered_map<uint64_t, std::string> &enumInfo();
 
 	/**
 	 * Applies an Assignment to a AtomicState.
@@ -121,7 +111,8 @@ struct Property {
 	 * @param assignment
 	 * @param state
 	 */
-	virtual void writeToState(const Assignment assignment, std::unique_ptr<drm_core::AtomicState> &state);
+	virtual void
+	writeToState(const Assignment assignment, std::unique_ptr<drm_core::AtomicState> &state);
 	virtual uint32_t intFromState(std::shared_ptr<ModeObject> obj);
 	virtual std::shared_ptr<ModeObject> modeObjFromState(std::shared_ptr<ModeObject> obj);
 
@@ -134,8 +125,7 @@ private:
 };
 
 struct BufferObject {
-	BufferObject()
-	: _mapping(-1) { }
+	BufferObject() : _mapping(-1) {}
 
 protected:
 	~BufferObject() = default;
@@ -153,8 +143,7 @@ private:
 };
 
 struct Blob {
-	Blob(std::vector<char> data)
-	: _data(std::move(data)) {  };
+	Blob(std::vector<char> data) : _data(std::move(data)) {};
 
 	size_t size();
 	const void *data();
@@ -176,13 +165,18 @@ protected:
 
 public:
 	virtual std::unique_ptr<Configuration> createConfiguration() = 0;
-	virtual std::pair<std::shared_ptr<BufferObject>, uint32_t> createDumb(uint32_t width,
-			uint32_t height, uint32_t bpp) = 0;
-	virtual std::shared_ptr<FrameBuffer> createFrameBuffer(std::shared_ptr<BufferObject> buff,
-			uint32_t width, uint32_t height, uint32_t format, uint32_t pitch) = 0;
-	//returns major, minor, patchlvl
+	virtual std::pair<std::shared_ptr<BufferObject>, uint32_t>
+	createDumb(uint32_t width, uint32_t height, uint32_t bpp) = 0;
+	virtual std::shared_ptr<FrameBuffer> createFrameBuffer(
+	        std::shared_ptr<BufferObject> buff,
+	        uint32_t width,
+	        uint32_t height,
+	        uint32_t format,
+	        uint32_t pitch
+	) = 0;
+	// returns major, minor, patchlvl
 	virtual std::tuple<int, int, int> driverVersion() = 0;
-	//returns name, desc, date
+	// returns name, desc, date
 	virtual std::tuple<std::string, std::string, std::string> driverInfo() = 0;
 
 	void setupCrtc(Crtc *crtc);
@@ -300,15 +294,13 @@ struct File {
 	 */
 	read(void *object, const char *, void *buffer, size_t length);
 
-	static async::result<helix::BorrowedDescriptor>
-	accessMemory(void *object);
+	static async::result<helix::BorrowedDescriptor> accessMemory(void *object);
 
 	static async::result<void>
 	ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conversation);
 
 	static async::result<frg::expected<protocols::fs::Error, protocols::fs::PollWaitResult>>
-	pollWait(void *object, uint64_t sequence, int mask,
-			async::cancellation_token cancellation);
+	pollWait(void *object, uint64_t sequence, int mask, async::cancellation_token cancellation);
 
 	static async::result<frg::expected<protocols::fs::Error, protocols::fs::PollStatusResult>>
 	pollStatus(void *object);
@@ -339,13 +331,11 @@ struct File {
 	 */
 	void postEvent(Event event);
 
-	helix::BorrowedDescriptor statusPageMemory() {
-		return _statusPage.getMemory();
-	}
+	helix::BorrowedDescriptor statusPageMemory() { return _statusPage.getMemory(); }
 
 private:
-	async::detached _retirePageFlip(std::unique_ptr<Configuration> config,
-			uint64_t cookie, uint32_t crtc_id);
+	async::detached
+	_retirePageFlip(std::unique_ptr<Configuration> config, uint64_t cookie, uint32_t crtc_id);
 
 	std::shared_ptr<Device> _device;
 
@@ -373,19 +363,16 @@ private:
 struct Configuration {
 	virtual ~Configuration() = default;
 
-	virtual bool capture(std::vector<Assignment> assignment, std::unique_ptr<AtomicState> &state) = 0;
+	virtual bool
+	capture(std::vector<Assignment> assignment, std::unique_ptr<AtomicState> &state) = 0;
 	virtual void dispose() = 0;
 	virtual void commit(std::unique_ptr<AtomicState> &state) = 0;
 
-	auto waitForCompletion() {
-		return _ev.wait();
-	}
+	auto waitForCompletion() { return _ev.wait(); }
 
 protected:
 	// TODO: Let derive classes handle the event?
-	void complete() {
-		_ev.raise();
-	}
+	void complete() { _ev.raise(); }
 
 private:
 	async::oneshot_event _ev;
@@ -396,8 +383,7 @@ private:
  * It can represent Connectors, CRTCs, Encoders, Framebuffers and Planes.
  */
 struct ModeObject {
-	ModeObject(ObjectType type, uint32_t id)
-	: _type(type), _id(id) { };
+	ModeObject(ObjectType type, uint32_t id) : _type(type), _id(id) {};
 
 	virtual ~ModeObject() = default;
 
@@ -420,6 +406,7 @@ struct ModeObject {
 	 * @return std::vector<drm_core::Assignment>
 	 */
 	virtual std::vector<drm_core::Assignment> getAssignments(std::shared_ptr<Device> dev);
+
 private:
 	ObjectType _type;
 	uint32_t _id;
@@ -504,7 +491,8 @@ struct ConnectorState {
 
 /**
  * Represents a display connector.
- * It transmits the signal to the display, detects display connection and removal and exposes the display's supported modes.
+ * It transmits the signal to the display, detects display connection and removal and exposes the
+ * display's supported modes.
  */
 struct Connector : ModeObject {
 	Connector(uint32_t id);
@@ -650,11 +638,12 @@ struct AtomicState {
 	 * i.e. has already been modified/touched, it is simply returned.
 	 *
 	 * @param id The ModeObject id of the Connector.
-	 * @return std::shared_ptr<drm_core::ConnectorState> ConnectorState for the @p id in the AtomicState
+	 * @return std::shared_ptr<drm_core::ConnectorState> ConnectorState for the @p id in the
+	 * AtomicState
 	 */
 	std::shared_ptr<ConnectorState> connector(uint32_t id);
 
-	std::unordered_map<uint32_t, std::shared_ptr<CrtcState>>& crtc_states(void);
+	std::unordered_map<uint32_t, std::shared_ptr<CrtcState>> &crtc_states(void);
 
 private:
 	Device *_device;
@@ -671,11 +660,14 @@ struct Assignment {
 	 * @param obj ModeObject that this Assignment belongs to.
 	 * @param property DRM Property that this Assignment assigns.
 	 * @param val Integer value to be set for the @p property of @p obj.
-	 * @return drm_core::Assignment Assignment instance to be used for committing the Configuration.
+	 * @return drm_core::Assignment Assignment instance to be used for committing the
+	 * Configuration.
 	 */
 	static Assignment withInt(std::shared_ptr<ModeObject>, Property *property, uint64_t val);
-	static Assignment withModeObj(std::shared_ptr<ModeObject>, Property *property, std::shared_ptr<ModeObject>);
-	static Assignment withBlob(std::shared_ptr<ModeObject>, Property *property, std::shared_ptr<Blob>);
+	static Assignment
+	withModeObj(std::shared_ptr<ModeObject>, Property *property, std::shared_ptr<ModeObject>);
+	static Assignment
+	withBlob(std::shared_ptr<ModeObject>, Property *property, std::shared_ptr<Blob>);
 
 	std::shared_ptr<ModeObject> object;
 	Property *property;
@@ -684,8 +676,7 @@ struct Assignment {
 	std::shared_ptr<Blob> blobValue;
 };
 
-async::detached serveDrmDevice(std::shared_ptr<drm_core::Device> device,
-		helix::UniqueLane lane);
+async::detached serveDrmDevice(std::shared_ptr<drm_core::Device> device, helix::UniqueLane lane);
 
 // ---------------------------------------------
 // Formats
@@ -699,17 +690,30 @@ struct FormatInfo {
 
 std::optional<FormatInfo> getFormatInfo(uint32_t fourcc);
 
-drm_mode_modeinfo makeModeInfo(const char *name, uint32_t type,
-		uint32_t clock, unsigned int hdisplay, unsigned int hsync_start,
-		unsigned int hsync_end, unsigned int htotal, unsigned int hskew,
-		unsigned int vdisplay, unsigned int vsync_start, unsigned int vsync_end,
-		unsigned int vtotal, unsigned int vscan, uint32_t flags);
+drm_mode_modeinfo makeModeInfo(
+        const char *name,
+        uint32_t type,
+        uint32_t clock,
+        unsigned int hdisplay,
+        unsigned int hsync_start,
+        unsigned int hsync_end,
+        unsigned int htotal,
+        unsigned int hskew,
+        unsigned int vdisplay,
+        unsigned int vsync_start,
+        unsigned int vsync_end,
+        unsigned int vtotal,
+        unsigned int vscan,
+        uint32_t flags
+);
 
-void addDmtModes(std::vector<drm_mode_modeinfo> &supported_modes,
-		unsigned int max_width, unsigned max_height);
+void addDmtModes(
+        std::vector<drm_mode_modeinfo> &supported_modes,
+        unsigned int max_width,
+        unsigned max_height
+);
 
 // Copies 16-byte aligned buffers. Expected to be faster than plain memcpy().
 extern "C" void fastCopy16(void *, const void *, size_t);
 
-} //namespace drm_core
-
+}  // namespace drm_core

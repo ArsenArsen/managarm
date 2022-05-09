@@ -1,17 +1,21 @@
 #pragma once
 
+#include "port.hpp"
+
 #include <arch/mem_space.hpp>
 #include <async/result.hpp>
 #include <helix/memory.hpp>
 #include <protocols/hw/client.hpp>
 
-#include "port.hpp"
-
 class Controller {
-
 public:
-	Controller(int64_t parentId, protocols::hw::Device hwDevice, helix::Mapping hbaRegs,
-			helix::UniqueDescriptor ahciBar, helix::UniqueDescriptor irq);
+	Controller(
+	        int64_t parentId,
+	        protocols::hw::Device hwDevice,
+	        helix::Mapping hbaRegs,
+	        helix::UniqueDescriptor ahciBar,
+	        helix::UniqueDescriptor irq
+	);
 
 	async::detached run();
 

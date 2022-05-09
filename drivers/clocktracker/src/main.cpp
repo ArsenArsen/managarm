@@ -1,11 +1,10 @@
 
-#include <iostream>
-
 #include <async/oneshot-event.hpp>
+#include <clock.pb.h>
 #include <helix/memory.hpp>
+#include <iostream>
 #include <protocols/clock/defs.hpp>
 #include <protocols/mbus/client.hpp>
-#include <clock.pb.h>
 
 // ----------------------------------------------------------------------------
 // RTC handling.
@@ -20,17 +19,16 @@ async::oneshot_event foundRtc;
 async::result<void> enumerateRtc() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({
-		mbus::EqualsFilter("class", "rtc")
-	});
-	
-	auto handler = mbus::ObserverHandler{}
-	.withAttach([] (mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		std::cout << "drivers/clocktracker: Found RTC" << std::endl;
+	auto filter = mbus::Conjunction({ mbus::EqualsFilter("class", "rtc") });
 
-		rtcLane = helix::UniqueLane(co_await entity.bind());
-		foundRtc.raise();
-	});
+	auto handler = mbus::ObserverHandler {}.withAttach(
+	        [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+		        std::cout << "drivers/clocktracker: Found RTC" << std::endl;
+
+		        rtcLane = helix::UniqueLane(co_await entity.bind());
+		        foundRtc.raise();
+	        }
+	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 	co_await foundRtc.wait();
@@ -42,10 +40,11 @@ async::result<RtcTime> getRtcTime() {
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		rtcLane,
-		helix_ng::offer(
-			helix_ng::sendBuffer(ser.data(), ser.size()),
-			helix_ng::recvInline())
+	        rtcLane,
+	        helix_ng::offer(
+	                helix_ng::sendBuffer(ser.data(), ser.size()),
+	                helix_ng::recvInline()
+	        )
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -54,8 +53,8 @@ async::result<RtcTime> getRtcTime() {
 	managarm::clock::SvrResponse resp;
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 	assert(resp.error() == managarm::clock::Error::SUCCESS);
-	
-	co_return RtcTime{resp.ref_nanos(), resp.time_nanos()};
+
+	co_return RtcTime { resp.ref_nanos(), resp.time_nanos() };
 }
 
 // ----------------------------------------------------------------------------
@@ -74,32 +73,31 @@ TrackerPage *accessPage() {
 // ----------------------------------------------------------------------------
 
 async::detached serve(helix::UniqueLane lane) {
-	while(true) {
+	while (true) {
 		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
-			lane,
-			helix_ng::accept(
-				helix_ng::recvInline())
+		        lane,
+		        helix_ng::accept(helix_ng::recvInline())
 		);
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_req.error());
-		
+
 		auto conversation = accept.descriptor();
 
 		managarm::clock::CntRequest req;
 		req.ParseFromArray(recv_req.data(), recv_req.length());
-		if(req.req_type() == managarm::clock::CntReqType::ACCESS_PAGE) {
+		if (req.req_type() == managarm::clock::CntReqType::ACCESS_PAGE) {
 			managarm::clock::SvrResponse resp;
 			resp.set_error(managarm::clock::Error::SUCCESS);
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, send_memory] = co_await helix_ng::exchangeMsgs(
-				conversation,
-				helix_ng::sendBuffer(ser.data(), ser.size()),
-				helix_ng::pushDescriptor(trackerPageMemory)
+			        conversation,
+			        helix_ng::sendBuffer(ser.data(), ser.size()),
+			        helix_ng::pushDescriptor(trackerPageMemory)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(send_memory.error());
-		}else{
+		} else {
 			throw std::runtime_error("Unexpected request type");
 		}
 	}
@@ -121,8 +119,8 @@ async::detached initializeDriver() {
 	size_t page_size = 4096;
 	HelHandle handle;
 	HEL_CHECK(helAllocateMemory(page_size, 0, nullptr, &handle));
-	trackerPageMemory = helix::UniqueDescriptor{handle};
-	trackerPageMapping = helix::Mapping{trackerPageMemory, 0, page_size};
+	trackerPageMemory = helix::UniqueDescriptor { handle };
+	trackerPageMapping = helix::Mapping { trackerPageMemory, 0, page_size };
 
 	// Initialize the tracker page.
 	auto page = accessPage();
@@ -131,31 +129,31 @@ async::detached initializeDriver() {
 	// Read the RTC to initialize the realtime clock.
 	// TODO
 #ifdef __aarch64__
-	auto result = RtcTime{0, 0};
+	auto result = RtcTime { 0, 0 };
 #else
-	auto result = co_await getRtcTime(); // TODO: Use the seqlock.
+	auto result = co_await getRtcTime();  // TODO: Use the seqlock.
 #endif
 
-	std::cout << "drivers/clocktracker: Initializing time to "
-			<< std::get<1>(result) << std::endl;
+	std::cout << "drivers/clocktracker: Initializing time to " << std::get<1>(result)
+	          << std::endl;
 	accessPage()->refClock = std::get<0>(result);
 	accessPage()->baseRealtime = std::get<1>(result);
 
 	// Create an mbus object for the device.
 	auto root = co_await mbus::Instance::global().getRoot();
-	
-	mbus::Properties descriptor{
-		{"class", mbus::StringItem{"clocktracker"}},
+
+	mbus::Properties descriptor {
+		{ "class", mbus::StringItem { "clocktracker" } },
 	};
 
-	auto handler = mbus::ObjectHandler{}
-	.withBind([=] () -> async::result<helix::UniqueDescriptor> {
-		helix::UniqueLane local_lane, remote_lane;
-		std::tie(local_lane, remote_lane) = helix::createStream();
-		serve(std::move(local_lane));
+	auto handler =
+	        mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+		        helix::UniqueLane local_lane, remote_lane;
+		        std::tie(local_lane, remote_lane) = helix::createStream();
+		        serve(std::move(local_lane));
 
-		co_return std::move(remote_lane);
-	});
+		        co_return std::move(remote_lane);
+	        });
 
 	co_await root.createObject("clocktracker", descriptor, std::move(handler));
 }
@@ -163,13 +161,9 @@ async::detached initializeDriver() {
 int main() {
 	std::cout << "drivers/clocktracker: Starting driver" << std::endl;
 
-	{
-		initializeDriver();
-	}
+	{ initializeDriver(); }
 
 	async::run_forever(helix::currentDispatcher);
 
 	return 0;
 }
-
-

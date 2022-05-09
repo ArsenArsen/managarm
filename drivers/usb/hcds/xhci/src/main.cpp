@@ -1,27 +1,25 @@
 
-#include <assert.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <deque>
-#include <optional>
-#include <functional>
-#include <iostream>
-#include <memory>
+#include "spec.hpp"
+#include "xhci.hpp"
 
 #include <arch/dma_pool.hpp>
+#include <assert.h>
 #include <async/result.hpp>
+#include <deque>
+#include <functional>
 #include <helix/ipc.hpp>
+#include <helix/memory.hpp>
+#include <iostream>
+#include <memory>
+#include <optional>
 #include <protocols/hw/client.hpp>
 #include <protocols/kernlet/compiler.hpp>
 #include <protocols/mbus/client.hpp>
-#include <protocols/usb/usb.hpp>
 #include <protocols/usb/api.hpp>
 #include <protocols/usb/server.hpp>
-
-#include <helix/memory.hpp>
-
-#include "spec.hpp"
-#include "xhci.hpp"
+#include <protocols/usb/usb.hpp>
+#include <stdio.h>
+#include <unistd.h>
 
 constexpr const char *completionCodeNames[256] = {
 	"Invalid",
@@ -69,13 +67,23 @@ constexpr const char *completionCodeNames[256] = {
 
 std::vector<std::shared_ptr<Controller>> globalControllers;
 
-Controller::Controller(protocols::hw::Device hw_device, helix::Mapping mapping,
-		helix::UniqueDescriptor mmio, helix::UniqueIrq irq, bool useMsis)
-: _hw_device{std::move(hw_device)}, _mapping{std::move(mapping)},
-		_mmio{std::move(mmio)}, _irq{std::move(irq)},
-		_space{_mapping.get()}, _memoryPool{},
-		_dcbaa{&_memoryPool, 256}, _cmdRing{this},
-		_eventRing{this}, _useMsis{useMsis} {
+Controller::Controller(
+        protocols::hw::Device hw_device,
+        helix::Mapping mapping,
+        helix::UniqueDescriptor mmio,
+        helix::UniqueIrq irq,
+        bool useMsis
+)
+        : _hw_device { std::move(hw_device) }
+        , _mapping { std::move(mapping) }
+        , _mmio { std::move(mmio) }
+        , _irq { std::move(irq) }
+        , _space { _mapping.get() }
+        , _memoryPool {}
+        , _dcbaa { &_memoryPool, 256 }
+        , _cmdRing { this }
+        , _eventRing { this }
+        , _useMsis { useMsis } {
 	auto op_offset = _space.load(cap_regs::caplength);
 	auto runtime_offset = _space.load(cap_regs::rtsoff);
 	auto doorbell_offset = _space.load(cap_regs::dboff);
@@ -94,7 +102,7 @@ std::vector<std::pair<uint8_t, uint16_t>> Controller::getExtendedCapabilityOffse
 
 	std::vector<std::pair<uint8_t, uint16_t>> caps = {};
 
-	while(1) {
+	while (1) {
 		auto val = arch::scalar_load<uint32_t>(_space, ptr);
 
 		if (val == 0xFFFFFFFF)
@@ -103,7 +111,7 @@ std::vector<std::pair<uint8_t, uint16_t>> Controller::getExtendedCapabilityOffse
 		if (!(val & 0xFF))
 			break;
 
-		caps.push_back({val & 0xFF, ptr});
+		caps.push_back({ val & 0xFF, ptr });
 
 		auto old_ptr = ptr;
 		ptr += ((val >> 8) & 0xFF) << 2;
@@ -117,12 +125,10 @@ std::vector<std::pair<uint8_t, uint16_t>> Controller::getExtendedCapabilityOffse
 async::detached Controller::initialize() {
 	auto caps = getExtendedCapabilityOffsets();
 
-	auto usb_legacy_cap = std::find_if(caps.begin(), caps.end(), 
-			[](auto &a){
-				return a.first == 0x1;
-			});
+	auto usb_legacy_cap =
+	        std::find_if(caps.begin(), caps.end(), [](auto &a) { return a.first == 0x1; });
 
-	if(usb_legacy_cap != caps.end()) {
+	if (usb_legacy_cap != caps.end()) {
 		auto usb_legacy_cap_off = usb_legacy_cap->second;
 		printf("xhci: usb legacy capability at %04x\n", usb_legacy_cap_off);
 
@@ -134,7 +140,7 @@ async::detached Controller::initialize() {
 		while (1) {
 			val = arch::scalar_load<uint8_t>(_space, usb_legacy_cap_off + 0x2);
 
-			if(!val)
+			if (!val)
 				break;
 
 			sleep(1);
@@ -159,12 +165,10 @@ async::detached Controller::initialize() {
 		off += 4;
 
 		v = arch::scalar_load<uint32_t>(_space, off);
-		proto.name = {
-			static_cast<char>(v & 0xFF),
-			static_cast<char>((v >> 8) & 0xFF),
-			static_cast<char>((v >> 16) & 0xFF),
-			static_cast<char>((v >> 24) & 0xFF)
-		};
+		proto.name = { static_cast<char>(v & 0xFF),
+			       static_cast<char>((v >> 8) & 0xFF),
+			       static_cast<char>((v >> 16) & 0xFF),
+			       static_cast<char>((v >> 24) & 0xFF) };
 		off += 4;
 
 		v = arch::scalar_load<uint32_t>(_space, off);
@@ -202,42 +206,31 @@ async::detached Controller::initialize() {
 	for (auto &p : _supportedProtocols) {
 		printf("xhci: supported protocol:\n");
 		printf("xhci: name: \"%s\" %u.%u\n", p.name.c_str(), p.major, p.minor);
-		printf("xhci: compatible ports: %lu to %lu\n", p.compatiblePortStart, 
-				p.compatiblePortStart + p.compatiblePortCount - 1);
+		printf("xhci: compatible ports: %lu to %lu\n",
+		       p.compatiblePortStart,
+		       p.compatiblePortStart + p.compatiblePortCount - 1);
 		printf("xhci: protocol defined: %03x\n", p.protocolDefined);
 		printf("xhci: protocol slot type: %lu\n", p.protocolSlotType);
 
-		constexpr const char *exponent[] = {
-			"B/s",
-			"Kb/s",
-			"Mb/s",
-			"Gb/s"
-		};
+		constexpr const char *exponent[] = { "B/s", "Kb/s", "Mb/s", "Gb/s" };
 
-		constexpr const char *type[] = {
-			"Symmetric",
-			"Reserved",
-			"Asymmetric Rx",
-			"Asymmetric Tx"
-		};
+		constexpr const char *type[] = { "Symmetric",
+			                         "Reserved",
+			                         "Asymmetric Rx",
+			                         "Asymmetric Tx" };
 
-		constexpr const char *linkProtocol[] = {
-			"SuperSpeed",
-			"SuperSpeedPlus",
-			"Reserved",
-			"Reserved"
-		};
+		constexpr const char *linkProtocol[] = { "SuperSpeed",
+			                                 "SuperSpeedPlus",
+			                                 "Reserved",
+			                                 "Reserved" };
 
 		printf("xhci: supported speeds:\n");
 		for (auto &s : p.speeds) {
-			printf("xhci:\tspeed:%u %s\n", s.mantissa, 
-					exponent[s.exponent]);
-			printf("xhci:\tfull duplex? %s\n",
-					s.fullDuplex ? "yes" : "no");
+			printf("xhci:\tspeed:%u %s\n", s.mantissa, exponent[s.exponent]);
+			printf("xhci:\tfull duplex? %s\n", s.fullDuplex ? "yes" : "no");
 			printf("xhci:\ttype: %s\n", type[s.type]);
 			if (p.major == 3)
-				printf("xhci:\tlink protocol: %s\n", 
-						linkProtocol[s.linkProtocol]);
+				printf("xhci:\tlink protocol: %s\n", linkProtocol[s.linkProtocol]);
 		}
 	}
 
@@ -247,22 +240,26 @@ async::detached Controller::initialize() {
 	state &= ~usbcmd::run;
 	_operational.store(op_regs::usbcmd, state);
 
-	while(!(_operational.load(op_regs::usbsts) & usbsts::hcHalted)); // wait for halt
+	while (!(_operational.load(op_regs::usbsts) & usbsts::hcHalted))
+		;  // wait for halt
 
-	_operational.store(op_regs::usbcmd, usbcmd::hcReset(1)); // reset hcd
-	while(_operational.load(op_regs::usbsts) & usbsts::controllerNotReady); // poll for reset to complete
+	_operational.store(op_regs::usbcmd, usbcmd::hcReset(1));  // reset hcd
+	while (_operational.load(op_regs::usbsts) & usbsts::controllerNotReady)
+		;  // poll for reset to complete
 	printf("xhci: controller reset done...\n");
 
-	assert(!(_space.load(cap_regs::hccparams1) & hccparams1::contextSize) && "device has 64-byte contexts, which are unsupported");
+	assert(!(_space.load(cap_regs::hccparams1) & hccparams1::contextSize)
+	       && "device has 64-byte contexts, which are unsupported");
 
 	_maxDeviceSlots = _space.load(cap_regs::hcsparams1) & hcsparams1::maxDevSlots;
 	_operational.store(op_regs::config, config::enabledDeviceSlots(_maxDeviceSlots));
 
 	uint32_t hcsparams2 = static_cast<uint32_t>(_space.load(cap_regs::hcsparams2));
-	uint32_t max_scratchpad_bufs = ((((hcsparams2) >> 16) & 0x3e0) | (((hcsparams2) >> 27) & 0x1f));
+	uint32_t max_scratchpad_bufs =
+	        ((((hcsparams2) >> 16) & 0x3e0) | (((hcsparams2) >> 27) & 0x1f));
 
 	auto pagesize_reg = _operational.load(op_regs::pagesize);
-	size_t page_size = 1 << ((__builtin_ffs(pagesize_reg) - 1) + 12); // 2^(n + 12)
+	size_t page_size = 1 << ((__builtin_ffs(pagesize_reg) - 1) + 12);  // 2^(n + 12)
 
 	printf("xhci: max scratchpad buffers: %u\n", max_scratchpad_bufs);
 	printf("xhci: page size: %lu\n", page_size);
@@ -271,11 +268,11 @@ async::detached Controller::initialize() {
 	max_erst = 1 << (max_erst);
 	printf("xhci: max_erst: %u\n", max_erst);
 
-	_scratchpadBufArray = arch::dma_array<uint64_t>{
-		&_memoryPool, static_cast<size_t>(max_scratchpad_bufs)};
+	_scratchpadBufArray =
+	        arch::dma_array<uint64_t> { &_memoryPool,
+		                            static_cast<size_t>(max_scratchpad_bufs) };
 	for (size_t i = 0; i < max_scratchpad_bufs; i++) {
-		_scratchpadBufs.push_back(arch::dma_buffer(&_memoryPool,
-					page_size));
+		_scratchpadBufs.push_back(arch::dma_buffer(&_memoryPool, page_size));
 
 		uintptr_t phys;
 		HEL_CHECK(helPointerPhysical(_scratchpadBufs.back().data(), &phys));
@@ -291,7 +288,7 @@ async::detached Controller::initialize() {
 
 	uintptr_t dcbaap;
 	HEL_CHECK(helPointerPhysical(_dcbaa.data(), &dcbaap));
-	_operational.store(op_regs::dcbaap, dcbaap); // tell the device about our dcbaa
+	_operational.store(op_regs::dcbaap, dcbaap);  // tell the device about our dcbaa
 
 	_operational.store(op_regs::crcr, _cmdRing.getCrcr() | 1);
 
@@ -316,12 +313,18 @@ async::detached Controller::initialize() {
 
 	_ports.resize(_numPorts);
 
-	_operational.store(op_regs::usbcmd, usbcmd::run(1) | usbcmd::intrEnable(1)); // enable interrupts and start hcd
+	_operational.store(
+	        op_regs::usbcmd,
+	        usbcmd::run(1) | usbcmd::intrEnable(1)
+	);  // enable interrupts and start hcd
 
-	while(_operational.load(op_regs::usbsts) & usbsts::hcHalted); // wait for start
+	while (_operational.load(op_regs::usbsts) & usbsts::hcHalted)
+		;  // wait for start
 
 	for (auto &p : _supportedProtocols) {
-		for (size_t i = p.compatiblePortStart; i < (p.compatiblePortStart + p.compatiblePortCount); i++) {
+		for (size_t i = p.compatiblePortStart;
+		     i < (p.compatiblePortStart + p.compatiblePortCount);
+		     i++) {
 			_ports[i - 1] = std::make_unique<Port>(i, this, &p);
 			_ports[i - 1]->initPort();
 		}
@@ -333,7 +336,7 @@ async::detached Controller::initialize() {
 async::detached Controller::handleIrqs() {
 	uint64_t sequence = 0;
 
-	while(1) {
+	while (1) {
 		auto await = co_await helix_ng::awaitEvent(_irq, sequence);
 		HEL_CHECK(await.error());
 		sequence = await.sequence();
@@ -355,7 +358,7 @@ async::detached Controller::handleIrqs() {
 async::detached Controller::handleMsis() {
 	uint64_t sequence = 0;
 
-	while(1) {
+	while (1) {
 		auto await = co_await helix_ng::awaitEvent(_irq, sequence);
 		HEL_CHECK(await.error());
 		sequence = await.sequence();
@@ -373,8 +376,7 @@ async::detached Controller::handleMsis() {
 }
 
 void Controller::ringDoorbell(uint8_t doorbell, uint8_t target, uint16_t stream_id) {
-	arch::scalar_store<uint32_t>(_doorbells, doorbell * 4,
-			target | (stream_id << 16));
+	arch::scalar_store<uint32_t>(_doorbells, doorbell * 4, target | (stream_id << 16));
 }
 
 // ------------------------------------------------------------------------
@@ -382,19 +384,20 @@ void Controller::ringDoorbell(uint8_t doorbell, uint8_t target, uint16_t stream_
 // ------------------------------------------------------------------------
 
 Controller::CommandRing::CommandRing(Controller *controller)
-:_commandRing{&controller->_memoryPool}, _enqueuePtr{0},
-	_controller{controller}, _pcs{true} {
-
+        : _commandRing { &controller->_memoryPool }
+        , _enqueuePtr { 0 }
+        , _controller { controller }
+        , _pcs { true } {
 	for (uint32_t i = 0; i < commandRingSize; i++) {
-		_commandRing->ent[i] = {{0, 0, 0, 0}};
+		_commandRing->ent[i] = { { 0, 0, 0, 0 } };
 	}
 
-	_commandRing->ent[commandRingSize - 1] = {{
-		static_cast<uint32_t>(getCrcr() & 0xFFFFFFFF),
-		static_cast<uint32_t>(getCrcr() >> 32),
-		0,
-		static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10))
-	}};
+	_commandRing->ent[commandRingSize - 1] = {
+		{ static_cast<uint32_t>(getCrcr() & 0xFFFFFFFF),
+		  static_cast<uint32_t>(getCrcr() >> 32),
+		  0,
+		  static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10)) }
+	};
 }
 
 uintptr_t Controller::CommandRing::getCrcr() {
@@ -403,8 +406,10 @@ uintptr_t Controller::CommandRing::getCrcr() {
 	return ptr;
 }
 
-void Controller::CommandRing::pushRawCommand(RawTrb cmd, 
-		Controller::CommandRing::CommandEvent *ev) {
+void Controller::CommandRing::pushRawCommand(
+        RawTrb cmd,
+        Controller::CommandRing::CommandEvent *ev
+) {
 	assert(_enqueuePtr < 127 && "ring aspect of the command ring not yet supported");
 	_commandRing->ent[_enqueuePtr] = cmd;
 	_commandEvents[_enqueuePtr] = ev;
@@ -416,12 +421,12 @@ void Controller::CommandRing::pushRawCommand(RawTrb cmd,
 	_enqueuePtr++;
 
 	// update link trb
-	_commandRing->ent[commandRingSize - 1] = {{
-		static_cast<uint32_t>(getCrcr() & 0xFFFFFFFF),
-		static_cast<uint32_t>(getCrcr() >> 32),
-		0,
-		static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10))
-	}};
+	_commandRing->ent[commandRingSize - 1] = {
+		{ static_cast<uint32_t>(getCrcr() & 0xFFFFFFFF),
+		  static_cast<uint32_t>(getCrcr() >> 32),
+		  0,
+		  static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10)) }
+	};
 }
 
 void Controller::CommandRing::submit() {
@@ -433,17 +438,19 @@ void Controller::CommandRing::submit() {
 // ------------------------------------------------------------------------
 
 Controller::EventRing::EventRing(Controller *controller)
-:_eventRing{&controller->_memoryPool}, _erst{&controller->_memoryPool, 1},
-	_dequeuePtr{0}, _controller{controller}, _ccs{1} {
-
+        : _eventRing { &controller->_memoryPool }
+        , _erst { &controller->_memoryPool, 1 }
+        , _dequeuePtr { 0 }
+        , _controller { controller }
+        , _ccs { 1 } {
 	for (size_t i = 0; i < eventRingSize; i++) {
-		_eventRing->ent[i] = {{0, 0, 0, 0}};
+		_eventRing->ent[i] = { { 0, 0, 0, 0 } };
 	}
 
 	_erst[0].ringSegmentBaseLow = getEventRingPtr() & 0xFFFFFFFF;
 	_erst[0].ringSegmentBaseHi = getEventRingPtr() >> 32;
 	_erst[0].ringSegmentSize = eventRingSize;
-	_erst[0].reserved = 0; // ResvZ in spec
+	_erst[0].reserved = 0;  // ResvZ in spec
 }
 
 uintptr_t Controller::EventRing::getErstPtr() {
@@ -463,19 +470,19 @@ size_t Controller::EventRing::getErstSize() {
 }
 
 void Controller::EventRing::processRing() {
-	while((_eventRing->ent[_dequeuePtr].val[3] & 1) == _ccs) {
+	while ((_eventRing->ent[_dequeuePtr].val[3] & 1) == _ccs) {
 		RawTrb raw_ev = _eventRing->ent[_dequeuePtr];
 
 		int old_ccs = _ccs;
 
 		_dequeuePtr++;
 		if (_dequeuePtr >= eventRingSize) {
-			_dequeuePtr = 0; // wrap around
-			_ccs = !_ccs; // invert cycle state
+			_dequeuePtr = 0;  // wrap around
+			_ccs = !_ccs;  // invert cycle state
 		}
 
 		if ((raw_ev.val[3] & 1) != old_ccs)
-			break; // not the proper cycle state
+			break;  // not the proper cycle state
 
 		Controller::Event ev = Controller::Event::fromRawTrb(raw_ev);
 
@@ -489,7 +496,8 @@ void Controller::EventRing::processRing() {
 
 void Controller::EventRing::processEvent(Controller::Event ev) {
 	if (ev.type == TrbType::commandCompletionEvent) {
-		size_t commandIndex = (ev.commandPointer - _controller->_cmdRing.getCrcr()) / sizeof(RawTrb);
+		size_t commandIndex =
+		        (ev.commandPointer - _controller->_cmdRing.getCrcr()) / sizeof(RawTrb);
 		assert(commandIndex < Controller::CommandRing::commandRingSize);
 		auto cmdEv = _controller->_cmdRing._commandEvents[commandIndex];
 		_controller->_cmdRing._commandEvents[commandIndex] = nullptr;
@@ -503,7 +511,8 @@ void Controller::EventRing::processEvent(Controller::Event ev) {
 		if (_controller->_ports[ev.portId - 1])
 			_controller->_ports[ev.portId - 1]->_doorbell.raise();
 	} else if (ev.type == TrbType::transferEvent) {
-		auto transferRing = _controller->_devices[ev.slotId]->_transferRings[ev.endpointId - 1].get();
+		auto transferRing =
+		        _controller->_devices[ev.slotId]->_transferRings[ev.endpointId - 1].get();
 		size_t commandIndex = (ev.trbPointer - transferRing->getPtr()) / sizeof(RawTrb);
 		assert(commandIndex < Controller::TransferRing::transferRingSize);
 		auto transferEv = transferRing->_transferEvents[commandIndex];
@@ -541,12 +550,14 @@ void Controller::Interrupter::setEventRing(EventRing *ring, bool clearEhb) {
 	// don't reload erstba if only setting erdp (indicated wanting to clear ehb)
 	if (!clearEhb) {
 		_space.store(interrupter::erstsz, ring->getErstSize());
-		_space.store(interrupter::erstbaLow,ring->getErstPtr() & 0xFFFFFFFF);
+		_space.store(interrupter::erstbaLow, ring->getErstPtr() & 0xFFFFFFFF);
 		_space.store(interrupter::erstbaHi, ring->getErstPtr() >> 32);
 	}
 
-	_space.store(interrupter::erdpLow,
-		(ring->getEventRingPtr() & 0xFFFFFFF0) | ((clearEhb ? 1 : 0) << 3));
+	_space.store(
+	        interrupter::erdpLow,
+	        (ring->getEventRingPtr() & 0xFFFFFFF0) | ((clearEhb ? 1 : 0) << 3)
+	);
 	_space.store(interrupter::erdpHi, ring->getEventRingPtr() >> 32);
 }
 
@@ -572,38 +583,35 @@ Controller::Event Controller::Event::fromRawTrb(RawTrb trb) {
 	ev.vfId = (trb.val[3] >> 16) & 0xFF;
 	ev.raw = trb;
 
-	switch(ev.type) {
-		case TrbType::transferEvent:
-			ev.trbPointer = trb.val[0] |
-				(static_cast<uintptr_t>(trb.val[1]) << 32);
-			ev.transferLen = trb.val[2] & 0xFFFFFF;
-			ev.endpointId = (trb.val[3] >> 16) & 0x1F;
-			ev.eventData = trb.val[3] & (1 << 2);
-			break;
+	switch (ev.type) {
+	case TrbType::transferEvent:
+		ev.trbPointer = trb.val[0] | (static_cast<uintptr_t>(trb.val[1]) << 32);
+		ev.transferLen = trb.val[2] & 0xFFFFFF;
+		ev.endpointId = (trb.val[3] >> 16) & 0x1F;
+		ev.eventData = trb.val[3] & (1 << 2);
+		break;
 
-		case TrbType::commandCompletionEvent:
-			ev.commandPointer = trb.val[0] |
-				(static_cast<uintptr_t>(trb.val[1]) << 32);
-			ev.commandCompletionParameter = trb.val[2] & 0xFFFFFF;
-			break;
+	case TrbType::commandCompletionEvent:
+		ev.commandPointer = trb.val[0] | (static_cast<uintptr_t>(trb.val[1]) << 32);
+		ev.commandCompletionParameter = trb.val[2] & 0xFFFFFF;
+		break;
 
-		case TrbType::portStatusChangeEvent:
-			ev.portId = (trb.val[0] >> 24) & 0xFF;
-			break;
+	case TrbType::portStatusChangeEvent:
+		ev.portId = (trb.val[0] >> 24) & 0xFF;
+		break;
 
-		case TrbType::doorbellEvent:
-			ev.doorbellReason = trb.val[0] & 0x1F;
-			break;
+	case TrbType::doorbellEvent:
+		ev.doorbellReason = trb.val[0] & 0x1F;
+		break;
 
-		case TrbType::deviceNotificationEvent:
-			ev.notificationData = (trb.val[0] |
-				(static_cast<uintptr_t>(trb.val[1]) << 32))
-				>> 8;
-			ev.notificationType = (trb.val[0] >> 4) & 0xF;
-			break;
+	case TrbType::deviceNotificationEvent:
+		ev.notificationData =
+		        (trb.val[0] | (static_cast<uintptr_t>(trb.val[1]) << 32)) >> 8;
+		ev.notificationType = (trb.val[0] >> 4) & 0xF;
+		break;
 
-		default:
-			assert(!"xhci: trb passed to fromRawTrb is not a proper event trb\n");
+	default:
+		assert(!"xhci: trb passed to fromRawTrb is not a proper event trb\n");
 	}
 
 	return ev;
@@ -611,57 +619,52 @@ Controller::Event Controller::Event::fromRawTrb(RawTrb trb) {
 
 void Controller::Event::printInfo() {
 	printf("xhci: --- event dump ---\n");
-	printf("xhci: raw: %08x %08x %08x %08x\n",
-			raw.val[0], raw.val[1], raw.val[2], raw.val[3]);
+	printf("xhci: raw: %08x %08x %08x %08x\n", raw.val[0], raw.val[1], raw.val[2], raw.val[3]);
 	printf("xhci: type: %u\n", static_cast<unsigned int>(type));
 	printf("xhci: slot id: %d\n", slotId);
 	printf("xhci: completion code: %s (%d)\n",
-			completionCodeNames[completionCode],
-			completionCode);
+	       completionCodeNames[completionCode],
+	       completionCode);
 
-	switch(type) {
-		case TrbType::transferEvent:
-			printf("xhci: type name: Transfer Event\n");
-			printf("xhci: trb ptr: %016lx, len %lu\n", trbPointer,
-					transferLen);
-			printf("xhci: endpointId: %lu, eventData: %s\n",
-					endpointId, eventData ? "yes" : "no");
-			break;
-		case TrbType::commandCompletionEvent:
-			printf("xhci: type name: Command Completion Event\n");
-			printf("xhci: command pointer: %016lx\n",
-					commandPointer);
-			printf("xhci: command completion parameter: %d\n",
-					commandCompletionParameter);
-			printf("xhci: vfid: %d\n", vfId);
-			break;
-		case TrbType::portStatusChangeEvent:
-			printf("xhci: type name: Port Status Change Event\n");
-			printf("xhci: port id: %lu\n", portId);
-			break;
-		case TrbType::bandwidthRequestEvent:
-			printf("xhci: type name: Bandwidth Request Event\n");
-			break;
-		case TrbType::doorbellEvent:
-			printf("xhci: type name: Doorbell Event\n");
-			printf("xhci: reason: %lu\n", doorbellReason);
-			printf("xhci: vfid: %d\n", vfId);
-			break;
-		case TrbType::hostControllerEvent:
-			printf("xhci: type name: Host Controller Event\n");
-			break;
-		case TrbType::deviceNotificationEvent:
-			printf("xhci: type name: Device Notification Event\n");
-			printf("xhci: notification data: %lx\n",
-					notificationData);
-			printf("xhci: notification type: %lu\n",
-					notificationType);
-			break;
-		case TrbType::mfindexWrapEvent:
-			printf("xhci: type name: MFINDEX Wrap Event\n");
-			break;
-		default:
-			printf("xhci: invalid event\n");
+	switch (type) {
+	case TrbType::transferEvent:
+		printf("xhci: type name: Transfer Event\n");
+		printf("xhci: trb ptr: %016lx, len %lu\n", trbPointer, transferLen);
+		printf("xhci: endpointId: %lu, eventData: %s\n",
+		       endpointId,
+		       eventData ? "yes" : "no");
+		break;
+	case TrbType::commandCompletionEvent:
+		printf("xhci: type name: Command Completion Event\n");
+		printf("xhci: command pointer: %016lx\n", commandPointer);
+		printf("xhci: command completion parameter: %d\n", commandCompletionParameter);
+		printf("xhci: vfid: %d\n", vfId);
+		break;
+	case TrbType::portStatusChangeEvent:
+		printf("xhci: type name: Port Status Change Event\n");
+		printf("xhci: port id: %lu\n", portId);
+		break;
+	case TrbType::bandwidthRequestEvent:
+		printf("xhci: type name: Bandwidth Request Event\n");
+		break;
+	case TrbType::doorbellEvent:
+		printf("xhci: type name: Doorbell Event\n");
+		printf("xhci: reason: %lu\n", doorbellReason);
+		printf("xhci: vfid: %d\n", vfId);
+		break;
+	case TrbType::hostControllerEvent:
+		printf("xhci: type name: Host Controller Event\n");
+		break;
+	case TrbType::deviceNotificationEvent:
+		printf("xhci: type name: Device Notification Event\n");
+		printf("xhci: notification data: %lx\n", notificationData);
+		printf("xhci: notification type: %lu\n", notificationType);
+		break;
+	case TrbType::mfindexWrapEvent:
+		printf("xhci: type name: MFINDEX Wrap Event\n");
+		break;
+	default:
+		printf("xhci: invalid event\n");
 	}
 
 	printf("xhci: --- end of event dump ---\n");
@@ -672,7 +675,9 @@ void Controller::Event::printInfo() {
 // ------------------------------------------------------------------------
 
 Controller::Port::Port(int id, Controller *controller, SupportedProtocol *proto)
-: _id{id}, _controller{controller}, _proto{proto} {
+        : _id { id }
+        , _controller { controller }
+        , _proto { proto } {
 	_space = controller->_operational.subspace(0x400 + (id - 1) * 0x10);
 }
 
@@ -686,14 +691,13 @@ void Controller::Port::disable() {
 }
 
 void Controller::Port::resetChangeBits() {
-	_space.store(port::portsc, portsc::portPower(true)
-			| portsc::connectStatusChange(true)
-			| portsc::portResetChange(true)
-			| portsc::portEnableChange(true)
-			| portsc::warmPortResetChange(true)
-			| portsc::overCurrentChange(true)
-			| portsc::portLinkStatusChange(true)
-			| portsc::portConfigErrorChange(true));
+	_space.store(
+	        port::portsc,
+	        portsc::portPower(true) | portsc::connectStatusChange(true)
+	                | portsc::portResetChange(true) | portsc::portEnableChange(true)
+	                | portsc::warmPortResetChange(true) | portsc::overCurrentChange(true)
+	                | portsc::portLinkStatusChange(true) | portsc::portConfigErrorChange(true)
+	);
 }
 
 bool Controller::Port::isConnected() {
@@ -719,9 +723,11 @@ uint8_t Controller::Port::getSpeed() {
 }
 
 void Controller::Port::transitionToLinkStatus(uint8_t status) {
-	_space.store(port::portsc, portsc::portPower(true)
-			| portsc::portLinkStatus(status)
-			| portsc::portLinkStatusStrobe(true));
+	_space.store(
+	        port::portsc,
+	        portsc::portPower(true) | portsc::portLinkStatus(status)
+	                | portsc::portLinkStatusStrobe(true)
+	);
 }
 
 async::detached Controller::Port::initPort() {
@@ -736,8 +742,10 @@ async::detached Controller::Port::initPort() {
 		// The XHCI spec states that USB2 devices should enter the polling state at the
 		// same time they set CCS=1, but VirtualBox' XHCI does not implement this behavior.
 		auto linkStatus = getLinkStatus();
-		if(linkStatus != 7)
-			printf("\e[35m" "xhci: USB2 port did not enter polling state after CCS=1" "\e[39m\n");
+		if (linkStatus != 7)
+			printf("\e[35m"
+			       "xhci: USB2 port did not enter polling state after CCS=1"
+			       "\e[39m\n");
 
 		reset();
 
@@ -756,7 +764,7 @@ async::detached Controller::Port::initPort() {
 	if (linkStatus >= 1 && linkStatus <= 3) {
 		transitionToLinkStatus(0);
 	} else
-		assert(linkStatus == 0); // U0
+		assert(linkStatus == 0);  // U0
 
 	int targetPacketSize = -1;
 	bool isFullSpeed = false;
@@ -764,20 +772,14 @@ async::detached Controller::Port::initPort() {
 
 	for (auto &speed : _proto->speeds) {
 		if (speed.value == speedId) {
-			if (speed.exponent == 2
-				&& speed.mantissa == 12) { // Full Speed
+			if (speed.exponent == 2 && speed.mantissa == 12) {  // Full Speed
 				isFullSpeed = true;
 				targetPacketSize = 8;
-			} else if (speed.exponent == 1
-				&& speed.mantissa == 1500) { // Low Speed
+			} else if (speed.exponent == 1 && speed.mantissa == 1500) {  // Low Speed
 				targetPacketSize = 8;
-			} else if (speed.exponent == 2
-				&& speed.mantissa == 480) { // High Speed
+			} else if (speed.exponent == 2 && speed.mantissa == 480) {  // High Speed
 				targetPacketSize = 64;
-			} else if (speed.exponent == 3
-				&& (speed.mantissa == 5
-					|| speed.mantissa == 10
-					|| speed.mantissa == 20)) { // SuperSpeed
+			} else if (speed.exponent == 3 && (speed.mantissa == 5 || speed.mantissa == 10 || speed.mantissa == 20)) {  // SuperSpeed
 				targetPacketSize = 512;
 			}
 
@@ -786,21 +788,21 @@ async::detached Controller::Port::initPort() {
 	}
 
 	if (_proto->speeds.empty()) {
-		switch(speedId) {
-			case 1:
-				isFullSpeed = true;
-				[[fallthrough]];
-			case 2:
-				targetPacketSize = 8;
-				break;
-			case 3:
-				targetPacketSize = 64;
-				break;
-			case 4:
-			case 5:
-			case 6:
-			case 7:
-				targetPacketSize = 512;
+		switch (speedId) {
+		case 1:
+			isFullSpeed = true;
+			[[fallthrough]];
+		case 2:
+			targetPacketSize = 8;
+			break;
+		case 3:
+			targetPacketSize = 64;
+			break;
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+			targetPacketSize = 512;
 		}
 	}
 
@@ -813,7 +815,7 @@ async::detached Controller::Port::initPort() {
 	// TODO: if isFullSpeed is set, read the first 8 bytes of the device descriptor
 	// and update the control endpoint's max packet size to match the bMaxPacketSize0 value
 
-	arch::dma_object<DeviceDescriptor> descriptor{&_controller->_memoryPool};
+	arch::dma_object<DeviceDescriptor> descriptor { &_controller->_memoryPool };
 	co_await _device->readDescriptor(descriptor.view_buffer(), 0x0100);
 
 	// Advertise the USB device on mbus.
@@ -826,29 +828,27 @@ async::detached Controller::Port::initPort() {
 	sprintf(product, "%.4x", descriptor->idProduct);
 	sprintf(release, "%.4x", descriptor->bcdDevice);
 
-	mbus::Properties mbus_desc{
-		{"usb.type", mbus::StringItem{"device"}},
-		{"usb.vendor", mbus::StringItem{vendor}},
-		{"usb.product", mbus::StringItem{product}},
-		{"usb.class", mbus::StringItem{class_code}},
-		{"usb.subclass", mbus::StringItem{sub_class}},
-		{"usb.protocol", mbus::StringItem{protocol}},
-		{"usb.release", mbus::StringItem{release}}
-	};
+	mbus::Properties mbus_desc { { "usb.type", mbus::StringItem { "device" } },
+		                     { "usb.vendor", mbus::StringItem { vendor } },
+		                     { "usb.product", mbus::StringItem { product } },
+		                     { "usb.class", mbus::StringItem { class_code } },
+		                     { "usb.subclass", mbus::StringItem { sub_class } },
+		                     { "usb.protocol", mbus::StringItem { protocol } },
+		                     { "usb.release", mbus::StringItem { release } } };
 
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	char name[3];
 	sprintf(name, "%.2x", _id);
 
-	auto handler = mbus::ObjectHandler{}
-	.withBind([=] () -> async::result<helix::UniqueDescriptor> {
-		helix::UniqueLane local_lane, remote_lane;
-		std::tie(local_lane, remote_lane) = helix::createStream();
-		protocols::usb::serve(::Device{_device}, std::move(local_lane));
+	auto handler =
+	        mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+		        helix::UniqueLane local_lane, remote_lane;
+		        std::tie(local_lane, remote_lane) = helix::createStream();
+		        protocols::usb::serve(::Device { _device }, std::move(local_lane));
 
-		co_return std::move(remote_lane);
-	});
+		        co_return std::move(remote_lane);
+	        });
 
 	co_await root.createObject(name, mbus_desc, std::move(handler));
 }
@@ -858,19 +858,20 @@ async::detached Controller::Port::initPort() {
 // ------------------------------------------------------------------------
 
 Controller::TransferRing::TransferRing(Controller *controller)
-:_transferRing{&controller->_memoryPool}, _dequeuePtr{0}, _enqueuePtr{0},
-	_pcs{true} {
-
+        : _transferRing { &controller->_memoryPool }
+        , _dequeuePtr { 0 }
+        , _enqueuePtr { 0 }
+        , _pcs { true } {
 	for (uint32_t i = 0; i < transferRingSize; i++) {
-		_transferRing->ent[i] = {{0, 0, 0, 0}};
+		_transferRing->ent[i] = { { 0, 0, 0, 0 } };
 	}
 
-	_transferRing->ent[transferRingSize - 1] = {{
-		static_cast<uint32_t>(getPtr() & 0xFFFFFFFF),
-		static_cast<uint32_t>(getPtr() >> 32),
-		0,
-		static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10))
-	}};
+	_transferRing->ent[transferRingSize - 1] = {
+		{ static_cast<uint32_t>(getPtr() & 0xFFFFFFFF),
+		  static_cast<uint32_t>(getPtr() >> 32),
+		  0,
+		  static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10)) }
+	};
 }
 
 uintptr_t Controller::TransferRing::getPtr() {
@@ -879,9 +880,10 @@ uintptr_t Controller::TransferRing::getPtr() {
 	return ptr;
 }
 
-void Controller::TransferRing::pushRawTransfer(RawTrb cmd, 
-		Controller::TransferRing::TransferEvent *ev) {
-
+void Controller::TransferRing::pushRawTransfer(
+        RawTrb cmd,
+        Controller::TransferRing::TransferEvent *ev
+) {
 	_transferRing->ent[_enqueuePtr] = cmd;
 	_transferEvents[_enqueuePtr] = ev;
 	if (_pcs) {
@@ -899,12 +901,12 @@ void Controller::TransferRing::pushRawTransfer(RawTrb cmd,
 }
 
 void Controller::TransferRing::updateLink() {
-	_transferRing->ent[transferRingSize - 1] = {{
-		static_cast<uint32_t>(getPtr() & 0xFFFFFFFF),
-		static_cast<uint32_t>(getPtr() >> 32),
-		0,
-		static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10))
-	}};
+	_transferRing->ent[transferRingSize - 1] = {
+		{ static_cast<uint32_t>(getPtr() & 0xFFFFFFFF),
+		  static_cast<uint32_t>(getPtr() >> 32),
+		  0,
+		  static_cast<uint32_t>(_pcs | (1 << 1) | (1 << 5) | (6 << 10)) }
+	};
 }
 
 void Controller::TransferRing::updateDequeue(int current) {
@@ -916,8 +918,9 @@ void Controller::TransferRing::updateDequeue(int current) {
 // ------------------------------------------------------------------------
 
 Controller::Device::Device(int portId, Controller *controller)
-: _slotId{-1}, _portId{portId}, _controller{controller} {
-}
+        : _slotId { -1 }
+        , _portId { portId }
+        , _controller { controller } {}
 
 arch::dma_pool *Controller::Device::setupPool() {
 	return &_controller->_memoryPool;
@@ -927,14 +930,13 @@ arch::dma_pool *Controller::Device::bufferPool() {
 	return &_controller->_memoryPool;
 }
 
-async::result<frg::expected<UsbError, std::string>>
-Controller::Device::configurationDescriptor() {
-	arch::dma_object<ConfigDescriptor> header{&_controller->_memoryPool};
+async::result<frg::expected<UsbError, std::string>> Controller::Device::configurationDescriptor() {
+	arch::dma_object<ConfigDescriptor> header { &_controller->_memoryPool };
 	co_await readDescriptor(header.view_buffer(), 0x0200);
 
-	arch::dma_buffer descriptor{&_controller->_memoryPool, header->totalLength};
+	arch::dma_buffer descriptor { &_controller->_memoryPool, header->totalLength };
 	co_await readDescriptor(descriptor, 0x0200);
-	co_return std::string{(char *)descriptor.data(), descriptor.size()};
+	co_return std::string { (char *) descriptor.data(), descriptor.size() };
 }
 
 async::result<frg::expected<UsbError, Configuration>>
@@ -950,12 +952,12 @@ Controller::Device::useConfiguration(int number) {
 
 	std::vector<EndpointInfo> _eps = {};
 
-	walkConfiguration(descriptor, [&] (int type, size_t length, void *p, const auto &info) {
-		(void)length;
+	walkConfiguration(descriptor, [&](int type, size_t length, void *p, const auto &info) {
+		(void) length;
 
-		if(type != descriptor_type::endpoint)
+		if (type != descriptor_type::endpoint)
 			return;
-		auto desc = (EndpointDescriptor *)p;
+		auto desc = (EndpointDescriptor *) p;
 
 		// TODO: Pay attention to interface/alternative.
 		auto packet_size = desc->maxPacketSize & 0x7FF;
@@ -963,26 +965,31 @@ Controller::Device::useConfiguration(int number) {
 
 		int pipe = info.endpointNumber.value();
 		if (info.endpointIn.value()) {
-			_eps.push_back({pipe, PipeType::in, packet_size, ep_type});
+			_eps.push_back({ pipe, PipeType::in, packet_size, ep_type });
 		} else {
-			_eps.push_back({pipe, PipeType::out, packet_size, ep_type});
+			_eps.push_back({ pipe, PipeType::out, packet_size, ep_type });
 		}
 	});
 
 	for (auto &ep : _eps) {
-		printf("xhci: setting up %s endpoint %d (max packet size: %d)\n", 
-			ep.dir == PipeType::in ? "in" : "out", ep.pipe, ep.packet_size);
+		printf("xhci: setting up %s endpoint %d (max packet size: %d)\n",
+		       ep.dir == PipeType::in ? "in" : "out",
+		       ep.pipe,
+		       ep.packet_size);
 		co_await setupEndpoint(ep.pipe, ep.dir, ep.packet_size, ep.type);
 	}
 
-	RawTrb setup_stage = {{
-			static_cast<uint32_t>((number << 16) | (9 << 8) | 0x00), // SET_CONFIGURATION, host to device
-			0, 8,
-			(3 << 16) | (1 << 6) | (static_cast<uint32_t>(TrbType::setupStage) << 10)}};
+	RawTrb setup_stage = { { static_cast<uint32_t>(
+		                         (number << 16) | (9 << 8) | 0x00
+		                 ),  // SET_CONFIGURATION, host to device
+		                 0,
+		                 8,
+		                 (3 << 16) | (1 << 6)
+		                         | (static_cast<uint32_t>(TrbType::setupStage) << 10) } };
 
-	RawTrb status_stage = {{
-			0, 0, 0, 
-			(1 << 5) | (static_cast<uint32_t>(TrbType::statusStage) << 10)}};
+	RawTrb status_stage = {
+		{ 0, 0, 0, (1 << 5) | (static_cast<uint32_t>(TrbType::statusStage) << 10) }
+	};
 
 	TransferRing::TransferEvent ev;
 
@@ -994,40 +1001,43 @@ Controller::Device::useConfiguration(int number) {
 
 	if (ev.event.completionCode != 1)
 		printf("xhci: failed to use configuration, completion code: '%s'\n",
-			completionCodeNames[ev.event.completionCode]);
+		       completionCodeNames[ev.event.completionCode]);
 
 	printf("xhci: configuration set\n");
 
-	co_return Configuration{std::make_shared<Controller::ConfigurationState>(_controller, shared_from_this(), number)};
+	co_return Configuration { std::make_shared<Controller::ConfigurationState>(
+		_controller,
+		shared_from_this(),
+		number
+	) };
 }
 
-async::result<frg::expected<UsbError>>
-Controller::Device::transfer(ControlTransfer info) {
-	RawTrb setup_stage = {{
-		0, static_cast<uint32_t>(info.buffer.size() << 16), 8,
-		((info.flags == kXferToDevice ? 2 : 3) << 16) 
-		| (1 << 6) | (static_cast<uint32_t>(TrbType::setupStage) << 10)}};
+async::result<frg::expected<UsbError>> Controller::Device::transfer(ControlTransfer info) {
+	RawTrb setup_stage = { { 0,
+		                 static_cast<uint32_t>(info.buffer.size() << 16),
+		                 8,
+		                 ((info.flags == kXferToDevice ? 2 : 3) << 16) | (1 << 6)
+		                         | (static_cast<uint32_t>(TrbType::setupStage) << 10) } };
 
 	memcpy(setup_stage.val, info.setup.data(), sizeof(SetupPacket));
 
 	pushRawTransfer(0, setup_stage);
 
 	size_t progress = 0;
-	while(progress < info.buffer.size()) {
-		uintptr_t pptr, ptr = (uintptr_t)info.buffer.data() + progress;
-		HEL_CHECK(helPointerPhysical((void *)ptr, &pptr));
+	while (progress < info.buffer.size()) {
+		uintptr_t pptr, ptr = (uintptr_t) info.buffer.data() + progress;
+		HEL_CHECK(helPointerPhysical((void *) ptr, &pptr));
 
 		auto chunk = std::min(info.buffer.size() - progress, 0x1000 - (ptr & 0xFFF));
 
 		bool is_last = (progress + chunk) >= info.buffer.size();
 
-		RawTrb transfer = {{
-			static_cast<uint32_t>(pptr & 0xFFFFFFFF),
-			static_cast<uint32_t>(pptr >> 32),
-			static_cast<uint32_t>(chunk),
-			(!is_last << 4) | (1 << 2)
-				| ((info.flags == kXferToDevice ? 0 : 1) << 16)
-				| (static_cast<uint32_t>(TrbType::normal) << 10)}};
+		RawTrb transfer = { { static_cast<uint32_t>(pptr & 0xFFFFFFFF),
+			              static_cast<uint32_t>(pptr >> 32),
+			              static_cast<uint32_t>(chunk),
+			              (!is_last << 4) | (1 << 2)
+			                      | ((info.flags == kXferToDevice ? 0 : 1) << 16)
+			                      | (static_cast<uint32_t>(TrbType::normal) << 10) } };
 
 		pushRawTransfer(0, transfer);
 
@@ -1036,10 +1046,11 @@ Controller::Device::transfer(ControlTransfer info) {
 
 	TransferRing::TransferEvent ev;
 
-	RawTrb status_stage = {{
-			0, 0, 0, 
-			((info.flags == kXferToDevice ? 0 : 1) << 16) 
-			| (1 << 5) | (static_cast<uint32_t>(TrbType::statusStage) << 10)}};
+	RawTrb status_stage = { { 0,
+		                  0,
+		                  0,
+		                  ((info.flags == kXferToDevice ? 0 : 1) << 16) | (1 << 5)
+		                          | (static_cast<uint32_t>(TrbType::statusStage) << 10) } };
 
 	pushRawTransfer(0, status_stage, &ev);
 	submit(1);
@@ -1048,7 +1059,7 @@ Controller::Device::transfer(ControlTransfer info) {
 
 	if (ev.event.completionCode != 1)
 		printf("xhci: failed to perform a control transfer, completion code: '%s'\n",
-			completionCodeNames[ev.event.completionCode]);
+		       completionCodeNames[ev.event.completionCode]);
 	co_return {};
 }
 
@@ -1058,17 +1069,19 @@ void Controller::Device::submit(int endpoint) {
 }
 
 async::result<void> Controller::Device::allocSlot(int slotType, int packetSize) {
-	RawTrb enable_slot = {{0, 0, 0, 
-		(slotType << 16)
-			| (static_cast<uint32_t>(TrbType::enableSlotCommand) << 10)}};
+	RawTrb enable_slot = { { 0,
+		                 0,
+		                 0,
+		                 (slotType << 16
+		                 ) | (static_cast<uint32_t>(TrbType::enableSlotCommand) << 10) } };
 	Controller::CommandRing::CommandEvent ev;
 	_controller->_cmdRing.pushRawCommand(enable_slot, &ev);
 	_controller->_cmdRing.submit();
 
 	co_await ev.completion.wait();
 
-	assert(ev.event.completionCode != 9); // TODO: handle running out of device slots
-	assert(ev.event.completionCode == 1); // success
+	assert(ev.event.completionCode != 9);  // TODO: handle running out of device slots
+	assert(ev.event.completionCode == 1);  // success
 
 	_slotId = ev.event.slotId;
 
@@ -1077,14 +1090,14 @@ async::result<void> Controller::Device::allocSlot(int slotType, int packetSize) 
 
 	// initialize slot
 
-	_devCtx = arch::dma_object<DeviceContext>{&_controller->_memoryPool};
+	_devCtx = arch::dma_object<DeviceContext> { &_controller->_memoryPool };
 
-	auto inputCtx = arch::dma_object<InputContext>{&_controller->_memoryPool};
+	auto inputCtx = arch::dma_object<InputContext> { &_controller->_memoryPool };
 	memset(inputCtx.data(), 0, sizeof(InputContext));
-	inputCtx->icc.addContextFlags = (1 << 0) | (1 << 1); // slot and control endpoint
+	inputCtx->icc.addContextFlags = (1 << 0) | (1 << 1);  // slot and control endpoint
 	// TODO: support hubs (generate route string)
-	inputCtx->slotContext.val[0] = (1 << 27); // 1 context entry
-	inputCtx->slotContext.val[1] = (_portId << 16); // root hub port
+	inputCtx->slotContext.val[0] = (1 << 27);  // 1 context entry
+	inputCtx->slotContext.val[1] = (_portId << 16);  // root hub port
 
 	_transferRings[0] = std::make_unique<TransferRing>(_controller);
 
@@ -1111,11 +1124,12 @@ async::result<void> Controller::Device::allocSlot(int slotType, int packetSize) 
 	uintptr_t in_ctx_ptr;
 	HEL_CHECK(helPointerPhysical(inputCtx.data(), &in_ctx_ptr));
 
-	RawTrb address_device = {{
-		static_cast<uint32_t>(in_ctx_ptr & 0xFFFFFFFF),
-		static_cast<uint32_t>(in_ctx_ptr >> 32), 0,
-		(_slotId << 24) | 
-			(static_cast<uint32_t>(TrbType::addressDeviceCommand) << 10)}};
+	RawTrb address_device = {
+		{ static_cast<uint32_t>(in_ctx_ptr & 0xFFFFFFFF),
+		  static_cast<uint32_t>(in_ctx_ptr >> 32),
+		  0,
+		  (_slotId << 24) | (static_cast<uint32_t>(TrbType::addressDeviceCommand) << 10) }
+	};
 	Controller::CommandRing::CommandEvent ev2;
 	_controller->_cmdRing.pushRawCommand(address_device, &ev2);
 	_controller->_cmdRing.submit();
@@ -1124,33 +1138,40 @@ async::result<void> Controller::Device::allocSlot(int slotType, int packetSize) 
 
 	if (ev2.event.completionCode != 1)
 		printf("xhci: failed to address device, completion code: '%s'\n",
-			completionCodeNames[ev2.event.completionCode]);
+		       completionCodeNames[ev2.event.completionCode]);
 
 	printf("xhci: device successfully addressed\n");
 }
 
-void Controller::Device::pushRawTransfer(int endpoint, RawTrb cmd, Controller::TransferRing::TransferEvent *ev) {
+void Controller::Device::pushRawTransfer(
+        int endpoint,
+        RawTrb cmd,
+        Controller::TransferRing::TransferEvent *ev
+) {
 	_transferRings[endpoint]->pushRawTransfer(cmd, ev);
 }
 
 async::result<void> Controller::Device::readDescriptor(arch::dma_buffer_view dest, uint16_t desc) {
-	RawTrb setup_stage = {{
-			static_cast<uint32_t>((desc << 16) | (6 << 8) | 0x80), // GET_DESCRIPTOR, dev to host
-			static_cast<uint32_t>(dest.size() << 16), 8,
-			(3 << 16) | (1 << 6) | (static_cast<uint32_t>(TrbType::setupStage) << 10)}};
+	RawTrb setup_stage = { { static_cast<uint32_t>(
+		                         (desc << 16) | (6 << 8) | 0x80
+		                 ),  // GET_DESCRIPTOR, dev to host
+		                 static_cast<uint32_t>(dest.size() << 16),
+		                 8,
+		                 (3 << 16) | (1 << 6)
+		                         | (static_cast<uint32_t>(TrbType::setupStage) << 10) } };
 
 	uintptr_t ptr;
 	HEL_CHECK(helPointerPhysical(dest.data(), &ptr));
 
-	RawTrb data_stage = {{
-			static_cast<uint32_t>(ptr & 0xFFFFFFFF),
-			static_cast<uint32_t>(ptr >> 32),
-			static_cast<uint32_t>(dest.size()),
-			(1 << 2) | (1 << 16) | (static_cast<uint32_t>(TrbType::dataStage) << 10)}};
+	RawTrb data_stage = { { static_cast<uint32_t>(ptr & 0xFFFFFFFF),
+		                static_cast<uint32_t>(ptr >> 32),
+		                static_cast<uint32_t>(dest.size()),
+		                (1 << 2) | (1 << 16)
+		                        | (static_cast<uint32_t>(TrbType::dataStage) << 10) } };
 
-	RawTrb status_stage = {{
-			0, 0, 0, 
-			(1 << 5) | (static_cast<uint32_t>(TrbType::statusStage) << 10)}};
+	RawTrb status_stage = {
+		{ 0, 0, 0, (1 << 5) | (static_cast<uint32_t>(TrbType::statusStage) << 10) }
+	};
 
 	TransferRing::TransferEvent ev;
 
@@ -1163,12 +1184,12 @@ async::result<void> Controller::Device::readDescriptor(arch::dma_buffer_view des
 
 	if (ev.event.completionCode != 1)
 		printf("xhci: failed to read descriptor, completion code: '%s'\n",
-			completionCodeNames[ev.event.completionCode]);
+		       completionCodeNames[ev.event.completionCode]);
 
 	printf("xhci: device descriptor successfully read\n");
 }
 
-static inline uint32_t getHcdEndpointType(PipeType dir, EndpointType type) {
+inline static uint32_t getHcdEndpointType(PipeType dir, EndpointType type) {
 	if (type == EndpointType::control)
 		return 4;
 	if (type == EndpointType::isochronous)
@@ -1180,9 +1201,15 @@ static inline uint32_t getHcdEndpointType(PipeType dir, EndpointType type) {
 	return 0;
 }
 
-async::result<void> Controller::Device::setupEndpoint(int endpoint, PipeType dir, size_t maxPacketSize, EndpointType type, bool drop) {
+async::result<void> Controller::Device::setupEndpoint(
+        int endpoint,
+        PipeType dir,
+        size_t maxPacketSize,
+        EndpointType type,
+        bool drop
+) {
 	printf("xhci: doing endpoint stuff to %d\n", endpoint);
-	auto inputCtx = arch::dma_object<InputContext>{&_controller->_memoryPool};
+	auto inputCtx = arch::dma_object<InputContext> { &_controller->_memoryPool };
 	memset(inputCtx.data(), 0, sizeof(InputContext));
 
 	int endpointId = endpoint * 2 + (dir == PipeType::in ? 1 : 0);
@@ -1207,7 +1234,8 @@ async::result<void> Controller::Device::setupEndpoint(int endpoint, PipeType dir
 	auto tr_ptr = _transferRings[endpointId - 1]->getPtr();
 	printf("xhci: tr ptr = %016lx\n", tr_ptr);
 	assert(!(tr_ptr & 0xF));
-	inputCtx->endpointContext[endpointId - 1].val[1] = (3 << 1) | (getHcdEndpointType(dir, type) << 3) | (maxPacketSize << 16);
+	inputCtx->endpointContext[endpointId - 1].val[1] =
+	        (3 << 1) | (getHcdEndpointType(dir, type) << 3) | (maxPacketSize << 16);
 	inputCtx->endpointContext[endpointId - 1].val[2] = (1 << 0) | (tr_ptr & 0xFFFFFFF0);
 	inputCtx->endpointContext[endpointId - 1].val[3] = (tr_ptr >> 32);
 	inputCtx->endpointContext[endpointId - 1].val[4] = maxPacketSize * 2;
@@ -1215,11 +1243,13 @@ async::result<void> Controller::Device::setupEndpoint(int endpoint, PipeType dir
 	uintptr_t in_ctx_ptr;
 	HEL_CHECK(helPointerPhysical(inputCtx.data(), &in_ctx_ptr));
 
-	RawTrb configure_endpoint = {{
-		static_cast<uint32_t>(in_ctx_ptr & 0xFFFFFFFF),
-		static_cast<uint32_t>(in_ctx_ptr >> 32), 0,
-		(_slotId << 24) | 
-			(static_cast<uint32_t>(TrbType::configureEndpointCommand) << 10)}};
+	RawTrb configure_endpoint = {
+		{ static_cast<uint32_t>(in_ctx_ptr & 0xFFFFFFFF),
+		  static_cast<uint32_t>(in_ctx_ptr >> 32),
+		  0,
+		  (_slotId << 24)
+		          | (static_cast<uint32_t>(TrbType::configureEndpointCommand) << 10) }
+	};
 	Controller::CommandRing::CommandEvent ev;
 	_controller->_cmdRing.pushRawCommand(configure_endpoint, &ev);
 	_controller->_cmdRing.submit();
@@ -1228,7 +1258,7 @@ async::result<void> Controller::Device::setupEndpoint(int endpoint, PipeType dir
 
 	if (ev.event.completionCode != 1)
 		printf("xhci: failed to configure endpoint, completion code: '%s'\n",
-			completionCodeNames[ev.event.completionCode]);
+		       completionCodeNames[ev.event.completionCode]);
 
 	assert(ev.event.completionCode == 1);
 
@@ -1239,42 +1269,56 @@ async::result<void> Controller::Device::setupEndpoint(int endpoint, PipeType dir
 // Controller::ConfigurationState
 // ------------------------------------------------------------------------
 
-Controller::ConfigurationState::ConfigurationState(Controller *controller, 
-		std::shared_ptr<Device> device, int)
-:_controller{controller}, _device{device} {
-}
+Controller::ConfigurationState::ConfigurationState(
+        Controller *controller,
+        std::shared_ptr<Device> device,
+        int
+)
+        : _controller { controller }
+        , _device { device } {}
 
 async::result<frg::expected<UsbError, Interface>>
 Controller::ConfigurationState::useInterface(int number, int alternative) {
 	assert(!alternative);
-	co_return Interface{std::make_shared<Controller::InterfaceState>(_controller, _device, number)};
+	co_return Interface {
+		std::make_shared<Controller::InterfaceState>(_controller, _device, number)
+	};
 }
 
 // ------------------------------------------------------------------------
 // Controller::InterfaceState
 // ------------------------------------------------------------------------
 
-Controller::InterfaceState::InterfaceState(Controller *controller, 
-		std::shared_ptr<Device> device, int)
-: _controller{controller}, _device{device} {
-}
+Controller::InterfaceState::InterfaceState(
+        Controller *controller,
+        std::shared_ptr<Device> device,
+        int
+)
+        : _controller { controller }
+        , _device { device } {}
 
 async::result<frg::expected<UsbError, Endpoint>>
 Controller::InterfaceState::getEndpoint(PipeType type, int number) {
-	co_return Endpoint{std::make_shared<Controller::EndpointState>(_controller, _device, number, type)};
+	co_return Endpoint {
+		std::make_shared<Controller::EndpointState>(_controller, _device, number, type)
+	};
 }
 
 // ------------------------------------------------------------------------
 // Controller::EndpointState
 // ------------------------------------------------------------------------
 
-Controller::EndpointState::EndpointState(Controller *, 
-		std::shared_ptr<Device> device, int endpoint, PipeType type)
-: _device{device}, _endpoint{endpoint}, _type{type} {
-}
+Controller::EndpointState::EndpointState(
+        Controller *,
+        std::shared_ptr<Device> device,
+        int endpoint,
+        PipeType type
+)
+        : _device { device }
+        , _endpoint { endpoint }
+        , _type { type } {}
 
-async::result<frg::expected<UsbError>>
-Controller::EndpointState::transfer(ControlTransfer info) {
+async::result<frg::expected<UsbError>> Controller::EndpointState::transfer(ControlTransfer info) {
 	assert(!"TODO: implement this");
 	co_return {};
 }
@@ -1286,20 +1330,19 @@ Controller::EndpointState::transfer(InterruptTransfer info) {
 	Controller::TransferRing::TransferEvent ev;
 
 	size_t progress = 0;
-	while(progress < info.buffer.size()) {
-		uintptr_t pptr, ptr = (uintptr_t)info.buffer.data() + progress;
-		HEL_CHECK(helPointerPhysical((void *)ptr, &pptr));
+	while (progress < info.buffer.size()) {
+		uintptr_t pptr, ptr = (uintptr_t) info.buffer.data() + progress;
+		HEL_CHECK(helPointerPhysical((void *) ptr, &pptr));
 
 		auto chunk = std::min(info.buffer.size() - progress, 0x1000 - (ptr & 0xFFF));
 
 		bool is_last = (progress + chunk) >= info.buffer.size();
 
-		RawTrb transfer = {{
-			static_cast<uint32_t>(pptr & 0xFFFFFFFF),
-			static_cast<uint32_t>(pptr >> 32),
-			static_cast<uint32_t>(chunk),
-			(!is_last << 4) | (1 << 2) | (is_last << 5)
-				| (static_cast<uint32_t>(TrbType::normal) << 10)}};
+		RawTrb transfer = { { static_cast<uint32_t>(pptr & 0xFFFFFFFF),
+			              static_cast<uint32_t>(pptr >> 32),
+			              static_cast<uint32_t>(chunk),
+			              (!is_last << 4) | (1 << 2) | (is_last << 5)
+			                      | (static_cast<uint32_t>(TrbType::normal) << 10) } };
 
 		_device->pushRawTransfer(endpointId - 1, transfer, is_last ? &ev : nullptr);
 
@@ -1310,32 +1353,31 @@ Controller::EndpointState::transfer(InterruptTransfer info) {
 
 	co_await ev.completion.wait();
 
-	assert(ev.event.completionCode == 1 || ev.event.completionCode == 13); // success
+	assert(ev.event.completionCode == 1 || ev.event.completionCode == 13);  // success
 
 	co_return info.buffer.size() - ev.event.transferLen;
 }
 
-async::result<frg::expected<UsbError, size_t>>
-Controller::EndpointState::transfer(BulkTransfer info) {
+async::result<frg::expected<UsbError, size_t>> Controller::EndpointState::transfer(BulkTransfer info
+) {
 	int endpointId = _endpoint * 2 + (_type == PipeType::in ? 1 : 0);
 
 	Controller::TransferRing::TransferEvent ev;
 
 	size_t progress = 0;
-	while(progress < info.buffer.size()) {
-		uintptr_t pptr, ptr = (uintptr_t)info.buffer.data() + progress;
-		HEL_CHECK(helPointerPhysical((void *)ptr, &pptr));
+	while (progress < info.buffer.size()) {
+		uintptr_t pptr, ptr = (uintptr_t) info.buffer.data() + progress;
+		HEL_CHECK(helPointerPhysical((void *) ptr, &pptr));
 
 		auto chunk = std::min(info.buffer.size() - progress, 0x1000 - (ptr & 0xFFF));
 
 		bool is_last = (progress + chunk) >= info.buffer.size();
 
-		RawTrb transfer = {{
-			static_cast<uint32_t>(pptr & 0xFFFFFFFF),
-			static_cast<uint32_t>(pptr >> 32),
-			static_cast<uint32_t>(chunk),
-			(!is_last << 4) | (1 << 2) | (is_last << 5)
-				| (static_cast<uint32_t>(TrbType::normal) << 10)}};
+		RawTrb transfer = { { static_cast<uint32_t>(pptr & 0xFFFFFFFF),
+			              static_cast<uint32_t>(pptr >> 32),
+			              static_cast<uint32_t>(chunk),
+			              (!is_last << 4) | (1 << 2) | (is_last << 5)
+			                      | (static_cast<uint32_t>(TrbType::normal) << 10) } };
 
 		_device->pushRawTransfer(endpointId - 1, transfer, is_last ? &ev : nullptr);
 
@@ -1347,10 +1389,11 @@ Controller::EndpointState::transfer(BulkTransfer info) {
 	co_await ev.completion.wait();
 
 	if (ev.event.completionCode != 1) {
-		printf("xhci: completion code is %s instead of success\n", completionCodeNames[ev.event.completionCode]);
+		printf("xhci: completion code is %s instead of success\n",
+		       completionCodeNames[ev.event.completionCode]);
 	}
 
-	assert(ev.event.completionCode == 1); // success
+	assert(ev.event.completionCode == 1);  // success
 
 	co_return info.buffer.size() - ev.event.transferLen;
 }
@@ -1376,10 +1419,15 @@ async::detached bindController(mbus::Entity entity) {
 
 	co_await device.enableBusmaster();
 
-	helix::Mapping mapping{bar, info.barInfo[0].offset, info.barInfo[0].length};
+	helix::Mapping mapping { bar, info.barInfo[0].offset, info.barInfo[0].length };
 
-	auto controller = std::make_shared<Controller>(std::move(device), std::move(mapping),
-			std::move(bar), std::move(irq), info.numMsis > 0);
+	auto controller = std::make_shared<Controller>(
+	        std::move(device),
+	        std::move(mapping),
+	        std::move(bar),
+	        std::move(irq),
+	        info.numMsis > 0
+	);
 	controller->initialize();
 	globalControllers.push_back(std::move(controller));
 }
@@ -1387,17 +1435,15 @@ async::detached bindController(mbus::Entity entity) {
 async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({
-		mbus::EqualsFilter("pci-class", "0c"),
-		mbus::EqualsFilter("pci-subclass", "03"),
-		mbus::EqualsFilter("pci-interface", "30")
-	});
+	auto filter = mbus::Conjunction({ mbus::EqualsFilter("pci-class", "0c"),
+	                                  mbus::EqualsFilter("pci-subclass", "03"),
+	                                  mbus::EqualsFilter("pci-interface", "30") });
 
-	auto handler = mbus::ObserverHandler{}
-	.withAttach([] (mbus::Entity entity, mbus::Properties) {
-		printf("xhci: detected controller\n");
-		bindController(std::move(entity));
-	});
+	auto handler =
+	        mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		        printf("xhci: detected controller\n");
+		        bindController(std::move(entity));
+	        });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }
@@ -1412,4 +1458,3 @@ int main() {
 	observeControllers();
 	async::run_forever(helix::currentDispatcher);
 }
- 

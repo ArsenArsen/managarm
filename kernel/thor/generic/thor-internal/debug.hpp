@@ -33,19 +33,19 @@ void copyLogMessage(size_t sequence, char *text);
 struct InfoSink {
 	constexpr InfoSink() = default;
 
-	void operator() (const char *msg);
+	void operator()(const char *msg);
 };
 
 struct UrgentSink {
 	constexpr UrgentSink() = default;
 
-	void operator() (const char *msg);
+	void operator()(const char *msg);
 };
 
 struct PanicSink {
 	constexpr PanicSink() = default;
 
-	void operator() (const char *msg);
+	void operator()(const char *msg);
 };
 
 extern frg::stack_buffer_logger<InfoSink> infoLogger;
@@ -54,4 +54,4 @@ extern frg::stack_buffer_logger<InfoSink> infoLogger;
 extern frg::stack_buffer_logger<UrgentSink> urgentLogger;
 extern frg::stack_buffer_logger<PanicSink> panicLogger;
 
-} // namespace thor
+}  // namespace thor

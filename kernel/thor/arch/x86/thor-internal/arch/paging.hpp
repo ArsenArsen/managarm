@@ -1,9 +1,8 @@
 #pragma once
 
-#include <atomic>
-
-#include <frg/list.hpp>
 #include <assert.h>
+#include <atomic>
+#include <frg/list.hpp>
 #include <smarter.hpp>
 #include <thor-internal/mm-rc.hpp>
 #include <thor-internal/types.hpp>
@@ -28,8 +27,7 @@ struct PageAccessor {
 		swap(a._pointer, b._pointer);
 	}
 
-	PageAccessor()
-	: _pointer{nullptr} { }
+	PageAccessor() : _pointer { nullptr } {}
 
 	PageAccessor(PhysicalAddr physical) {
 		assert(physical != PhysicalAddr(-1) && "trying to access invalid physical page");
@@ -40,25 +38,18 @@ struct PageAccessor {
 
 	PageAccessor(const PageAccessor &) = delete;
 
-	PageAccessor(PageAccessor &&other)
-	: PageAccessor{} {
-		swap(*this, other);
-	}
+	PageAccessor(PageAccessor &&other) : PageAccessor {} { swap(*this, other); }
 
-	~PageAccessor() { }
+	~PageAccessor() {}
 
-	PageAccessor &operator= (PageAccessor other) {
+	PageAccessor &operator=(PageAccessor other) {
 		swap(*this, other);
 		return *this;
 	}
 
-	explicit operator bool () {
-		return _pointer;
-	}
+	explicit operator bool() { return _pointer; }
 
-	void *get() {
-		return _pointer;
-	}
+	void *get() { return _pointer; }
 
 private:
 	void *_pointer;
@@ -109,7 +100,7 @@ void poisonPhysicalWriteAccess(PhysicalAddr physical);
 struct PageSpace;
 struct PageBinding;
 
-static constexpr int maxPcidCount = 8;
+constexpr static int maxPcidCount = 8;
 
 // Per-CPU context for paging.
 struct PageContext {
@@ -119,7 +110,7 @@ struct PageContext {
 
 	PageContext(const PageContext &) = delete;
 
-	PageContext &operator= (const PageContext &) = delete;
+	PageContext &operator=(const PageContext &) = delete;
 
 private:
 	// Timestamp for the LRU mechansim of PCIDs.
@@ -134,24 +125,18 @@ struct PageBinding {
 
 	PageBinding(const PageBinding &) = delete;
 
-	PageBinding &operator= (const PageBinding &) = delete;
+	PageBinding &operator=(const PageBinding &) = delete;
 
-	smarter::shared_ptr<PageSpace> boundSpace() {
-		return _boundSpace;
-	}
+	smarter::shared_ptr<PageSpace> boundSpace() { return _boundSpace; }
 
 	void setupPcid(int pcid) {
 		assert(!_pcid);
 		_pcid = pcid;
 	}
 
-	int getPcid() {
-		return _pcid;
-	}
+	int getPcid() { return _pcid; }
 
-	uint64_t primaryStamp() {
-		return _primaryStamp;
-	}
+	uint64_t primaryStamp() { return _primaryStamp; }
 
 	bool isPrimary();
 
@@ -181,7 +166,7 @@ struct GlobalPageBinding {
 
 	GlobalPageBinding(const GlobalPageBinding &) = delete;
 
-	GlobalPageBinding &operator= (const GlobalPageBinding &) = delete;
+	GlobalPageBinding &operator=(const GlobalPageBinding &) = delete;
 
 	void bind();
 
@@ -200,9 +185,7 @@ struct PageSpace {
 
 	~PageSpace();
 
-	PhysicalAddr rootTable() {
-		return _rootTable;
-	}
+	PhysicalAddr rootTable() { return _rootTable; }
 
 	void retire(RetireNode *node);
 
@@ -213,7 +196,7 @@ private:
 
 	std::atomic<bool> _wantToRetire = false;
 
-	RetireNode * _retireNode = nullptr;
+	RetireNode *_retireNode = nullptr;
 
 	frg::ticket_spinlock _mutex;
 
@@ -222,18 +205,17 @@ private:
 	uint64_t _shootSequence;
 
 	frg::intrusive_list<
-		ShootNode,
-		frg::locate_member<
-			ShootNode,
-			frg::default_list_hook<ShootNode>,
-			&ShootNode::_queueNode
-		>
-	> _shootQueue;
+	        ShootNode,
+	        frg::locate_member<
+	                ShootNode,
+	                frg::default_list_hook<ShootNode>,
+	                &ShootNode::_queueNode>>
+	        _shootQueue;
 };
 
 namespace page_mode {
-	static constexpr uint32_t remap = 1;
-}
+constexpr static uint32_t remap = 1;
+}  // namespace page_mode
 
 enum class PageMode {
 	null,
@@ -244,17 +226,17 @@ enum class PageMode {
 using PageFlags = uint32_t;
 
 namespace page_access {
-	static constexpr uint32_t write = 1;
-	static constexpr uint32_t execute = 2;
-	static constexpr uint32_t read = 4;
-}
+constexpr static uint32_t write = 1;
+constexpr static uint32_t execute = 2;
+constexpr static uint32_t read = 4;
+}  // namespace page_access
 
 using PageStatus = uint32_t;
 
 namespace page_status {
-	static constexpr PageStatus present = 1;
-	static constexpr PageStatus dirty = 2;
-};
+constexpr static PageStatus present = 1;
+constexpr static PageStatus dirty = 2;
+};  // namespace page_status
 
 enum class CachingMode {
 	null,
@@ -268,6 +250,7 @@ enum class CachingMode {
 
 struct KernelPageSpace {
 	friend struct GlobalPageBinding;
+
 public:
 	static void initialize();
 
@@ -278,16 +261,18 @@ public:
 
 	KernelPageSpace(const KernelPageSpace &) = delete;
 
-	KernelPageSpace &operator= (const KernelPageSpace &) = delete;
+	KernelPageSpace &operator=(const KernelPageSpace &) = delete;
 
-	PhysicalAddr rootTable() {
-		return _rootTable;
-	}
+	PhysicalAddr rootTable() { return _rootTable; }
 
 	bool submitShootdown(ShootNode *node);
 
-	void mapSingle4k(VirtualAddr pointer, PhysicalAddr physical,
-			uint32_t flags, CachingMode caching_mode);
+	void mapSingle4k(
+	        VirtualAddr pointer,
+	        PhysicalAddr physical,
+	        uint32_t flags,
+	        CachingMode caching_mode
+	);
 	PhysicalAddr unmapSingle4k(VirtualAddr pointer);
 
 private:
@@ -302,13 +287,12 @@ private:
 	uint64_t _shootSequence;
 
 	frg::intrusive_list<
-		ShootNode,
-		frg::locate_member<
-			ShootNode,
-			frg::default_list_hook<ShootNode>,
-			&ShootNode::_queueNode
-		>
-	> _shootQueue;
+	        ShootNode,
+	        frg::locate_member<
+	                ShootNode,
+	                frg::default_list_hook<ShootNode>,
+	                &ShootNode::_queueNode>>
+	        _shootQueue;
 };
 
 struct ClientPageSpace : PageSpace {
@@ -320,7 +304,7 @@ public:
 
 		~Walk();
 
-		Walk &operator= (const Walk &) = delete;
+		Walk &operator=(const Walk &) = delete;
 
 		void walkTo(uintptr_t address);
 
@@ -335,10 +319,10 @@ public:
 		uintptr_t _address = 0;
 
 		// Accessors for all levels of PTs.
-		PageAccessor _accessor4; // Coarsest level (PML4).
+		PageAccessor _accessor4;  // Coarsest level (PML4).
 		PageAccessor _accessor3;
 		PageAccessor _accessor2;
-		PageAccessor _accessor1; // Finest level (page table).
+		PageAccessor _accessor1;  // Finest level (page table).
 	};
 
 	ClientPageSpace();
@@ -347,10 +331,15 @@ public:
 
 	~ClientPageSpace();
 
-	ClientPageSpace &operator= (const ClientPageSpace &) = delete;
+	ClientPageSpace &operator=(const ClientPageSpace &) = delete;
 
-	void mapSingle4k(VirtualAddr pointer, PhysicalAddr physical, bool user_access,
-			uint32_t flags, CachingMode caching_mode);
+	void mapSingle4k(
+	        VirtualAddr pointer,
+	        PhysicalAddr physical,
+	        bool user_access,
+	        uint32_t flags,
+	        CachingMode caching_mode
+	);
 	PageStatus unmapSingle4k(VirtualAddr pointer);
 	PageStatus cleanSingle4k(VirtualAddr pointer);
 	bool isMapped(VirtualAddr pointer);
@@ -364,4 +353,4 @@ void invalidatePage(const void *address);
 
 void invalidateFullTlb();
 
-} // namespace thor
+}  // namespace thor

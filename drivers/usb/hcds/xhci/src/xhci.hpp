@@ -1,25 +1,27 @@
 
-#include <queue>
+#include "spec.hpp"
 
 #include <arch/mem_space.hpp>
-#include <async/recurring-event.hpp>
 #include <async/mutex.hpp>
+#include <async/recurring-event.hpp>
 #include <async/result.hpp>
 #include <helix/memory.hpp>
 #include <helix/timer.hpp>
 #include <protocols/usb/api.hpp>
-
-#include "spec.hpp"
+#include <queue>
 
 // ----------------------------------------------------------------
 // controller.
 // ----------------------------------------------------------------
 
 struct Controller : std::enable_shared_from_this<Controller> {
-	Controller(protocols::hw::Device hw_device,
-			helix::Mapping mapping,
-			helix::UniqueDescriptor mmio,
-			helix::UniqueIrq irq, bool useMsis);
+	Controller(
+	        protocols::hw::Device hw_device,
+	        helix::Mapping mapping,
+	        helix::UniqueDescriptor mmio,
+	        helix::UniqueIrq irq,
+	        bool useMsis
+	);
 
 	async::detached initialize();
 	async::detached handleIrqs();
@@ -79,13 +81,14 @@ private:
 
 		std::array<CommandEvent *, commandRingSize> _commandEvents;
 		void submit();
+
 	private:
 		arch::dma_object<CommandRingEntries> _commandRing;
 		size_t _enqueuePtr;
 
 		Controller *_controller;
 
-		bool _pcs; // producer cycle state
+		bool _pcs;  // producer cycle state
 	};
 
 	struct EventRing {
@@ -113,6 +116,7 @@ private:
 
 		std::deque<Event> _dequeuedEvents;
 		async::recurring_event _doorbell;
+
 	private:
 		arch::dma_object<EventRingEntries> _eventRing;
 		arch::dma_array<ErstEntry> _erst;
@@ -146,12 +150,13 @@ private:
 		void updateLink();
 
 		std::array<TransferEvent *, transferRingSize> _transferEvents;
+
 	private:
 		arch::dma_object<TransferRingEntries> _transferRing;
 		size_t _dequeuePtr;
 		size_t _enqueuePtr;
 
-		bool _pcs; // producer cycle state
+		bool _pcs;  // producer cycle state
 	};
 
 	struct Interrupter {
@@ -160,6 +165,7 @@ private:
 		void setEventRing(EventRing *ring, bool clear_ehb = false);
 		bool isPending();
 		void clearPending();
+
 	private:
 		arch::mem_space _space;
 	};
@@ -178,7 +184,7 @@ private:
 		void transitionToLinkStatus(uint8_t status);
 		async::detached initPort();
 
-		template <typename T>
+		template<typename T>
 		async::result<void> awaitFlag(arch::field<uint32_t, T> field, T value) {
 			while (true) {
 				resetChangeBits();
@@ -186,7 +192,7 @@ private:
 					co_return;
 
 				async::cancellation_event ev;
-				helix::TimeoutCancellation tc{1'000'000'000, ev};
+				helix::TimeoutCancellation tc { 1'000'000'000, ev };
 
 				co_await _doorbell.async_wait(ev);
 				co_await tc.retire();
@@ -194,6 +200,7 @@ private:
 		}
 
 		async::recurring_event _doorbell;
+
 	private:
 		uint8_t getLinkStatus();
 		uint8_t getSpeed();
@@ -204,18 +211,26 @@ private:
 		arch::mem_space _space;
 	};
 
-	struct Device final : DeviceData, std::enable_shared_from_this<Device> {
+	struct Device final
+	        : DeviceData
+	        , std::enable_shared_from_this<Device> {
 		Device(int portId, Controller *controller);
 
 		// Public API inherited from DeviceData.
 		arch::dma_pool *setupPool() override;
 		arch::dma_pool *bufferPool() override;
-		async::result<frg::expected<UsbError, std::string>> configurationDescriptor() override;
-		async::result<frg::expected<UsbError, Configuration>> useConfiguration(int number) override;
+		async::result<frg::expected<UsbError, std::string>>
+		configurationDescriptor() override;
+		async::result<frg::expected<UsbError, Configuration>> useConfiguration(int number
+		) override;
 		async::result<frg::expected<UsbError>> transfer(ControlTransfer info) override;
 
 		void submit(int endpoint);
-		void pushRawTransfer(int endpoint, RawTrb cmd, TransferRing::TransferEvent *ev = nullptr);
+		void pushRawTransfer(
+		        int endpoint,
+		        RawTrb cmd,
+		        TransferRing::TransferEvent *ev = nullptr
+		);
 		async::result<void> allocSlot(int slotType, int packetSize);
 
 		async::result<void> readDescriptor(arch::dma_buffer_view dest, uint16_t desc);
@@ -224,7 +239,13 @@ private:
 
 		int _slotId;
 
-		async::result<void> setupEndpoint(int endpoint, PipeType dir, size_t maxPacketSize, EndpointType type, bool drop = false);
+		async::result<void> setupEndpoint(
+		        int endpoint,
+		        PipeType dir,
+		        size_t maxPacketSize,
+		        EndpointType type,
+		        bool drop = false
+		);
 
 	private:
 		int _portId;
@@ -261,7 +282,11 @@ private:
 	};
 
 	struct ConfigurationState final : ConfigurationData {
-		explicit ConfigurationState(Controller *controller, std::shared_ptr<Device> device, int number);
+		explicit ConfigurationState(
+		        Controller *controller,
+		        std::shared_ptr<Device> device,
+		        int number
+		);
 
 		async::result<frg::expected<UsbError, Interface>>
 		useInterface(int number, int alternative) override;
@@ -283,10 +308,16 @@ private:
 	};
 
 	struct EndpointState final : EndpointData {
-		explicit EndpointState(Controller *controller, std::shared_ptr<Device> device, int endpoint, PipeType type);
+		explicit EndpointState(
+		        Controller *controller,
+		        std::shared_ptr<Device> device,
+		        int endpoint,
+		        PipeType type
+		);
 
 		async::result<frg::expected<UsbError>> transfer(ControlTransfer info) override;
-		async::result<frg::expected<UsbError, size_t>> transfer(InterruptTransfer info) override;
+		async::result<frg::expected<UsbError, size_t>> transfer(InterruptTransfer info
+		) override;
 		async::result<frg::expected<UsbError, size_t>> transfer(BulkTransfer info) override;
 
 	private:
@@ -328,5 +359,3 @@ private:
 
 	bool _useMsis;
 };
-
-

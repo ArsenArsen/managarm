@@ -1,13 +1,12 @@
 
-#include <queue>
 #include <arch/dma_pool.hpp>
 #include <arch/io_space.hpp>
-#include <async/recurring-event.hpp>
-#include <async/promise.hpp>
 #include <async/mutex.hpp>
-#include <protocols/hw/client.hpp>
-
+#include <async/promise.hpp>
+#include <async/recurring-event.hpp>
 #include <frg/std_compat.hpp>
+#include <protocols/hw/client.hpp>
+#include <queue>
 
 struct DeviceState;
 struct ConfigurationState;
@@ -27,10 +26,10 @@ public:
 };
 
 namespace hub_status {
-	static constexpr uint32_t connect = 0x01;
-	static constexpr uint32_t enable = 0x02;
-	static constexpr uint32_t reset = 0x04;
-}
+constexpr static uint32_t connect = 0x01;
+constexpr static uint32_t enable = 0x02;
+constexpr static uint32_t reset = 0x04;
+}  // namespace hub_status
 
 struct PortState {
 	uint32_t status;
@@ -44,12 +43,12 @@ protected:
 public:
 	virtual size_t numPorts() = 0;
 	virtual async::result<PortState> pollState(int port) = 0;
-	virtual async::result<frg::expected<UsbError, bool>> issueReset(int port, bool *low_speed) = 0;
+	virtual async::result<frg::expected<UsbError, bool>>
+	issueReset(int port, bool *low_speed) = 0;
 };
 
 struct Enumerator {
-	Enumerator(BaseController *controller)
-	: _controller{controller} { }
+	Enumerator(BaseController *controller) : _controller { controller } {}
 
 	void observeHub(std::shared_ptr<Hub> hub);
 
@@ -65,28 +64,34 @@ private:
 // Controller.
 // ----------------------------------------------------------------
 
-struct Controller final : std::enable_shared_from_this<Controller>, BaseController {
+struct Controller final
+        : std::enable_shared_from_this<Controller>
+        , BaseController {
 	friend struct ConfigurationState;
 
 	struct RootHub final : Hub {
-		RootHub(Controller *controller)
-		: _controller{controller} { }
+		RootHub(Controller *controller) : _controller { controller } {}
 
 		size_t numPorts() override;
 		async::result<PortState> pollState(int port) override;
-		async::result<frg::expected<UsbError, bool>> issueReset(int port, bool *low_speed) override;
+		async::result<frg::expected<UsbError, bool>>
+		issueReset(int port, bool *low_speed) override;
 
 	private:
 		Controller *_controller;
 	};
 
-	Controller(protocols::hw::Device hw_device, uintptr_t base,
-			arch::io_space space, helix::UniqueIrq irq);
+	Controller(
+	        protocols::hw::Device hw_device,
+	        uintptr_t base,
+	        arch::io_space space,
+	        helix::UniqueIrq irq
+	);
 
 	void initialize();
 	async::detached _handleIrqs();
 	async::detached _refreshFrame();
-	
+
 	async::result<void> enumerateDevice(bool low_speed) override;
 
 private:
@@ -110,23 +115,24 @@ private:
 	// All those classes are linked into a list that represents a part of the schedule.
 	// They need to be freed through the reclaim mechansim.
 	struct ScheduleItem : boost::intrusive::list_base_hook<> {
-		ScheduleItem()
-		: reclaimFrame(-1) { }
+		ScheduleItem() : reclaimFrame(-1) {}
 
-		virtual ~ScheduleItem() {
-			assert(reclaimFrame != -1);
-		}
+		virtual ~ScheduleItem() { assert(reclaimFrame != -1); }
 
 		int64_t reclaimFrame;
 	};
 
 	struct Transaction : ScheduleItem {
-		explicit Transaction(arch::dma_array<TransferDescriptor> transfers,
-				bool allow_short_packets = false)
-		: transfers{std::move(transfers)}, autoToggle{false},
-				numComplete{0}, lengthComplete{0},
-				allowShortPackets{allow_short_packets} { }
-		
+		explicit Transaction(
+		        arch::dma_array<TransferDescriptor> transfers,
+		        bool allow_short_packets = false
+		)
+		        : transfers { std::move(transfers) }
+		        , autoToggle { false }
+		        , numComplete { 0 }
+		        , lengthComplete { 0 }
+		        , allowShortPackets { allow_short_packets } {}
+
 		arch::dma_array<TransferDescriptor> transfers;
 		bool autoToggle;
 		size_t numComplete;
@@ -138,7 +144,8 @@ private:
 
 	struct QueueEntity : ScheduleItem {
 		QueueEntity(arch::dma_object<QueueHead> the_head)
-		: head{std::move(the_head)}, toggleState{false} {
+		        : head { std::move(the_head) }
+		        , toggleState { false } {
 			head->_linkPointer = QueueHead::LinkPointer();
 			head->_elementPointer = QueueHead::ElementPointer();
 		}
@@ -171,8 +178,7 @@ private:
 public:
 	async::result<frg::expected<UsbError, std::string>> configurationDescriptor(int address);
 
-	async::result<frg::expected<UsbError>>
-	useConfiguration(int address, int configuration);
+	async::result<frg::expected<UsbError>> useConfiguration(int address, int configuration);
 
 	async::result<frg::expected<UsbError>>
 	useInterface(int address, int interface, int alternative);
@@ -180,17 +186,29 @@ public:
 	// ------------------------------------------------------------------------
 	// Transfer functions.
 	// ------------------------------------------------------------------------
-	
-	static Transaction *_buildControl(int address, int pipe, XferFlags dir,
-			arch::dma_object_view<SetupPacket> setup, arch::dma_buffer_view buffer,
-			bool low_speed, size_t max_packet_size);
-	static Transaction *_buildInterruptOrBulk(int address, int pipe, XferFlags dir,
-			arch::dma_buffer_view buffer,
-			bool low_speed, size_t max_packet_size,
-			bool allow_short_packets);
+
+	static Transaction *_buildControl(
+	        int address,
+	        int pipe,
+	        XferFlags dir,
+	        arch::dma_object_view<SetupPacket> setup,
+	        arch::dma_buffer_view buffer,
+	        bool low_speed,
+	        size_t max_packet_size
+	);
+	static Transaction *_buildInterruptOrBulk(
+	        int address,
+	        int pipe,
+	        XferFlags dir,
+	        arch::dma_buffer_view buffer,
+	        bool low_speed,
+	        size_t max_packet_size,
+	        bool allow_short_packets
+	);
 
 public:
-	async::result<frg::expected<UsbError>> transfer(int address, int pipe, ControlTransfer info);
+	async::result<frg::expected<UsbError>>
+	transfer(int address, int pipe, ControlTransfer info);
 
 	async::result<frg::expected<UsbError, size_t>>
 	transfer(int address, PipeType type, int pipe, InterruptTransfer info);
@@ -199,15 +217,20 @@ public:
 	transfer(int address, PipeType type, int pipe, BulkTransfer info);
 
 private:
-	async::result<frg::expected<UsbError>>
-	_directTransfer(int address, int pipe, ControlTransfer info,
-			QueueEntity *queue, bool low_speed, size_t max_packet_size);
+	async::result<frg::expected<UsbError>> _directTransfer(
+	        int address,
+	        int pipe,
+	        ControlTransfer info,
+	        QueueEntity *queue,
+	        bool low_speed,
+	        size_t max_packet_size
+	);
 
 private:
 	// ------------------------------------------------------------------------
 	// Schedule management.
 	// ------------------------------------------------------------------------
-	
+
 	void _linkInterrupt(QueueEntity *entity, int order, int index);
 	void _linkAsync(QueueEntity *entity);
 	void _linkIntoScheduleTree(int order, int index, QueueEntity *entity);
@@ -227,7 +250,7 @@ private:
 	boost::intrusive::list<ScheduleItem> _reclaimQueue;
 
 	FrameList *_frameList;
-	
+
 	// ----------------------------------------------------------------------------
 	// Debugging functions.
 	// ----------------------------------------------------------------------------
@@ -259,8 +282,11 @@ private:
 // ----------------------------------------------------------------------------
 
 struct ConfigurationState final : ConfigurationData {
-	explicit ConfigurationState(std::shared_ptr<Controller> controller,
-			int device, int configuration);
+	explicit ConfigurationState(
+	        std::shared_ptr<Controller> controller,
+	        int device,
+	        int configuration
+	);
 
 	async::result<frg::expected<UsbError, Interface>>
 	useInterface(int number, int alternative) override;
@@ -276,8 +302,11 @@ private:
 // ----------------------------------------------------------------------------
 
 struct InterfaceState final : InterfaceData {
-	explicit InterfaceState(std::shared_ptr<Controller> controller,
-			int device, int configuration);
+	explicit InterfaceState(
+	        std::shared_ptr<Controller> controller,
+	        int device,
+	        int configuration
+	);
 
 	async::result<frg::expected<UsbError, Endpoint>>
 	getEndpoint(PipeType type, int number) override;
@@ -293,8 +322,12 @@ private:
 // ----------------------------------------------------------------------------
 
 struct EndpointState final : EndpointData {
-	explicit EndpointState(std::shared_ptr<Controller> controller,
-			int device, PipeType type, int endpoint);
+	explicit EndpointState(
+	        std::shared_ptr<Controller> controller,
+	        int device,
+	        PipeType type,
+	        int endpoint
+	);
 
 	async::result<frg::expected<UsbError>> transfer(ControlTransfer info) override;
 	async::result<frg::expected<UsbError, size_t>> transfer(InterruptTransfer info) override;
@@ -306,4 +339,3 @@ private:
 	PipeType _type;
 	int _endpoint;
 };
-

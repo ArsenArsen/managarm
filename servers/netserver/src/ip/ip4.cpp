@@ -2,15 +2,16 @@
 
 #include "arp.hpp"
 #include "checksum.hpp"
-#include <async/recurring-event.hpp>
-#include <sys/socket.h>
-#include <netinet/in.h>
+
 #include <algorithm>
+#include <async/recurring-event.hpp>
 #include <cstring>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <netinet/in.h>
 #include <protocols/fs/server.hpp>
 #include <queue>
+#include <sys/socket.h>
 
 using namespace protocols::fs;
 
@@ -50,8 +51,8 @@ bool operator<(const CidrAddress &lhs, const CidrAddress &) {
 
 bool operator<(const Route &lhs, const Route &rhs) {
 	// bigger MTU is better, and hence sorts lower
-	return std::tie(lhs.network, lhs.metric, rhs.mtu) <
-		std::tie(rhs.network, rhs.metric, lhs.mtu);
+	return std::tie(lhs.network, lhs.metric, rhs.mtu)
+	     < std::tie(rhs.network, rhs.metric, lhs.mtu);
 }
 
 bool Ip4Packet::parse(arch::dma_buffer owner, arch::dma_buffer_view frame) {
@@ -96,15 +97,20 @@ auto checkAddress(const void *addr_ptr, size_t addr_len, uint32_t &ip) {
 	ip = addr.sin_addr.s_addr;
 	return protocols::fs::Error::none;
 }
-}
+}  // namespace
 
 struct Ip4Socket {
 	explicit Ip4Socket(int proto) : proto(proto) {}
 
-	static async::result<RecvResult> recvmsg(void *obj,
-			const char *creds,
-			uint32_t flags, void *data, size_t len,
-			void *addr_buf, size_t addr_size, size_t max_ctrl_len) {
+	static async::result<RecvResult>
+	recvmsg(void *obj,
+	        const char *creds,
+	        uint32_t flags,
+	        void *data,
+	        size_t len,
+	        void *addr_buf,
+	        size_t addr_size,
+	        size_t max_ctrl_len) {
 		using arch::convert_endian;
 		using arch::endian;
 		auto self = static_cast<Ip4Socket *>(obj);
@@ -126,22 +132,25 @@ struct Ip4Socket {
 		co_return RecvData { copy_size, sizeof(addr), {} };
 	}
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>> sendmsg(void *obj,
-			const char *creds, uint32_t flags,
-			void *data, size_t len,
-			void *addr_ptr, size_t addr_size,
-			std::vector<uint32_t> fds);
+	static async::result<frg::expected<protocols::fs::Error, size_t>>
+	sendmsg(void *obj,
+	        const char *creds,
+	        uint32_t flags,
+	        void *data,
+	        size_t len,
+	        void *addr_ptr,
+	        size_t addr_size,
+	        std::vector<uint32_t> fds);
 
-	static async::result<Error> connect(void* obj,
-			const char *creds,
-			const void *addr_ptr, size_t addr_size) {
+	static async::result<Error>
+	connect(void *obj, const char *creds, const void *addr_ptr, size_t addr_size) {
 		auto self = static_cast<Ip4Socket *>(obj);
 		uint32_t ip;
 		if (auto e = checkAddress(addr_ptr, addr_size, ip);
-			e != protocols::fs::Error::none) {
+		    e != protocols::fs::Error::none) {
 			co_return e;
 		}
-		
+
 		// TODO(arsen): check other broadcast addresses too
 		if (ip == INADDR_ANY) {
 			co_return protocols::fs::Error::accessDenied;
@@ -155,6 +164,7 @@ struct Ip4Socket {
 		.recvMsg = &recvmsg,
 		.sendMsg = &sendmsg,
 	};
+
 private:
 	friend struct Ip4;
 	int proto;
@@ -163,18 +173,23 @@ private:
 	async::recurring_event bell;
 };
 
-async::result<frg::expected<protocols::fs::Error, size_t>> Ip4Socket::sendmsg(void *obj,
-		const char *creds, uint32_t flags,
-		void *data, size_t len,
-		void *addr_ptr, size_t addr_size,
-		std::vector<uint32_t> fds) {
+async::result<frg::expected<protocols::fs::Error, size_t>> Ip4Socket::sendmsg(
+        void *obj,
+        const char *creds,
+        uint32_t flags,
+        void *data,
+        size_t len,
+        void *addr_ptr,
+        size_t addr_size,
+        std::vector<uint32_t> fds
+) {
 	using arch::convert_endian;
 	using arch::endian;
 	auto self = static_cast<Ip4Socket *>(obj);
 	uint32_t address;
 	if (addr_size != 0) {
 		if (auto e = checkAddress(addr_ptr, addr_size, address);
-			e != protocols::fs::Error::none) {
+		    e != protocols::fs::Error::none) {
 			co_return e;
 		}
 	} else {
@@ -197,8 +212,7 @@ async::result<frg::expected<protocols::fs::Error, size_t>> Ip4Socket::sendmsg(vo
 		co_return protocols::fs::Error::netUnreachable;
 	}
 
-	auto error = co_await ip4().sendFrame(std::move(*ti),
-		data, len, self->proto);
+	auto error = co_await ip4().sendFrame(std::move(*ti), data, len, self->proto);
 	if (error != protocols::fs::Error::none) {
 		co_return error;
 	}
@@ -206,8 +220,7 @@ async::result<frg::expected<protocols::fs::Error, size_t>> Ip4Socket::sendmsg(vo
 	co_return len;
 }
 
-async::result<std::optional<Ip4TargetInfo>>
-Ip4::targetByRemote(uint32_t remote) {
+async::result<std::optional<Ip4TargetInfo>> Ip4::targetByRemote(uint32_t remote) {
 	auto oroute = ip4Router().resolveRoute(remote);
 	if (!oroute) {
 		std::cout << "netserver: net unreachable" << std::endl;
@@ -216,8 +229,7 @@ Ip4::targetByRemote(uint32_t remote) {
 
 	auto target = oroute->link.lock();
 	if (!target) {
-		std::cout << "netserver: route link disappeared"
-			<< std::endl;
+		std::cout << "netserver: route link disappeared" << std::endl;
 		// TODO(arsen): remove route too
 		co_return std::nullopt;
 	}
@@ -228,8 +240,8 @@ Ip4::targetByRemote(uint32_t remote) {
 		source = findLinkIp(elvis, target.get()).value_or(0);
 	}
 	if (source == 0) {
-		std::cout << "netserver: could not find same network ip for "
-			<< std::hex << std::setw(8) << remote << std::dec << std::endl;
+		std::cout << "netserver: could not find same network ip for " << std::hex
+		          << std::setw(8) << remote << std::dec << std::endl;
 		co_return std::nullopt;
 	}
 
@@ -237,14 +249,13 @@ Ip4::targetByRemote(uint32_t remote) {
 }
 
 bool Ip4::hasIp(uint32_t addr) {
-	return std::any_of(ips.cbegin(), ips.cend(),
-		[addr] (auto &x) {
-			return x.first.ip == addr;
-		});
+	return std::any_of(ips.cbegin(), ips.cend(), [addr](auto &x) {
+		return x.first.ip == addr;
+	});
 }
 
-async::result<protocols::fs::Error> Ip4::sendFrame(Ip4TargetInfo ti,
-		void *data, size_t len, uint16_t proto) {
+async::result<protocols::fs::Error>
+Ip4::sendFrame(Ip4TargetInfo ti, void *data, size_t len, uint16_t proto) {
 	using arch::convert_endian;
 	using arch::endian;
 
@@ -304,29 +315,37 @@ async::result<protocols::fs::Error> Ip4::sendFrame(Ip4TargetInfo ti,
 	co_return protocols::fs::Error::none;
 }
 
-void Ip4::feedPacket(nic::MacAddress, nic::MacAddress,
-		arch::dma_buffer owner, arch::dma_buffer_view frame) {
+void Ip4::feedPacket(
+        nic::MacAddress,
+        nic::MacAddress,
+        arch::dma_buffer owner,
+        arch::dma_buffer_view frame
+) {
 	Ip4Packet hdr;
 	if (!hdr.parse(std::move(owner), frame)) {
 		std::cout << "netserver: runt, or otherwise invalid, ip4 frame received"
-			<< std::endl;
+		          << std::endl;
 		return;
 	}
 	auto proto = hdr.header.protocol;
 
 	auto begin = sockets.lower_bound(proto);
-	if (begin == sockets.end()
-			&& proto != static_cast<uint16_t>(IpProto::udp)
-			&& proto != static_cast<uint16_t>(IpProto::tcp)) {
+	if (begin == sockets.end() && proto != static_cast<uint16_t>(IpProto::udp)
+	    && proto != static_cast<uint16_t>(IpProto::tcp)) {
 		return;
 	}
 
 	auto hdrs = smarter::make_shared<const Ip4Packet>(std::move(hdr));
 
 	switch (static_cast<IpProto>(proto)) {
-	case IpProto::udp: udp.feedDatagram(hdrs); break;
-	case IpProto::tcp: tcp.feedDatagram(hdrs); break;
-	default: break;
+	case IpProto::udp:
+		udp.feedDatagram(hdrs);
+		break;
+	case IpProto::tcp:
+		tcp.feedDatagram(hdrs);
+		break;
+	default:
+		break;
 	}
 
 	for (; begin != sockets.end() && begin->first == proto; begin++) {
@@ -340,8 +359,9 @@ void Ip4::setLink(CidrAddress addr, std::weak_ptr<nic::Link> l) {
 }
 
 std::shared_ptr<nic::Link> Ip4::getLink(uint32_t addr) {
-	auto iter = std::find_if(ips.begin(), ips.end(),
-		[addr] (const auto &e) { return e.first.ip == addr; });
+	auto iter = std::find_if(ips.begin(), ips.end(), [addr](const auto &e) {
+		return e.first.ip == addr;
+	});
 	if (iter == ips.end()) {
 		return {};
 	}
@@ -371,18 +391,17 @@ managarm::fs::Errors Ip4::serveSocket(helix::UniqueLane lane, int type, int prot
 	case SOCK_RAW: {
 		auto sock = smarter::make_shared<Ip4Socket>(proto);
 		sockets.emplace(proto, sock);
-		async::detach(servePassthrough(std::move(lane),
-				sock, &Ip4Socket::ops),
-			[this, socket = sock.get()] {
-				for (auto i = sockets.begin();
-					i != sockets.end();
-					i++) {
-					if (i->second.get() == socket) {
-						sockets.erase(i);
-						break;
-					}
-				}
-			});
+		async::detach(
+		        servePassthrough(std::move(lane), sock, &Ip4Socket::ops),
+		        [this, socket = sock.get()] {
+			        for (auto i = sockets.begin(); i != sockets.end(); i++) {
+				        if (i->second.get() == socket) {
+					        sockets.erase(i);
+					        break;
+				        }
+			        }
+		        }
+		);
 		return managarm::fs::Errors::SUCCESS;
 	}
 	case SOCK_DGRAM:

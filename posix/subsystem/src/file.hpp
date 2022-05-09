@@ -1,15 +1,15 @@
 #pragma once
 
-#include <variant>
-#include <string.h> // for hel.h
-#include <vector>
+#include "common.hpp"
 
 #include <async/result.hpp>
 #include <boost/intrusive/rbtree.hpp>
 #include <frg/expected.hpp>
 #include <hel.h>
 #include <protocols/fs/server.hpp>
-#include "common.hpp"
+#include <string.h>  // for hel.h
+#include <variant>
+#include <vector>
 
 struct File;
 struct MountView;
@@ -17,7 +17,7 @@ struct FsLink;
 struct Process;
 struct ControllingTerminalState;
 
-struct FileHandle { };
+struct FileHandle {};
 
 using SharedFilePtr = smarter::shared_ptr<File, FileHandle>;
 
@@ -66,7 +66,10 @@ enum class Error {
 
 // TODO: Rename this enum as is not part of the VFS.
 enum class VfsSeek {
-	null, absolute, relative, eof
+	null,
+	absolute,
+	relative,
+	eof
 };
 
 template<typename T>
@@ -87,7 +90,7 @@ using PollStatusResult = std::tuple<uint64_t, int>;
 
 using AcceptResult = smarter::shared_ptr<File, FileHandle>;
 
-struct DisposeFileHandle { };
+struct DisposeFileHandle {};
 
 struct File : private smarter::crtp_counter<File, DisposeFileHandle> {
 	friend struct smarter::crtp_counter<File, DisposeFileHandle>;
@@ -96,21 +99,18 @@ struct File : private smarter::crtp_counter<File, DisposeFileHandle> {
 
 public:
 	using DefaultOps = uint32_t;
-	static inline constexpr DefaultOps defaultIsTerminal = 1 << 1;
-	static inline constexpr DefaultOps defaultPipeLikeSeek = 1 << 2;
+	constexpr inline static DefaultOps defaultIsTerminal = 1 << 1;
+	constexpr inline static DefaultOps defaultPipeLikeSeek = 1 << 2;
 
 	// ------------------------------------------------------------------------
 	// File protocol adapters.
 	// ------------------------------------------------------------------------
 
-	static async::result<protocols::fs::SeekResult>
-	ptSeekRel(void *object, int64_t offset);
+	static async::result<protocols::fs::SeekResult> ptSeekRel(void *object, int64_t offset);
 
-	static async::result<protocols::fs::SeekResult>
-	ptSeekAbs(void *object, int64_t offset);
+	static async::result<protocols::fs::SeekResult> ptSeekAbs(void *object, int64_t offset);
 
-	static async::result<protocols::fs::SeekResult>
-	ptSeekEof(void *object, int64_t offset);
+	static async::result<protocols::fs::SeekResult> ptSeekEof(void *object, int64_t offset);
 
 	static async::result<protocols::fs::ReadResult>
 	ptRead(void *object, const char *credentials, void *buffer, size_t length);
@@ -118,11 +118,15 @@ public:
 	static async::result<frg::expected<protocols::fs::Error, size_t>>
 	ptWrite(void *object, const char *credentials, const void *buffer, size_t length);
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>>
-	ptPwrite(void *object, int64_t offset, const char *credentials, const void *buffer, size_t length);
+	static async::result<frg::expected<protocols::fs::Error, size_t>> ptPwrite(
+	        void *object,
+	        int64_t offset,
+	        const char *credentials,
+	        const void *buffer,
+	        size_t length
+	);
 
-	static async::result<protocols::fs::ReadEntriesResult>
-	ptReadEntries(void *object);
+	static async::result<protocols::fs::ReadEntriesResult> ptReadEntries(void *object);
 
 	static async::result<frg::expected<protocols::fs::Error>>
 	ptTruncate(void *object, size_t size);
@@ -130,55 +134,58 @@ public:
 	static async::result<frg::expected<protocols::fs::Error>>
 	ptAllocate(void *object, int64_t offset, size_t size);
 
-	static async::result<int>
-	ptGetOption(void *object, int option);
+	static async::result<int> ptGetOption(void *object, int option);
 
-	static async::result<void>
-	ptSetOption(void *object, int option, int value);
+	static async::result<void> ptSetOption(void *object, int option, int value);
 
 	static async::result<protocols::fs::Error>
-	ptBind(void *object, const char *credentials,
-			const void *addr_ptr, size_t addr_length);
+	ptBind(void *object, const char *credentials, const void *addr_ptr, size_t addr_length);
 
 	static async::result<protocols::fs::Error>
-	ptConnect(void *object, const char *credentials,
-			const void *addr_ptr, size_t addr_length);
+	ptConnect(void *object, const char *credentials, const void *addr_ptr, size_t addr_length);
 
 	static async::result<size_t>
 	ptSockname(void *object, void *addr_ptr, size_t max_addr_length);
 
 	static async::result<void>
-	ptIoctl(void *object, managarm::fs::CntRequest req,
-			helix::UniqueLane conversation);
+	ptIoctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conversation);
 
-	static async::result<int>
-	ptGetFileFlags(void *object);
+	static async::result<int> ptGetFileFlags(void *object);
 
-	static async::result<void>
-	ptSetFileFlags(void *object, int flags);
+	static async::result<void> ptSetFileFlags(void *object, int flags);
 
-	static async::result<protocols::fs::RecvResult>
-	ptRecvMsg(void *object, const char *creds, uint32_t flags,
-			void *data, size_t len,
-			void *addr, size_t addr_len,
-			size_t max_ctrl_len);
+	static async::result<protocols::fs::RecvResult> ptRecvMsg(
+	        void *object,
+	        const char *creds,
+	        uint32_t flags,
+	        void *data,
+	        size_t len,
+	        void *addr,
+	        size_t addr_len,
+	        size_t max_ctrl_len
+	);
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>>
-	ptSendMsg(void *object, const char *creds, uint32_t flags,
-			void *data, size_t len,
-			void *addr, size_t addr_len,
-			std::vector<uint32_t> fds);
+	static async::result<frg::expected<protocols::fs::Error, size_t>> ptSendMsg(
+	        void *object,
+	        const char *creds,
+	        uint32_t flags,
+	        void *data,
+	        size_t len,
+	        void *addr,
+	        size_t addr_len,
+	        std::vector<uint32_t> fds
+	);
 
-	static async::result<protocols::fs::Error>
-	ptListen(void *object);
+	static async::result<protocols::fs::Error> ptListen(void *object);
 
 	static async::result<frg::expected<protocols::fs::Error, size_t>>
 	ptPeername(void *object, void *addr_ptr, size_t max_addr_length);
 
 	static async::result<frg::expected<protocols::fs::Error, int>> ptGetSeals(void *object);
-	static async::result<frg::expected<protocols::fs::Error, int>> ptAddSeals(void *object, int seals);
+	static async::result<frg::expected<protocols::fs::Error, int>>
+	ptAddSeals(void *object, int seals);
 
-	static constexpr auto fileOperations = protocols::fs::FileOperations{
+	constexpr static auto fileOperations = protocols::fs::FileOperations {
 		.seekAbs = &ptSeekAbs,
 		.seekRel = &ptSeekRel,
 		.seekEof = &ptSeekEof,
@@ -208,39 +215,39 @@ public:
 	// Public File API.
 	// ------------------------------------------------------------------------
 
-	static smarter::shared_ptr<File, FileHandle> constructHandle(smarter::shared_ptr<File> ptr) {
+	static smarter::shared_ptr<File, FileHandle> constructHandle(smarter::shared_ptr<File> ptr
+	) {
 		auto [file, object_ctr] = ptr.release();
 		file->setup(smarter::adopt_rc, object_ctr, 1);
-		return smarter::shared_ptr<File, FileHandle>{smarter::adopt_rc, file, file};
+		return smarter::shared_ptr<File, FileHandle> { smarter::adopt_rc, file, file };
 	}
 
 	File(StructName struct_name, DefaultOps default_ops = 0)
-	: _structName{struct_name}, _defaultOps{default_ops}, _isOpen{true} { }
+	        : _structName { struct_name }
+	        , _defaultOps { default_ops }
+	        , _isOpen { true } {}
 
-	File(StructName struct_name, std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link,
-			DefaultOps default_ops = 0)
-	: _structName{struct_name}, _mount{std::move(mount)}, _link{std::move(link)},
-			_defaultOps{default_ops}, _isOpen{true} { }
+	File(StructName struct_name,
+	     std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     DefaultOps default_ops = 0)
+	        : _structName { struct_name }
+	        , _mount { std::move(mount) }
+	        , _link { std::move(link) }
+	        , _defaultOps { default_ops }
+	        , _isOpen { true } {}
 
 	virtual ~File();
 
-// TODO: Make this protected:
-	void setupWeakFile(smarter::weak_ptr<File> ptr) {
-		_weakPtr = std::move(ptr);
-	}
+	// TODO: Make this protected:
+	void setupWeakFile(smarter::weak_ptr<File> ptr) { _weakPtr = std::move(ptr); }
 
 public:
-	const smarter::weak_ptr<File> &weakFile() {
-		return _weakPtr;
-	}
+	const smarter::weak_ptr<File> &weakFile() { return _weakPtr; }
 
-	StructName structName() {
-		return _structName;
-	}
+	StructName structName() { return _structName; }
 
-	bool isOpen() {
-		return _isOpen;
-	}
+	bool isOpen() { return _isOpen; }
 
 	virtual void handleClose();
 
@@ -253,26 +260,24 @@ private:
 public:
 	// MountView that was used to open the file.
 	// See associatedLink().
-	std::shared_ptr<MountView> associatedMount() {
-		return _mount;
-	}
+	std::shared_ptr<MountView> associatedMount() { return _mount; }
 
 	// This is the link that was used to open the file.
 	// Note that this might not be the only link that can be used
 	// to reach the file's inode.
 	std::shared_ptr<FsLink> associatedLink() {
-		if(!_link)
+		if (!_link)
 			std::cout << "posix \e[1;34m" << structName()
-					<< "\e[0m: Object does not support associatedLink()" << std::endl;
+			          << "\e[0m: Object does not support associatedLink()" << std::endl;
 		return _link;
 	}
 
 	bool isTerminal();
 
-	async::result<frg::expected<Error>> readExactly(Process *process, void *data, size_t length);
+	async::result<frg::expected<Error>>
+	readExactly(Process *process, void *data, size_t length);
 
-	virtual async::result<frg::expected<Error, off_t>>
-	seek(off_t offset, VfsSeek whence);
+	virtual async::result<frg::expected<Error, off_t>> seek(off_t offset, VfsSeek whence);
 
 	virtual async::result<frg::expected<Error, size_t>>
 	readSome(Process *process, void *data, size_t max_length);
@@ -289,33 +294,44 @@ public:
 	virtual FutureMaybe<ReadEntriesResult> readEntries();
 
 	virtual async::result<protocols::fs::RecvResult>
-		recvMsg(Process *process, uint32_t flags,
-			void *data, size_t max_length,
-			void *addr_ptr, size_t max_addr_length, size_t max_ctrl_length);
+	recvMsg(Process *process,
+	        uint32_t flags,
+	        void *data,
+	        size_t max_length,
+	        void *addr_ptr,
+	        size_t max_addr_length,
+	        size_t max_ctrl_length);
 
 	virtual async::result<frg::expected<protocols::fs::Error, size_t>>
-		sendMsg(Process *process, uint32_t flags,
-			const void *data, size_t max_length,
-			const void *addr_ptr, size_t addr_length,
-			std::vector<smarter::shared_ptr<File, FileHandle>> files);
+	sendMsg(Process *process,
+	        uint32_t flags,
+	        const void *data,
+	        size_t max_length,
+	        const void *addr_ptr,
+	        size_t addr_length,
+	        std::vector<smarter::shared_ptr<File, FileHandle>> files);
 
 	virtual async::result<frg::expected<protocols::fs::Error>> truncate(size_t size);
 
-	virtual async::result<frg::expected<protocols::fs::Error>> allocate(int64_t offset, size_t size);
+	virtual async::result<frg::expected<protocols::fs::Error>>
+	allocate(int64_t offset, size_t size);
 
 	// poll() uses a sequence number mechansim for synchronization.
 	// Before returning, it waits until current-sequence > in-sequence.
 	// Returns (current-sequence, edges since in-sequence, current events).
 	// current-sequence is incremented each time an edge (i.e. an event bit
 	// transitions from clear to set) happens.
-	virtual expected<PollResult> poll(Process *, uint64_t sequence,
-			async::cancellation_token cancellation = {});
+	virtual expected<PollResult>
+	poll(Process *, uint64_t sequence, async::cancellation_token cancellation = {});
 
-	// Waits until the poll sequence changes *and* one of the events in the mask receivs an edge.
-	// Returns (current-sequence, edges since in-sequence).
-	virtual async::result<frg::expected<Error, PollWaitResult>> pollWait(Process *,
-			uint64_t sequence, int mask,
-			async::cancellation_token cancellation = {});
+	// Waits until the poll sequence changes *and* one of the events in the mask receivs an
+	// edge. Returns (current-sequence, edges since in-sequence).
+	virtual async::result<frg::expected<Error, PollWaitResult>> pollWait(
+	        Process *,
+	        uint64_t sequence,
+	        int mask,
+	        async::cancellation_token cancellation = {}
+	);
 
 	// Returns immediately.
 	// Returns (current-sequence, active events).
@@ -326,11 +342,11 @@ public:
 
 	virtual async::result<frg::expected<Error, AcceptResult>> accept(Process *process);
 
-	virtual async::result<protocols::fs::Error> bind(Process *process,
-			const void *addr_ptr, size_t addr_length);
+	virtual async::result<protocols::fs::Error>
+	bind(Process *process, const void *addr_ptr, size_t addr_length);
 
-	virtual async::result<protocols::fs::Error> connect(Process *process,
-			const void *addr_ptr, size_t addr_length);
+	virtual async::result<protocols::fs::Error>
+	connect(Process *process, const void *addr_ptr, size_t addr_length);
 
 	virtual async::result<protocols::fs::Error> listen();
 
@@ -338,13 +354,14 @@ public:
 
 	virtual FutureMaybe<helix::UniqueDescriptor> accessMemory();
 
-	virtual async::result<void> ioctl(Process *process, managarm::fs::CntRequest req,
-			helix::UniqueLane conversation);
+	virtual async::result<void>
+	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation);
 
 	virtual async::result<int> getFileFlags();
 	virtual async::result<void> setFileFlags(int flags);
 
-	virtual async::result<frg::expected<protocols::fs::Error, size_t>> peername(void *addr_ptr, size_t max_addr_length);
+	virtual async::result<frg::expected<protocols::fs::Error, size_t>>
+	peername(void *addr_ptr, size_t max_addr_length);
 
 	virtual helix::BorrowedDescriptor getPassthroughLane() = 0;
 
@@ -352,6 +369,7 @@ public:
 	virtual async::result<frg::expected<protocols::fs::Error, int>> addSeals(int flags);
 
 	virtual async::result<frg::expected<Error, std::string>> ttyname();
+
 private:
 	smarter::weak_ptr<File> _weakPtr;
 	StructName _structName;
@@ -368,16 +386,25 @@ public:
 	static void serve(smarter::shared_ptr<DummyFile> file) {
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
-		async::detach(protocols::fs::servePassthrough(std::move(lane),
-				file, &fileOperations, file->_cancelServe));
+		async::detach(protocols::fs::servePassthrough(
+		        std::move(lane),
+		        file,
+		        &fileOperations,
+		        file->_cancelServe
+		));
 	}
 
-	DummyFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link, DefaultOps default_ops = 0)
-	: File{StructName::get("dummy-file"), std::move(mount), std::move(link), default_ops} { }
+	DummyFile(
+	        std::shared_ptr<MountView> mount,
+	        std::shared_ptr<FsLink> link,
+	        DefaultOps default_ops = 0
+	)
+	        : File { StructName::get("dummy-file"),
+		         std::move(mount),
+		         std::move(link),
+		         default_ops } {}
 
-	helix::BorrowedDescriptor getPassthroughLane() override {
-		return _passthrough;
-	}
+	helix::BorrowedDescriptor getPassthroughLane() override { return _passthrough; }
 
 private:
 	helix::UniqueLane _passthrough;

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <atomic>
-
 #include <async/basic.hpp>
 #include <async/cancellation.hpp>
+#include <atomic>
 #include <frg/container_of.hpp>
 #include <frg/intrusive.hpp>
 #include <frg/pairing_heap.hpp>
@@ -32,8 +31,7 @@ protected:
 };
 
 struct AlarmTracker {
-	AlarmTracker()
-	: _sink{nullptr} { }
+	AlarmTracker() : _sink { nullptr } {}
 
 	void setSink(AlarmSink *sink) {
 		assert(!_sink.load(std::memory_order_relaxed));
@@ -45,7 +43,7 @@ struct AlarmTracker {
 protected:
 	void fireAlarm() {
 		auto sink = _sink.load(std::memory_order_acquire);
-		if(sink)
+		if (sink)
 			sink->firedAlarm();
 	}
 
@@ -64,10 +62,9 @@ enum class TimerState {
 
 struct PrecisionTimerNode {
 	struct CancelFunctor {
-		CancelFunctor(PrecisionTimerNode *node)
-		: node_{node} { }
+		CancelFunctor(PrecisionTimerNode *node) : node_ { node } {}
 
-		void operator() ();
+		void operator()();
 
 	private:
 		PrecisionTimerNode *node_;
@@ -76,8 +73,7 @@ struct PrecisionTimerNode {
 	friend struct CompareTimer;
 	friend struct PrecisionTimerEngine;
 
-	PrecisionTimerNode()
-	: _engine{nullptr}, _cancelCb{this} { }
+	PrecisionTimerNode() : _engine { nullptr }, _cancelCb { this } {}
 
 	void setup(uint64_t deadline, Worklet *elapsed) {
 		_deadline = deadline;
@@ -90,9 +86,7 @@ struct PrecisionTimerNode {
 		_elapsed = elapsed;
 	}
 
-	bool wasCancelled() {
-		return _wasCancelled;
-	}
+	bool wasCancelled() { return _wasCancelled; }
 
 	frg::pairing_heap_hook<PrecisionTimerNode> hook;
 
@@ -110,7 +104,7 @@ private:
 };
 
 struct CompareTimer {
-	bool operator() (const PrecisionTimerNode *a, const PrecisionTimerNode *b) const {
+	bool operator()(const PrecisionTimerNode *a, const PrecisionTimerNode *b) const {
 		return a->_deadline > b->_deadline;
 	}
 };
@@ -123,7 +117,7 @@ private:
 
 public:
 	PrecisionTimerEngine(ClockSource *clock, AlarmTracker *alarm);
-	
+
 	void installTimer(PrecisionTimerNode *timer);
 
 	// ----------------------------------------------------------------------------------
@@ -137,9 +131,8 @@ public:
 		using value_type = void;
 
 		template<typename R>
-		friend SleepOperation<R>
-		connect(SleepSender sender, R receiver) {
-			return {sender, std::move(receiver)};
+		friend SleepOperation<R> connect(SleepSender sender, R receiver) {
+			return { sender, std::move(receiver) };
 		}
 
 		PrecisionTimerEngine *self;
@@ -148,27 +141,32 @@ public:
 	};
 
 	SleepSender sleep(uint64_t deadline, async::cancellation_token cancellation = {}) {
-		return {this, deadline, cancellation};
+		return { this, deadline, cancellation };
 	}
 
 	SleepSender sleepFor(uint64_t nanos, async::cancellation_token cancellation = {}) {
-		return {this, systemClockSource()->currentNanos() + nanos, cancellation};
+		return { this, systemClockSource()->currentNanos() + nanos, cancellation };
 	}
 
 	template<typename R>
 	struct SleepOperation {
 		SleepOperation(SleepSender s, R receiver)
-		: s_{std::move(s)}, receiver_{std::move(receiver)} { }
+		        : s_ { std::move(s) }
+		        , receiver_ { std::move(receiver) } {}
 
 		SleepOperation(const SleepOperation &) = delete;
 
-		SleepOperation &operator= (const SleepOperation &) = delete;
+		SleepOperation &operator=(const SleepOperation &) = delete;
 
 		void start() {
-			worklet_.setup([] (Worklet *base) {
-				auto op = frg::container_of(base, &SleepOperation::worklet_);
-				async::execution::set_value(op->receiver_);
-			}, WorkQueue::generalQueue());
+			worklet_.setup(
+			        [](Worklet *base) {
+				        auto op =
+				                frg::container_of(base, &SleepOperation::worklet_);
+				        async::execution::set_value(op->receiver_);
+			        },
+			        WorkQueue::generalQueue()
+			);
 			node_.setup(s_.deadline, &worklet_);
 			s_.self->installTimer(&node_);
 		}
@@ -180,9 +178,8 @@ public:
 		Worklet worklet_;
 	};
 
-	friend async::sender_awaiter<SleepSender>
-	operator co_await(SleepSender sender) {
-		return {std::move(sender)};
+	friend async::sender_awaiter<SleepSender> operator co_await(SleepSender sender) {
+		return { std::move(sender) };
 	}
 
 	// ----------------------------------------------------------------------------------
@@ -201,19 +198,18 @@ private:
 	Mutex _mutex;
 
 	frg::pairing_heap<
-		PrecisionTimerNode,
-		frg::locate_member<
-			PrecisionTimerNode,
-			frg::pairing_heap_hook<PrecisionTimerNode>,
-			&PrecisionTimerNode::hook
-		>,
-		CompareTimer
-	> _timerQueue;
-	
+	        PrecisionTimerNode,
+	        frg::locate_member<
+	                PrecisionTimerNode,
+	                frg::pairing_heap_hook<PrecisionTimerNode>,
+	                &PrecisionTimerNode::hook>,
+	        CompareTimer>
+	        _timerQueue;
+
 	size_t _activeTimers;
 };
 
-inline void PrecisionTimerNode::CancelFunctor::operator() () {
+inline void PrecisionTimerNode::CancelFunctor::operator()() {
 	node_->_engine->cancelTimer(node_);
 }
 
@@ -221,4 +217,4 @@ PrecisionTimerEngine *generalTimerEngine();
 
 bool haveTimer();
 
-} // namespace thor
+}  // namespace thor

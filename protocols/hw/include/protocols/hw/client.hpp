@@ -40,8 +40,7 @@ struct FbInfo {
 };
 
 struct Device {
-	Device(helix::UniqueLane lane)
-	:_lane(std::move(lane)) { };
+	Device(helix::UniqueLane lane) : _lane(std::move(lane)) {};
 
 	async::result<PciInfo> getPciInfo();
 	async::result<helix::UniqueDescriptor> accessBar(int index);
@@ -55,7 +54,8 @@ struct Device {
 
 	async::result<uint32_t> loadPciSpace(size_t offset, unsigned int size);
 	async::result<void> storePciSpace(size_t offset, unsigned int size, uint32_t word);
-	async::result<uint32_t> loadPciCapability(unsigned int index, size_t offset, unsigned int size);
+	async::result<uint32_t>
+	loadPciCapability(unsigned int index, size_t offset, unsigned int size);
 
 	async::result<FbInfo> getFbInfo();
 	async::result<helix::UniqueDescriptor> accessFbMemory();
@@ -64,4 +64,5 @@ private:
 	helix::UniqueLane _lane;
 };
 
-} } // namespace protocols::hw
+}  // namespace hw
+}  // namespace protocols

@@ -51,4 +51,5 @@ struct RecvData {
 using RecvResult = std::variant<Error, RecvData>;
 using SendResult = std::variant<Error, size_t>;
 
-} } // namespace protocols::fs
+}  // namespace fs
+}  // namespace protocols

@@ -1,18 +1,15 @@
 
-#include <memory>
-#include <iostream>
+#include "protocols/hw/client.hpp"
 
-#include <vector>
-
-#include <string.h>
-
-#include <frg/std_compat.hpp>
-
-#include <helix/ipc.hpp>
-#include <hw.bragi.hpp>
 #include <bragi/helpers-all.hpp>
 #include <bragi/helpers-std.hpp>
-#include "protocols/hw/client.hpp"
+#include <frg/std_compat.hpp>
+#include <helix/ipc.hpp>
+#include <hw.bragi.hpp>
+#include <iostream>
+#include <memory>
+#include <string.h>
+#include <vector>
 
 namespace protocols {
 namespace hw {
@@ -21,13 +18,13 @@ async::result<PciInfo> Device::getPciInfo() {
 	managarm::hw::GetPciInfoRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -39,9 +36,9 @@ async::result<PciInfo> Device::getPciInfo() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -49,31 +46,29 @@ async::result<PciInfo> Device::getPciInfo() {
 
 	assert(resp.error() == managarm::hw::Errors::SUCCESS);
 
-	PciInfo info{
-		.numMsis = resp.num_msis()
-	};
+	PciInfo info { .numMsis = resp.num_msis() };
 
-	for(size_t i = 0; i < resp.capabilities_size(); i++)
-		info.caps.push_back({resp.capabilities(i).type()});
+	for (size_t i = 0; i < resp.capabilities_size(); i++)
+		info.caps.push_back({ resp.capabilities(i).type() });
 
-	for(int i = 0; i < 6; i++) {
-		if(resp.bars(i).io_type() == managarm::hw::IoType::NO_BAR) {
+	for (int i = 0; i < 6; i++) {
+		if (resp.bars(i).io_type() == managarm::hw::IoType::NO_BAR) {
 			info.barInfo[i].ioType = IoType::kIoTypeNone;
-		}else if(resp.bars(i).io_type() == managarm::hw::IoType::PORT) {
+		} else if (resp.bars(i).io_type() == managarm::hw::IoType::PORT) {
 			info.barInfo[i].ioType = IoType::kIoTypePort;
-		}else if(resp.bars(i).io_type() == managarm::hw::IoType::MEMORY) {
+		} else if (resp.bars(i).io_type() == managarm::hw::IoType::MEMORY) {
 			info.barInfo[i].ioType = IoType::kIoTypeMemory;
-		}else{
+		} else {
 			throw std::runtime_error("Illegal IoType for io_type!\n");
 		}
 
-		if(resp.bars(i).host_type() == managarm::hw::IoType::NO_BAR) {
+		if (resp.bars(i).host_type() == managarm::hw::IoType::NO_BAR) {
 			info.barInfo[i].hostType = IoType::kIoTypeNone;
-		}else if(resp.bars(i).host_type() == managarm::hw::IoType::PORT) {
+		} else if (resp.bars(i).host_type() == managarm::hw::IoType::PORT) {
 			info.barInfo[i].hostType = IoType::kIoTypePort;
-		}else if(resp.bars(i).host_type() == managarm::hw::IoType::MEMORY) {
+		} else if (resp.bars(i).host_type() == managarm::hw::IoType::MEMORY) {
 			info.barInfo[i].hostType = IoType::kIoTypeMemory;
-		}else{
+		} else {
 			throw std::runtime_error("Illegal IoType for host_type!\n");
 		}
 		info.barInfo[i].address = resp.bars(i).address();
@@ -89,13 +84,13 @@ async::result<helix::UniqueDescriptor> Device::accessBar(int index) {
 	req.set_index(index);
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -107,10 +102,10 @@ async::result<helix::UniqueDescriptor> Device::accessBar(int index) {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail, pull_bar] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
-			helix_ng::pullDescriptor()
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
+	        helix_ng::pullDescriptor()
+	);
 
 	HEL_CHECK(recv_tail.error());
 	HEL_CHECK(pull_bar.error());
@@ -127,13 +122,13 @@ async::result<helix::UniqueDescriptor> Device::accessIrq() {
 	managarm::hw::AccessIrqRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -145,10 +140,10 @@ async::result<helix::UniqueDescriptor> Device::accessIrq() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail, pull_irq] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
-			helix_ng::pullDescriptor()
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
+	        helix_ng::pullDescriptor()
+	);
 
 	HEL_CHECK(recv_tail.error());
 	HEL_CHECK(pull_irq.error());
@@ -165,13 +160,13 @@ async::result<helix::UniqueDescriptor> Device::installMsi(int index) {
 	req.set_index(index);
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -183,10 +178,10 @@ async::result<helix::UniqueDescriptor> Device::installMsi(int index) {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail, pull_msi] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
-			helix_ng::pullDescriptor()
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
+	        helix_ng::pullDescriptor()
+	);
 
 	HEL_CHECK(recv_tail.error());
 	HEL_CHECK(pull_msi.error());
@@ -202,13 +197,13 @@ async::result<void> Device::claimDevice() {
 	managarm::hw::ClaimDeviceRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -220,9 +215,9 @@ async::result<void> Device::claimDevice() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -235,13 +230,13 @@ async::result<void> Device::enableBusIrq() {
 	managarm::hw::EnableBusIrqRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -253,9 +248,9 @@ async::result<void> Device::enableBusIrq() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -268,13 +263,13 @@ async::result<void> Device::enableMsi() {
 	managarm::hw::EnableMsiRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -286,9 +281,9 @@ async::result<void> Device::enableMsi() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -301,13 +296,13 @@ async::result<void> Device::enableBusmaster() {
 	managarm::hw::EnableBusmasterRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -319,9 +314,9 @@ async::result<void> Device::enableBusmaster() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -336,13 +331,13 @@ async::result<uint32_t> Device::loadPciSpace(size_t offset, unsigned int size) {
 	req.set_size(size);
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -354,9 +349,9 @@ async::result<uint32_t> Device::loadPciSpace(size_t offset, unsigned int size) {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -374,13 +369,13 @@ async::result<void> Device::storePciSpace(size_t offset, unsigned int size, uint
 	req.set_word(word);
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -392,9 +387,9 @@ async::result<void> Device::storePciSpace(size_t offset, unsigned int size, uint
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -403,20 +398,21 @@ async::result<void> Device::storePciSpace(size_t offset, unsigned int size, uint
 	assert(resp.error() == managarm::hw::Errors::SUCCESS);
 }
 
-async::result<uint32_t> Device::loadPciCapability(unsigned int index, size_t offset, unsigned int size) {
+async::result<uint32_t>
+Device::loadPciCapability(unsigned int index, size_t offset, unsigned int size) {
 	managarm::hw::LoadPciCapabilityRequest req;
 	req.set_index(index);
 	req.set_offset(offset);
 	req.set_size(size);
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -428,9 +424,9 @@ async::result<uint32_t> Device::loadPciCapability(unsigned int index, size_t off
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -445,13 +441,13 @@ async::result<FbInfo> Device::getFbInfo() {
 	managarm::hw::GetFbInfoRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -463,9 +459,9 @@ async::result<FbInfo> Device::getFbInfo() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	);
 
 	HEL_CHECK(recv_tail.error());
 
@@ -488,13 +484,13 @@ async::result<helix::UniqueDescriptor> Device::accessFbMemory() {
 	managarm::hw::AccessFbMemoryRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-			_lane,
-			helix_ng::offer(
-				helix_ng::want_lane,
-				helix_ng::sendBragiHeadOnly(req, frg::stl_allocator{}),
-				helix_ng::recvInline()
-			)
-		);
+	        _lane,
+	        helix_ng::offer(
+	                helix_ng::want_lane,
+	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	                helix_ng::recvInline()
+	        )
+	);
 
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -506,10 +502,10 @@ async::result<helix::UniqueDescriptor> Device::accessFbMemory() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail, pull_bar] = co_await helix_ng::exchangeMsgs(
-			offer.descriptor(),
-			helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
-			helix_ng::pullDescriptor()
-		);
+	        offer.descriptor(),
+	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size()),
+	        helix_ng::pullDescriptor()
+	);
 
 	HEL_CHECK(recv_tail.error());
 	HEL_CHECK(pull_bar.error());
@@ -522,5 +518,5 @@ async::result<helix::UniqueDescriptor> Device::accessFbMemory() {
 	co_return std::move(bar);
 }
 
-} } // namespace protocols::hw
-
+}  // namespace hw
+}  // namespace protocols

@@ -17,4 +17,4 @@ protected:
 extern GlobalInitEngine globalInitEngine;
 initgraph::Stage *getTaskingAvailableStage();
 
-} // namespace thor
+}  // namespace thor

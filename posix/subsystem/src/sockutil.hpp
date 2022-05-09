@@ -5,11 +5,10 @@
 // Helper class to build control messages.
 // TODO: Move this to an own file.
 struct CtrlBuilder {
-	CtrlBuilder(size_t max_size)
-	: _maxSize{max_size}, _offset{0} { }
+	CtrlBuilder(size_t max_size) : _maxSize { max_size }, _offset { 0 } {}
 
 	bool message(int layer, int type, size_t payload) {
-		if(_buffer.size() + CMSG_SPACE(payload) > _maxSize)
+		if (_buffer.size() + CMSG_SPACE(payload) > _maxSize)
 			return false;
 
 		_offset = _buffer.size();
@@ -33,9 +32,7 @@ struct CtrlBuilder {
 		_offset += sizeof(T);
 	}
 
-	std::vector<char> buffer() {
-		return std::move(_buffer);
-	}
+	std::vector<char> buffer() { return std::move(_buffer); }
 
 private:
 	std::vector<char> _buffer;

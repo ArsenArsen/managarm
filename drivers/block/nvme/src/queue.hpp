@@ -1,12 +1,12 @@
 #pragma once
 
-#include <arch/mem_space.hpp>
-#include <async/recurring-event.hpp>
-#include <async/queue.hpp>
-#include <frg/std_compat.hpp>
-
 #include "command.hpp"
 #include "spec.hpp"
+
+#include <arch/mem_space.hpp>
+#include <async/queue.hpp>
+#include <async/recurring-event.hpp>
+#include <frg/std_compat.hpp>
 
 struct Queue {
 	Queue(unsigned int index, unsigned int depth, arch::mem_space doorbells);
@@ -14,19 +14,13 @@ struct Queue {
 	void init();
 	async::detached run();
 
-	unsigned int getQueueId() const {
-		return qid_;
-	}
-	unsigned int getQueueDepth() const {
-		return depth_;
-	}
+	unsigned int getQueueId() const { return qid_; }
 
-	uintptr_t getCqPhysAddr() const {
-		return cqPhys_;
-	}
-	uintptr_t getSqPhysAddr() const {
-		return sqPhys_;
-	}
+	unsigned int getQueueDepth() const { return depth_; }
+
+	uintptr_t getCqPhysAddr() const { return cqPhys_; }
+
+	uintptr_t getSqPhysAddr() const { return sqPhys_; }
 
 	async::result<Command::Result> submitCommand(std::unique_ptr<Command> cmd);
 

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <memory>
+#include "usb.hpp"
 
 #include <arch/dma_structs.hpp>
 #include <async/result.hpp>
 #include <frg/expected.hpp>
-
-#include "usb.hpp"
+#include <memory>
 
 enum class UsbError {
 	none,
@@ -19,9 +18,14 @@ enum XferFlags {
 };
 
 struct ControlTransfer {
-	ControlTransfer(XferFlags flags, arch::dma_object_view<SetupPacket> setup,
-			arch::dma_buffer_view buffer)
-	: flags{flags}, setup{setup}, buffer{buffer} { }
+	ControlTransfer(
+	        XferFlags flags,
+	        arch::dma_object_view<SetupPacket> setup,
+	        arch::dma_buffer_view buffer
+	)
+	        : flags { flags }
+	        , setup { setup }
+	        , buffer { buffer } {}
 
 	XferFlags flags;
 	arch::dma_object_view<SetupPacket> setup;
@@ -30,8 +34,10 @@ struct ControlTransfer {
 
 struct InterruptTransfer {
 	InterruptTransfer(XferFlags flags, arch::dma_buffer_view buffer)
-	: flags{flags}, buffer{buffer},
-			allowShortPackets{false}, lazyNotification{false} { }
+	        : flags { flags }
+	        , buffer { buffer }
+	        , allowShortPackets { false }
+	        , lazyNotification { false } {}
 
 	XferFlags flags;
 	arch::dma_buffer_view buffer;
@@ -41,8 +47,10 @@ struct InterruptTransfer {
 
 struct BulkTransfer {
 	BulkTransfer(XferFlags flags, arch::dma_buffer_view buffer)
-	: flags{flags}, buffer{buffer},
-			allowShortPackets{false}, lazyNotification{false} { }
+	        : flags { flags }
+	        , buffer { buffer }
+	        , allowShortPackets { false }
+	        , lazyNotification { false } {}
 
 	XferFlags flags;
 	arch::dma_buffer_view buffer;
@@ -51,7 +59,10 @@ struct BulkTransfer {
 };
 
 enum class PipeType {
-	null, in, out, control
+	null,
+	in,
+	out,
+	control
 };
 
 // ----------------------------------------------------------------------------
@@ -67,7 +78,6 @@ public:
 	virtual async::result<frg::expected<UsbError, size_t>> transfer(InterruptTransfer info) = 0;
 	virtual async::result<frg::expected<UsbError, size_t>> transfer(BulkTransfer info) = 0;
 };
-
 
 struct Endpoint {
 	Endpoint(std::shared_ptr<EndpointData> state);
@@ -102,7 +112,6 @@ struct Interface {
 private:
 	std::shared_ptr<InterfaceData> _state;
 };
-
 
 // ----------------------------------------------------------------------------
 // ConfigurationData
@@ -140,7 +149,8 @@ public:
 	virtual arch::dma_pool *bufferPool() = 0;
 
 	virtual async::result<frg::expected<UsbError, std::string>> configurationDescriptor() = 0;
-	virtual async::result<frg::expected<UsbError, Configuration>> useConfiguration(int number) = 0;
+	virtual async::result<frg::expected<UsbError, Configuration>> useConfiguration(int number
+	) = 0;
 	virtual async::result<frg::expected<UsbError>> transfer(ControlTransfer info) = 0;
 };
 

@@ -1,27 +1,37 @@
-#include <cstring>
+#include "command.hpp"
+
 #include <cstdio>
+#include <cstring>
+#include <helix/memory.hpp>
 #include <inttypes.h>
 #include <unistd.h>
 
-#include <helix/memory.hpp>
-
-#include "command.hpp"
-
 namespace {
-	constexpr bool logCommands = false;
-}
+constexpr bool logCommands = false;
+}  // namespace
 
-Command::Command(uint64_t sector, size_t numSectors, size_t numBytes, void *buffer,
-		CommandType type) : sector_{sector}, numSectors_{numSectors}, numBytes_{numBytes},
-	buffer_{buffer}, type_{type}, event_{} {
-
+Command::Command(
+        uint64_t sector,
+        size_t numSectors,
+        size_t numBytes,
+        void *buffer,
+        CommandType type
+)
+        : sector_ { sector }
+        , numSectors_ { numSectors }
+        , numBytes_ { numBytes }
+        , buffer_ { buffer }
+        , type_ { type }
+        , event_ {} {
 	// TODO: Requests larger than 64k need to be split
 	assert(numBytes < 65536);
 
 	if (logCommands) {
 		printf("block/ahci: queueing %zu byte %s to %p at sector %" PRIu64 "\n",
-			numBytes, cmdTypeToString(type_),
-			reinterpret_cast<void *>(buffer), sector);
+		       numBytes,
+		       cmdTypeToString(type_),
+		       reinterpret_cast<void *>(buffer),
+		       sector);
 	}
 }
 
@@ -33,16 +43,16 @@ void Command::notifyCompletion() {
 	event_.raise();
 }
 
-void Command::prepare(commandTable& table, commandHeader& header) {
+void Command::prepare(commandTable &table, commandHeader &header) {
 	auto tablePhys = helix::ptrToPhysical(&table);
-	assert(tablePhys < std::numeric_limits<uint32_t>::max() &&
-			numSectors_ < std::numeric_limits<uint16_t>::max());
+	assert(tablePhys < std::numeric_limits<uint32_t>::max()
+	       && numSectors_ < std::numeric_limits<uint16_t>::max());
 
 	memset(&table, 0, sizeof(commandTable));
-	table.commandFis.fisType = 0x27; // Host to Device FIS
-	table.commandFis.info = 1 << 7; // Use command register, not control register
-	table.commandFis.command = 0; // Set below
-	table.commandFis.devHead = 1 << 6; // LBA bit
+	table.commandFis.fisType = 0x27;  // Host to Device FIS
+	table.commandFis.info = 1 << 7;  // Use command register, not control register
+	table.commandFis.command = 0;  // Set below
+	table.commandFis.devHead = 1 << 6;  // LBA bit
 	table.commandFis.lba0 = sector_ & 0xFF;
 	table.commandFis.lba1 = (sector_ >> 8) & 0xFF;
 	table.commandFis.lba2 = (sector_ >> 16) & 0xFF;
@@ -54,7 +64,7 @@ void Command::prepare(commandTable& table, commandHeader& header) {
 	auto numEntries = writeScatterGather_(table);
 
 	memset(&header, 0, sizeof(commandHeader));
-	header.configBytes[0] = sizeof(fisH2D) / 4; // Supply length in words
+	header.configBytes[0] = sizeof(fisH2D) / 4;  // Supply length in words
 	header.configBytes[1] = 0;
 	header.prdtLength = numEntries;
 	header.prdByteCount = 0;
@@ -62,23 +72,26 @@ void Command::prepare(commandTable& table, commandHeader& header) {
 	header.ctBaseUpper = 0;
 
 	switch (type_) {
-		case CommandType::read:
-			table.commandFis.command = 0x25; // READ DMA EXT
-			break;
-		case CommandType::write:
-			table.commandFis.command = 0x35; // WRITE DMA EXT
-			header.configBytes[0] |= 1 << 6; // Indicates we are writing
-			break;
-		case CommandType::identify:
-			table.commandFis.command = 0xEC; // IDENTIFY DEVICE
-			break;
-		default:
-			assert(!"unknown command type");
+	case CommandType::read:
+		table.commandFis.command = 0x25;  // READ DMA EXT
+		break;
+	case CommandType::write:
+		table.commandFis.command = 0x35;  // WRITE DMA EXT
+		header.configBytes[0] |= 1 << 6;  // Indicates we are writing
+		break;
+	case CommandType::identify:
+		table.commandFis.command = 0xEC;  // IDENTIFY DEVICE
+		break;
+	default:
+		assert(!"unknown command type");
 	}
 
 	if (logCommands) {
 		printf("block/ahci: submitting %zu byte %s to %p at sector %" PRIu64 "\n",
-				numBytes_, cmdTypeToString(type_), buffer_, sector_);
+		       numBytes_,
+		       cmdTypeToString(type_),
+		       buffer_,
+		       sector_);
 	}
 }
 
@@ -88,14 +101,14 @@ void Command::prepare(commandTable& table, commandHeader& header) {
  * and calling helPointerPhysical ensures that the pages are allocated and present
  * in the page tables. Hence, we know the buffer remains in memory during the DMA.
  */
-size_t Command::writeScatterGather_(commandTable& table) {
+size_t Command::writeScatterGather_(commandTable &table) {
 	// TODO: Grab the page size for each individual address
 	size_t pageSize = getpagesize();
 
 	size_t prdtIndex = 0;
 	auto addEntry = [&](uintptr_t phys, size_t bytesToWrite) {
-		assert(prdtIndex < commandTable::prdtEntries &&
-				phys < std::numeric_limits<uint32_t>::max() && !(phys & 1));
+		assert(prdtIndex < commandTable::prdtEntries
+		       && phys < std::numeric_limits<uint32_t>::max() && !(phys & 1));
 
 		table.prdts[prdtIndex++] = prdtEntry {
 			static_cast<uint32_t>(phys),
@@ -123,9 +136,9 @@ size_t Command::writeScatterGather_(commandTable& table) {
 	// Insert every page in the buffer into the scatter-gather list.
 	for (uintptr_t virt = virtStart; virt < virtEnd; virt += pageSize) {
 		uintptr_t phys = helix::addressToPhysical(virt);
-		
-		// TODO: As a small optimisation, we could accumulate into the previous entry if they
-		// happen to be physically contiguous.
+
+		// TODO: As a small optimisation, we could accumulate into the previous entry if
+		// they happen to be physically contiguous.
 		addEntry(phys, virtEnd - virt);
 	}
 

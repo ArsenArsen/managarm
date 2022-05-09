@@ -1,10 +1,10 @@
 #pragma once
 
+#include <experimental/optional>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <experimental/optional>
 #include <string>
 #include <vector>
 
@@ -62,4 +62,4 @@ struct Emulator {
 	char *chars;
 };
 
-} // namespace libterminal
+}  // namespace libterminal

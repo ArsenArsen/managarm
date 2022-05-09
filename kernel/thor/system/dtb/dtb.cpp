@@ -1,50 +1,44 @@
-#include <thor-internal/dtb/dtb.hpp>
-#include <thor-internal/debug.hpp>
-#include <thor-internal/main.hpp>
-#include <thor-internal/arch/paging.hpp>
-#include <frg/manual_box.hpp>
+#include <dtb.hpp>
 #include <eir/interface.hpp>
 #include <frg/hash.hpp>
-#include <dtb.hpp>
+#include <frg/manual_box.hpp>
+#include <thor-internal/arch/paging.hpp>
+#include <thor-internal/debug.hpp>
+#include <thor-internal/dtb/dtb.hpp>
+#include <thor-internal/main.hpp>
 
 namespace thor {
 
-static inline constexpr bool logNodeInfo = true;
+constexpr inline static bool logNodeInfo = true;
 
 initgraph::Stage *getDeviceTreeParsedStage() {
-	static initgraph::Stage s{&globalInitEngine, "dtb.tree-parsed"};
+	static initgraph::Stage s { &globalInitEngine, "dtb.tree-parsed" };
 	return &s;
 }
 
 extern "C" EirInfo *thorBootInfoPtr;
 
 namespace {
-	frg::manual_box<DeviceTree> dt;
+frg::manual_box<DeviceTree> dt;
 
-	frg::manual_box<
-		frg::hash_map<
-			uint32_t,
-			DeviceTreeNode *,
-			frg::hash<uint32_t>,
-			KernelAlloc
-		>
-	> phandles;
+frg::manual_box<frg::hash_map<uint32_t, DeviceTreeNode *, frg::hash<uint32_t>, KernelAlloc>>
+        phandles;
 
-	DeviceTreeNode *treeRoot;
+DeviceTreeNode *treeRoot;
 
-	auto parseStringList(const ::DeviceTreeProperty &prop) {
-		frg::vector<frg::string_view, KernelAlloc> list{*kernelAlloc};
+auto parseStringList(const ::DeviceTreeProperty &prop) {
+	frg::vector<frg::string_view, KernelAlloc> list { *kernelAlloc };
 
-		size_t i = 0;
-		while (i < prop.size()) {
-			frg::string_view sv{reinterpret_cast<const char *>(prop.data()) + i};
-			i += sv.size() + 1;
-			list.push_back(sv);
-		}
-
-		return list;
+	size_t i = 0;
+	while (i < prop.size()) {
+		frg::string_view sv { reinterpret_cast<const char *>(prop.data()) + i };
+		i += sv.size() + 1;
+		list.push_back(sv);
 	}
-} // namespace anonymous
+
+	return list;
+}
+}  // namespace
 
 void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 	name_ = dtNode.name();
@@ -53,7 +47,8 @@ void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 	if (auto p = dtNode.findProperty("phandle"); p) {
 		phandle_ = p->asU32();
 	} else if (auto p = dtNode.findProperty("linux,phandle"); p) {
-		infoLogger() << "thor: warning: node \"" << name() << "\" uses legacy \"linux,phandle\" property!" << frg::endlog;
+		infoLogger() << "thor: warning: node \"" << name()
+		             << "\" uses legacy \"linux,phandle\" property!" << frg::endlog;
 		phandle_ = p->asU32();
 	}
 
@@ -61,7 +56,7 @@ void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 		phandles->insert(phandle_, this);
 
 	for (auto prop : dtNode.properties()) {
-		frg::string_view pn{prop.name()};
+		frg::string_view pn { prop.name() };
 
 		if (pn == "model") {
 			model_ = reinterpret_cast<const char *>(prop.data());
@@ -84,13 +79,14 @@ void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 
 			size_t j = 0;
 			while (j < prop.size()) {
-				RegRange reg{};
+				RegRange reg {};
 
 				if (addrCells) {
 					if (addrCells == 3) {
 						reg.addrHi = prop.asPropArrayEntry(1, j);
 						reg.addrHiValid = true;
-						reg.addr = prop.asPropArrayEntry(addrCells - 1, j + 1);
+						reg.addr =
+						        prop.asPropArrayEntry(addrCells - 1, j + 1);
 						j += addrCells * 4;
 					} else {
 						reg.addr = prop.asPropArrayEntry(addrCells, j);
@@ -107,9 +103,10 @@ void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 			}
 		} else if (pn == "interrupts") {
 			// This is parsed by the interrupt controller node
-			irqData_ = {static_cast<const std::byte *>(prop.data()), prop.size()};
+			irqData_ = { static_cast<const std::byte *>(prop.data()), prop.size() };
 		} else if (pn == "interrupt-map") {
-			interruptMapRaw_ = {static_cast<const std::byte *>(prop.data()), prop.size()};
+			interruptMapRaw_ = { static_cast<const std::byte *>(prop.data()),
+				             prop.size() };
 		} else if (pn == "enable-method") {
 			auto methods = parseStringList(prop);
 
@@ -137,7 +134,7 @@ void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 
 	// Iterate again to parse things that depend on previously parsed properties
 	for (auto prop : dtNode.properties()) {
-		frg::string_view pn{prop.name()};
+		frg::string_view pn { prop.name() };
 
 		if (pn == "ranges") {
 			auto parentAddrCells = parent_->addressCells_;
@@ -146,7 +143,7 @@ void DeviceTreeNode::initializeWith(::DeviceTreeNode dtNode) {
 
 			size_t j = 0;
 			while (j < prop.size()) {
-				AddrTranslateRange reg{};
+				AddrTranslateRange reg {};
 				// PCI(e) buses have a 3 cell long child addresses
 				if (childAddrCells == 3) {
 					reg.childAddrHi = prop.asPropArrayEntry(1, j);
@@ -199,7 +196,7 @@ void DeviceTreeNode::finalizeInit() {
 	auto ipIt = phandles->find(interruptParentId_);
 	if (ipIt == phandles->end()) {
 		panicLogger() << "thor: node \"" << name() << "\" has an interrupt parent id "
-			<< interruptParentId_ << " but no such node exists" << frg::endlog;
+		              << interruptParentId_ << " but no such node exists" << frg::endlog;
 	} else {
 		interruptParent_ = ipIt->get<1>();
 	}
@@ -224,7 +221,7 @@ void DeviceTreeNode::finalizeInit() {
 		auto childAddrCells = addressCells_;
 		auto nexusInterruptCells = interruptCells_;
 
-		::DeviceTreeProperty prop{"", interruptMapRaw_};
+		::DeviceTreeProperty prop { "", interruptMapRaw_ };
 
 		size_t j = 0;
 		while (j < prop.size()) {
@@ -251,9 +248,8 @@ void DeviceTreeNode::finalizeInit() {
 			auto intParent = (*phandles)[phandle];
 			entry.interruptController = intParent;
 
-			auto parentAddrCells = intParent->hasAddressCells_
-				? intParent->addressCells_
-				: 0;
+			auto parentAddrCells =
+			        intParent->hasAddressCells_ ? intParent->addressCells_ : 0;
 			auto parentInterruptCells = intParent->interruptCells_;
 
 			assert(parentAddrCells < 3);
@@ -267,10 +263,7 @@ void DeviceTreeNode::finalizeInit() {
 		}
 	}
 
-	if (logNodeInfo &&
-			(irqs_.size()
-			 || reg_.size()
-			 || ranges_.size())) {
+	if (logNodeInfo && (irqs_.size() || reg_.size() || ranges_.size())) {
 		infoLogger() << "Node \"" << path() << "\" has the following:" << frg::endlog;
 
 		if (compatible_.size()) {
@@ -281,15 +274,15 @@ void DeviceTreeNode::finalizeInit() {
 		}
 
 		if (irqs_.size()) {
-			constexpr const char *polarityNames[] = {"null", "high", "low"};
-			constexpr const char *triggerNames[] = {"null", "edge", "level"};
+			constexpr const char *polarityNames[] = { "null", "high", "low" };
+			constexpr const char *triggerNames[] = { "null", "edge", "level" };
 
 			infoLogger() << "\t- interrupts:" << frg::endlog;
 			for (auto irq : irqs_) {
-				infoLogger() << "\t\t- ID: " << irq.id << ", polarity: "
-					<< polarityNames[(int)irq.polarity]
-					<< ", trigger: " << triggerNames[(int)irq.trigger]
-					<< frg::endlog;
+				infoLogger() << "\t\t- ID: " << irq.id
+				             << ", polarity: " << polarityNames[(int) irq.polarity]
+				             << ", trigger: " << triggerNames[(int) irq.trigger]
+				             << frg::endlog;
 			}
 		}
 
@@ -297,10 +290,12 @@ void DeviceTreeNode::finalizeInit() {
 			infoLogger() << "\t- resources:" << frg::endlog;
 			for (auto reg : reg_) {
 				if (reg.size)
-					infoLogger() << "\t\t- " << (void *)reg.addr << " - "
-						<< (void *)reg.size << " bytes" << frg::endlog;
+					infoLogger()
+					        << "\t\t- " << (void *) reg.addr << " - "
+					        << (void *) reg.size << " bytes" << frg::endlog;
 				else
-					infoLogger() << "\t\t- " << (void *)reg.addr << frg::endlog;
+					infoLogger()
+					        << "\t\t- " << (void *) reg.addr << frg::endlog;
 			}
 		}
 
@@ -311,30 +306,43 @@ void DeviceTreeNode::finalizeInit() {
 					bool pref = range.childAddrHi & (1 << 30);
 					uint8_t type = (range.childAddrHi >> 24) & 0b11;
 
-					constexpr const char *typeNames[] = {"config", "I/O", "32-bit memory", "64-bit memory"};
+					constexpr const char *typeNames[] = { "config",
+						                              "I/O",
+						                              "32-bit memory",
+						                              "64-bit memory" };
 
-					infoLogger() << "\t\t- child (" << (pref ? "" : "non-")
-						<< "prefetchable, " << typeNames[type] << ") "
-						<< (void *)range.childAddr << " translates to host "
-						<< (void *)range.parentAddr << " - "
-						<< (void *)range.size << " bytes" << frg::endlog;
+					infoLogger()
+					        << "\t\t- child (" << (pref ? "" : "non-")
+					        << "prefetchable, " << typeNames[type] << ") "
+					        << (void *) range.childAddr
+					        << " translates to host "
+					        << (void *) range.parentAddr << " - "
+					        << (void *) range.size << " bytes" << frg::endlog;
 				} else {
-					infoLogger() << "\t\t- child " << (void *)range.childAddr << " translates to host "
-						<< (void *)range.parentAddr << " - "
-						<< (void *)range.size << " bytes" << frg::endlog;
+					infoLogger()
+					        << "\t\t- child " << (void *) range.childAddr
+					        << " translates to host "
+					        << (void *) range.parentAddr << " - "
+					        << (void *) range.size << " bytes" << frg::endlog;
 				}
 			}
 		}
 
 		if (interruptMap_.size()) {
-			constexpr const char *pciPins[] = {"null", "#INTA", "#INTB", "#INTC", "#INTD"};
+			constexpr const char *pciPins[] = { "null",
+				                            "#INTA",
+				                            "#INTB",
+				                            "#INTC",
+				                            "#INTD" };
 
 			infoLogger() << "\t- interrupt mappings:" << frg::endlog;
 			for (auto ent : interruptMap_) {
 				if (ent.childAddrHiValid && isCompatible(dtPciCompatible)) {
-					infoLogger() << "\t\t- " << pciPins[ent.childIrq] << " of "
-						<< frg::hex_fmt{ent.childAddrHi} << " to " << ent.parentIrq.id << " of "
-						<< ent.interruptController->path() << frg::endlog;
+					infoLogger()
+					        << "\t\t- " << pciPins[ent.childIrq] << " of "
+					        << frg::hex_fmt { ent.childAddrHi } << " to "
+					        << ent.parentIrq.id << " of "
+					        << ent.interruptController->path() << frg::endlog;
 				}
 			}
 		}
@@ -346,7 +354,7 @@ void DeviceTreeNode::finalizeInit() {
 }
 
 auto DeviceTreeNode::parseIrq_(::DeviceTreeProperty *prop, size_t i) -> DeviceIrq {
-	DeviceIrq irq{};
+	DeviceIrq irq {};
 
 	bool isPPI = prop->asU32(i);
 	uint32_t rawId = prop->asU32(i + 4);
@@ -358,28 +366,27 @@ auto DeviceTreeNode::parseIrq_(::DeviceTreeProperty *prop, size_t i) -> DeviceIr
 		irq.id = rawId + 32;
 
 	switch (flags & 0xF) {
-		case 1:
-			irq.polarity = Polarity::high;
-			irq.trigger = TriggerMode::edge;
-			break;
-		case 2:
-			irq.polarity = Polarity::low;
-			irq.trigger = TriggerMode::edge;
-			break;
-		case 4:
-			irq.polarity = Polarity::high;
-			irq.trigger = TriggerMode::level;
-			break;
-		case 8:
-			irq.polarity = Polarity::low;
-			irq.trigger = TriggerMode::level;
-			break;
-		default:
-			infoLogger() << "thor: Illegal IRQ flags " << (flags & 0xF)
-				<< " found when parsing IRQ property"
-				<< frg::endlog;
-			irq.polarity = Polarity::null;
-			irq.trigger = TriggerMode::null;
+	case 1:
+		irq.polarity = Polarity::high;
+		irq.trigger = TriggerMode::edge;
+		break;
+	case 2:
+		irq.polarity = Polarity::low;
+		irq.trigger = TriggerMode::edge;
+		break;
+	case 4:
+		irq.polarity = Polarity::high;
+		irq.trigger = TriggerMode::level;
+		break;
+	case 8:
+		irq.polarity = Polarity::low;
+		irq.trigger = TriggerMode::level;
+		break;
+	default:
+		infoLogger() << "thor: Illegal IRQ flags " << (flags & 0xF)
+		             << " found when parsing IRQ property" << frg::endlog;
+		irq.polarity = Polarity::null;
+		irq.trigger = TriggerMode::null;
 	}
 
 	irq.ppiCpuMask = isPPI ? ((flags >> 8) & 0xFF) : 0;
@@ -387,15 +394,16 @@ auto DeviceTreeNode::parseIrq_(::DeviceTreeProperty *prop, size_t i) -> DeviceIr
 	return irq;
 }
 
-auto DeviceTreeNode::parseIrqs_(frg::span<const std::byte> data) -> frg::vector<DeviceIrq, KernelAlloc> {
-	frg::vector<DeviceIrq, KernelAlloc> ret{*kernelAlloc};
+auto DeviceTreeNode::parseIrqs_(frg::span<const std::byte> data)
+        -> frg::vector<DeviceIrq, KernelAlloc> {
+	frg::vector<DeviceIrq, KernelAlloc> ret { *kernelAlloc };
 
-	::DeviceTreeProperty prop{"", data};
+	::DeviceTreeProperty prop { "", data };
 
 	// We only support GIC irqs for now
 	if (!isCompatible(dtGicCompatible)) {
 		infoLogger() << "thor: warning: Skipping parsing IRQs using node \"" << path()
-			<< "\", it's not compatible with the GIC" << frg::endlog;
+		             << "\", it's not compatible with the GIC" << frg::endlog;
 		return ret;
 	}
 
@@ -411,7 +419,7 @@ auto DeviceTreeNode::parseIrqs_(frg::span<const std::byte> data) -> frg::vector<
 }
 
 void DeviceTreeNode::generatePath_() {
-	frg::vector<frg::string_view, KernelAlloc> components{*kernelAlloc};
+	frg::vector<frg::string_view, KernelAlloc> components { *kernelAlloc };
 
 	auto p = this;
 	while (p) {
@@ -428,7 +436,7 @@ void DeviceTreeNode::generatePath_() {
 
 uint64_t DeviceTreeNode::translateAddress(uint64_t addr) const {
 	// We only handle simple bus address translation
-	if (!isCompatible<1>({"simple-bus"}))
+	if (!isCompatible<1>({ "simple-bus" }))
 		return addr;
 
 	// This node has no translation table
@@ -439,9 +447,8 @@ uint64_t DeviceTreeNode::translateAddress(uint64_t addr) const {
 		if (addr >= tr.childAddr && addr <= (tr.childAddr + tr.size))
 			return tr.parentAddr + (addr - tr.childAddr);
 
-	panicLogger() << "thor: address " << (void *)addr
-		<< " doesn't fall into any of \""
-		<< path() << "\"'s memory ranges" << frg::endlog;
+	panicLogger() << "thor: address " << (void *) addr << " doesn't fall into any of \""
+	              << path() << "\"'s memory ranges" << frg::endlog;
 	__builtin_unreachable();
 }
 
@@ -478,57 +485,57 @@ DeviceTreeNode *getDeviceTreeRoot() {
 	return treeRoot;
 }
 
-static initgraph::Task initTablesTask{&globalInitEngine, "dtb.parse-dtb",
-	initgraph::Entails{getDeviceTreeParsedStage()},
+static initgraph::Task initTablesTask {
+	&globalInitEngine,
+	"dtb.parse-dtb",
+	initgraph::Entails { getDeviceTreeParsedStage() },
 	[] {
-		size_t dtbPageOff = thorBootInfoPtr->dtbPtr & (kPageSize - 1);
-		size_t dtbSize = (thorBootInfoPtr->dtbSize + dtbPageOff + kPageSize - 1) & ~(kPageSize - 1);
+	        size_t dtbPageOff = thorBootInfoPtr->dtbPtr & (kPageSize - 1);
+	        size_t dtbSize =
+	                (thorBootInfoPtr->dtbSize + dtbPageOff + kPageSize - 1) & ~(kPageSize - 1);
 
-		auto ptr = KernelVirtualMemory::global().allocate(dtbSize);
-		uintptr_t va = reinterpret_cast<uintptr_t>(ptr);
-		uintptr_t pa = thorBootInfoPtr->dtbPtr & ~(kPageSize - 1);
+	        auto ptr = KernelVirtualMemory::global().allocate(dtbSize);
+	        uintptr_t va = reinterpret_cast<uintptr_t>(ptr);
+	        uintptr_t pa = thorBootInfoPtr->dtbPtr & ~(kPageSize - 1);
 
-		for (size_t i = 0; i < dtbSize; i += kPageSize) {
-			KernelPageSpace::global().mapSingle4k(va, pa,
-				page_access::write, CachingMode::null);
-			va += kPageSize;
-			pa += kPageSize;
-		}
+	        for (size_t i = 0; i < dtbSize; i += kPageSize) {
+		        KernelPageSpace::global()
+		                .mapSingle4k(va, pa, page_access::write, CachingMode::null);
+		        va += kPageSize;
+		        pa += kPageSize;
+	        }
 
-		ptr = reinterpret_cast<void *>(
-				reinterpret_cast<uintptr_t>(ptr) + dtbPageOff);
+	        ptr = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) + dtbPageOff);
 
-		dt.initialize(ptr);
-		phandles.initialize(frg::hash<uint32_t>{}, *kernelAlloc);
+	        dt.initialize(ptr);
+	        phandles.initialize(frg::hash<uint32_t> {}, *kernelAlloc);
 
-		treeRoot = frg::construct<DeviceTreeNode>(*kernelAlloc, nullptr);
-		treeRoot->initializeWith(dt->rootNode());
+	        treeRoot = frg::construct<DeviceTreeNode>(*kernelAlloc, nullptr);
+	        treeRoot->initializeWith(dt->rootNode());
 
-		infoLogger() << "thor: Booting on \"" << treeRoot->model() << "\"" << frg::endlog;
+	        infoLogger() << "thor: Booting on \"" << treeRoot->model() << "\"" << frg::endlog;
 
-		struct {
-			DeviceTreeNode *curr;
+	        struct {
+		        DeviceTreeNode *curr;
 
-			void push(::DeviceTreeNode node) {
-				auto n = frg::construct<DeviceTreeNode>(*kernelAlloc, curr);
+		        void push(::DeviceTreeNode node) {
+			        auto n = frg::construct<DeviceTreeNode>(*kernelAlloc, curr);
 
-				n->initializeWith(node);
-				curr->attachChild(node.name(), n);
-				curr = n;
-			}
+			        n->initializeWith(node);
+			        curr->attachChild(node.name(), n);
+			        curr = n;
+		        }
 
-			void pop() {
-				curr = curr->parent();
-			}
-		} walker{treeRoot};
+		        void pop() { curr = curr->parent(); }
+	        } walker { treeRoot };
 
-		dt->rootNode().walkChildren(walker);
+	        dt->rootNode().walkChildren(walker);
 
-		// Initialize interruptParent etc
-		// This can't be done above because the interrupt parent may not
-		// have been discovered yet
-		treeRoot->finalizeInit();
+	        // Initialize interruptParent etc
+	        // This can't be done above because the interrupt parent may not
+	        // have been discovered yet
+	        treeRoot->finalizeInit();
 	}
 };
 
-} // namespace thor
+}  // namespace thor

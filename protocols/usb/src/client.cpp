@@ -1,14 +1,13 @@
 
-#include <memory>
-#include <iostream>
+#include "protocols/usb/client.hpp"
 
-#include <string.h>
+#include "usb.pb.h"
 
 #include <async/result.hpp>
 #include <helix/ipc.hpp>
-
-#include "usb.pb.h"
-#include "protocols/usb/client.hpp"
+#include <iostream>
+#include <memory>
+#include <string.h>
 
 namespace protocols {
 namespace usb {
@@ -16,8 +15,7 @@ namespace usb {
 namespace {
 
 struct DeviceState final : DeviceData {
-	DeviceState(helix::UniqueLane lane)
-	:_lane(std::move(lane)) { }
+	DeviceState(helix::UniqueLane lane) : _lane(std::move(lane)) {}
 
 	arch::dma_pool *setupPool() override;
 	arch::dma_pool *bufferPool() override;
@@ -31,8 +29,7 @@ private:
 };
 
 struct ConfigurationState final : ConfigurationData {
-	ConfigurationState(helix::UniqueLane lane)
-	:_lane(std::move(lane)) { }
+	ConfigurationState(helix::UniqueLane lane) : _lane(std::move(lane)) {}
 
 	async::result<frg::expected<UsbError, Interface>>
 	useInterface(int number, int alternative) override;
@@ -42,8 +39,7 @@ private:
 };
 
 struct InterfaceState final : InterfaceData {
-	InterfaceState(helix::UniqueLane lane)
-	:_lane(std::move(lane)) { }
+	InterfaceState(helix::UniqueLane lane) : _lane(std::move(lane)) {}
 
 	async::result<frg::expected<UsbError, Endpoint>>
 	getEndpoint(PipeType type, int number) override;
@@ -52,11 +48,9 @@ private:
 	helix::UniqueLane _lane;
 };
 
-
 struct EndpointState final : EndpointData {
-	EndpointState(helix::UniqueLane lane)
-	:_lane(std::move(lane)) { }
-	
+	EndpointState(helix::UniqueLane lane) : _lane(std::move(lane)) {}
+
 	async::result<frg::expected<UsbError>> transfer(ControlTransfer info) override;
 	async::result<frg::expected<UsbError, size_t>> transfer(InterruptTransfer info) override;
 	async::result<frg::expected<UsbError, size_t>> transfer(BulkTransfer info) override;
@@ -83,11 +77,14 @@ async::result<frg::expected<UsbError, std::string>> DeviceState::configurationDe
 	req.set_req_type(managarm::usb::CntReqType::GET_CONFIGURATION_DESCRIPTOR);
 
 	auto ser = req.SerializeAsString();
-	auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-			helix::action(&offer, kHelItemAncillary),
-			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-			helix::action(&recv_resp, kHelItemChain),
-			helix::action(&recv_data));
+	auto &&transmit = helix::submitAsync(
+	        _lane,
+	        helix::Dispatcher::global(),
+	        helix::action(&offer, kHelItemAncillary),
+	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	        helix::action(&recv_resp, kHelItemChain),
+	        helix::action(&recv_data)
+	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -114,11 +111,14 @@ async::result<frg::expected<UsbError, Configuration>> DeviceState::useConfigurat
 	req.set_number(number);
 
 	auto ser = req.SerializeAsString();
-	auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-			helix::action(&offer, kHelItemAncillary),
-			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-			helix::action(&recv_resp, kHelItemChain),
-			helix::action(&pull_lane));
+	auto &&transmit = helix::submitAsync(
+	        _lane,
+	        helix::Dispatcher::global(),
+	        helix::action(&offer, kHelItemAncillary),
+	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	        helix::action(&recv_resp, kHelItemChain),
+	        helix::action(&pull_lane)
+	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -134,11 +134,11 @@ async::result<frg::expected<UsbError, Configuration>> DeviceState::useConfigurat
 }
 
 async::result<frg::expected<UsbError>> DeviceState::transfer(ControlTransfer info) {
-	if(info.flags == kXferToDevice) {
+	if (info.flags == kXferToDevice) {
 		throw std::runtime_error("xfer to device not implemented");
-	}else{
+	} else {
 		assert(info.flags == kXferToHost);
-	
+
 		helix::Offer offer;
 		helix::SendBuffer send_req;
 		helix::SendBuffer send_setup;
@@ -148,14 +148,22 @@ async::result<frg::expected<UsbError>> DeviceState::transfer(ControlTransfer inf
 		managarm::usb::CntRequest req;
 		req.set_req_type(managarm::usb::CntReqType::TRANSFER_TO_HOST);
 		req.set_length(info.buffer.size());
-		
+
 		auto ser = req.SerializeAsString();
-		auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-				helix::action(&offer, kHelItemAncillary),
-				helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-				helix::action(&send_setup, info.setup.data(), sizeof(SetupPacket), kHelItemChain),
-				helix::action(&recv_resp, kHelItemChain),
-				helix::action(&recv_data, info.buffer.data(), info.buffer.size()));
+		auto &&transmit = helix::submitAsync(
+		        _lane,
+		        helix::Dispatcher::global(),
+		        helix::action(&offer, kHelItemAncillary),
+		        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		        helix::action(
+		                &send_setup,
+		                info.setup.data(),
+		                sizeof(SetupPacket),
+		                kHelItemChain
+		        ),
+		        helix::action(&recv_resp, kHelItemChain),
+		        helix::action(&recv_data, info.buffer.data(), info.buffer.size())
+		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -183,17 +191,20 @@ ConfigurationState::useInterface(int number, int alternative) {
 	req.set_alternative(alternative);
 
 	auto ser = req.SerializeAsString();
-	auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-			helix::action(&offer, kHelItemAncillary),
-			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-			helix::action(&recv_resp, kHelItemChain),
-			helix::action(&pull_lane));
+	auto &&transmit = helix::submitAsync(
+	        _lane,
+	        helix::Dispatcher::global(),
+	        helix::action(&offer, kHelItemAncillary),
+	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	        helix::action(&recv_resp, kHelItemChain),
+	        helix::action(&pull_lane)
+	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
 	HEL_CHECK(recv_resp.error());
 	HEL_CHECK(pull_lane.error());
-	
+
 	managarm::usb::SvrResponse resp;
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 	assert(resp.error() == managarm::usb::Errors::SUCCESS);
@@ -215,17 +226,20 @@ InterfaceState::getEndpoint(PipeType type, int number) {
 	req.set_number(number);
 
 	auto ser = req.SerializeAsString();
-	auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-			helix::action(&offer, kHelItemAncillary),
-			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-			helix::action(&recv_resp, kHelItemChain),
-			helix::action(&pull_lane));
+	auto &&transmit = helix::submitAsync(
+	        _lane,
+	        helix::Dispatcher::global(),
+	        helix::action(&offer, kHelItemAncillary),
+	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	        helix::action(&recv_resp, kHelItemChain),
+	        helix::action(&pull_lane)
+	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
 	HEL_CHECK(recv_resp.error());
 	HEL_CHECK(pull_lane.error());
-	
+
 	managarm::usb::SvrResponse resp;
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 	assert(resp.error() == managarm::usb::Errors::SUCCESS);
@@ -239,11 +253,11 @@ async::result<frg::expected<UsbError>> EndpointState::transfer(ControlTransfer) 
 }
 
 async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(InterruptTransfer info) {
-	if(info.flags == kXferToDevice) {
+	if (info.flags == kXferToDevice) {
 		throw std::runtime_error("xfer to device not implemented");
-	}else{
+	} else {
 		assert(info.flags == kXferToHost);
-	
+
 		helix::Offer offer;
 		helix::SendBuffer send_req;
 		helix::RecvInline recv_resp;
@@ -256,11 +270,14 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(Interrupt
 		req.set_lazy_notification(info.lazyNotification);
 
 		auto ser = req.SerializeAsString();
-		auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-				helix::action(&offer, kHelItemAncillary),
-				helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-				helix::action(&recv_resp, kHelItemChain),
-				helix::action(&recv_data, info.buffer.data(), info.buffer.size()));
+		auto &&transmit = helix::submitAsync(
+		        _lane,
+		        helix::Dispatcher::global(),
+		        helix::action(&offer, kHelItemAncillary),
+		        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		        helix::action(&recv_resp, kHelItemChain),
+		        helix::action(&recv_data, info.buffer.data(), info.buffer.size())
+		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -275,10 +292,10 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(Interrupt
 }
 
 async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTransfer info) {
-	if(info.flags == kXferToDevice) {
+	if (info.flags == kXferToDevice) {
 		assert(info.flags == kXferToDevice);
 		assert(!info.allowShortPackets);
-	
+
 		helix::Offer offer;
 		helix::SendBuffer send_req;
 		helix::SendBuffer send_data;
@@ -288,13 +305,21 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTrans
 		req.set_req_type(managarm::usb::CntReqType::BULK_TRANSFER_TO_DEVICE);
 		req.set_length(info.buffer.size());
 		req.set_lazy_notification(info.lazyNotification);
-		
+
 		auto ser = req.SerializeAsString();
-		auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-				helix::action(&offer, kHelItemAncillary),
-				helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-				helix::action(&send_data, info.buffer.data(), info.buffer.size(), kHelItemChain),
-				helix::action(&recv_resp));
+		auto &&transmit = helix::submitAsync(
+		        _lane,
+		        helix::Dispatcher::global(),
+		        helix::action(&offer, kHelItemAncillary),
+		        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		        helix::action(
+		                &send_data,
+		                info.buffer.data(),
+		                info.buffer.size(),
+		                kHelItemChain
+		        ),
+		        helix::action(&recv_resp)
+		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -305,9 +330,9 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTrans
 		resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 		assert(resp.error() == managarm::usb::Errors::SUCCESS);
 		co_return resp.size();
-	}else{
+	} else {
 		assert(info.flags == kXferToHost);
-	
+
 		helix::Offer offer;
 		helix::SendBuffer send_req;
 		helix::RecvInline recv_resp;
@@ -318,13 +343,16 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTrans
 		req.set_length(info.buffer.size());
 		req.set_allow_short(info.allowShortPackets);
 		req.set_lazy_notification(info.lazyNotification);
-		
+
 		auto ser = req.SerializeAsString();
-		auto &&transmit = helix::submitAsync(_lane, helix::Dispatcher::global(),
-				helix::action(&offer, kHelItemAncillary),
-				helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-				helix::action(&recv_resp, kHelItemChain),
-				helix::action(&recv_data, info.buffer.data(), info.buffer.size()));
+		auto &&transmit = helix::submitAsync(
+		        _lane,
+		        helix::Dispatcher::global(),
+		        helix::action(&offer, kHelItemAncillary),
+		        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		        helix::action(&recv_resp, kHelItemChain),
+		        helix::action(&recv_data, info.buffer.data(), info.buffer.size())
+		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -338,12 +366,11 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTrans
 	}
 }
 
-
-} // anonymous namespace
+}  // anonymous namespace
 
 Device connect(helix::UniqueLane lane) {
 	return Device(std::make_shared<DeviceState>(std::move(lane)));
 }
 
-} } // namespace protocols::usb
-
+}  // namespace usb
+}  // namespace protocols

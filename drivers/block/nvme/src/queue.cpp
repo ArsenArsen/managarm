@@ -1,12 +1,18 @@
+#include "queue.hpp"
+
+#include "spec.hpp"
+
 #include <arch/bit.hpp>
 #include <helix/ipc.hpp>
 #include <helix/memory.hpp>
 
-#include "queue.hpp"
-#include "spec.hpp"
-
 Queue::Queue(unsigned int qid, unsigned int depth, arch::mem_space doorbells)
-	: qid_(qid), depth_(depth), doorbells_(doorbells), sqTail_(0), cqHead_(0), cqPhase_(1) {
+        : qid_(qid)
+        , depth_(depth)
+        , doorbells_(doorbells)
+        , sqTail_(0)
+        , cqHead_(0)
+        , cqPhase_(1) {
 	queuedCmds_.resize(depth);
 }
 
@@ -18,16 +24,30 @@ void Queue::init() {
 	HelHandle memory;
 	void *window;
 	HEL_CHECK(helAllocateMemory(cqSize, kHelAllocContinuous, nullptr, &memory));
-	HEL_CHECK(helMapMemory(memory, kHelNullHandle, nullptr,
-						   0, cqSize, kHelMapProtRead | kHelMapProtWrite, &window));
+	HEL_CHECK(helMapMemory(
+	        memory,
+	        kHelNullHandle,
+	        nullptr,
+	        0,
+	        cqSize,
+	        kHelMapProtRead | kHelMapProtWrite,
+	        &window
+	));
 	HEL_CHECK(helCloseDescriptor(kHelThisUniverse, memory));
 
 	cqes_ = reinterpret_cast<spec::CompletionEntry *>(window);
 	memset(cqes_, 0, cqSize);
 
 	HEL_CHECK(helAllocateMemory(sqSize, kHelAllocContinuous, nullptr, &memory));
-	HEL_CHECK(helMapMemory(memory, kHelNullHandle, nullptr,
-						   0, sqSize, kHelMapProtRead | kHelMapProtWrite, &window));
+	HEL_CHECK(helMapMemory(
+	        memory,
+	        kHelNullHandle,
+	        nullptr,
+	        0,
+	        sqSize,
+	        kHelMapProtRead | kHelMapProtWrite,
+	        &window
+	));
 	HEL_CHECK(helCloseDescriptor(kHelThisUniverse, memory));
 
 	sqCmds_ = window;
@@ -74,7 +94,7 @@ int Queue::handleIrq() {
 	commandsInFlight_ -= found;
 
 	if (found)
-		doorbells_.store(arch::scalar_register<uint32_t>{0x4}, cqHead_);
+		doorbells_.store(arch::scalar_register<uint32_t> { 0x4 }, cqHead_);
 
 	return found;
 }
@@ -105,12 +125,12 @@ async::result<void> Queue::submitCommandToDevice(std::unique_ptr<Command> cmd) {
 	auto slot = co_await findFreeSlot();
 
 	auto &cmdBuf = cmd->getCommandBuffer();
-	cmdBuf.common.commandId = (uint16_t)slot;
+	cmdBuf.common.commandId = (uint16_t) slot;
 
-	memcpy((uint8_t *)sqCmds_ + (sqTail_ << 6), &cmdBuf, sizeof(spec::Command));
+	memcpy((uint8_t *) sqCmds_ + (sqTail_ << 6), &cmdBuf, sizeof(spec::Command));
 	if (++sqTail_ == depth_)
 		sqTail_ = 0;
-	doorbells_.store(arch::scalar_register<uint32_t>{0}, sqTail_);
+	doorbells_.store(arch::scalar_register<uint32_t> { 0 }, sqTail_);
 
 	queuedCmds_[slot] = std::move(cmd);
 	commandsInFlight_++;

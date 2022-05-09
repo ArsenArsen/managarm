@@ -1,29 +1,25 @@
 #include "udp4.hpp"
 
-#include "ip4.hpp"
 #include "checksum.hpp"
+#include "ip4.hpp"
 
-#include <async/basic.hpp>
-#include <async/result.hpp>
-#include <async/queue.hpp>
 #include <arch/bit.hpp>
-#include <protocols/fs/server.hpp>
+#include <arpa/inet.h>
+#include <async/basic.hpp>
+#include <async/queue.hpp>
+#include <async/result.hpp>
 #include <cstring>
 #include <iomanip>
+#include <netinet/ip.h>
+#include <protocols/fs/server.hpp>
 #include <random>
 #include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/ip.h>
 
 namespace {
 struct stl_allocator {
-	void *allocate(size_t size) {
-		return operator new(size);
-	}
+	void *allocate(size_t size) { return operator new(size); }
 
-	void deallocate(void *p, size_t) {
-		return operator delete(p);
-	}
+	void deallocate(void *p, size_t) { return operator delete(p); }
 };
 
 template<typename T>
@@ -46,7 +42,7 @@ struct PseudoHeader {
 		maybeFlip(len);
 	}
 };
-} // namespace
+}  // namespace
 
 struct Udp {
 	struct Header {
@@ -54,7 +50,7 @@ struct Udp {
 		uint16_t dst;
 		uint16_t len;
 		uint16_t chk;
-	
+
 		void ensureEndian() {
 			maybeFlip(src);
 			maybeFlip(dst);
@@ -62,11 +58,10 @@ struct Udp {
 			maybeFlip(chk);
 		}
 	} header;
+
 	static_assert(sizeof(header) == 8, "udp header size wrong");
 
-	arch::dma_buffer_view payload() const {
-		return packet->payload().subview(sizeof(header));
-	}
+	arch::dma_buffer_view payload() const { return packet->payload().subview(sizeof(header)); }
 
 	bool parse(smarter::shared_ptr<const Ip4Packet> packet) {
 		Checksum chk;
@@ -105,8 +100,7 @@ Endpoint &Endpoint::operator=(struct sockaddr_in sa) {
 	using arch::convert_endian;
 	using arch::endian;
 	port = convert_endian<endian::big, endian::native>(sa.sin_port);
-	addr = convert_endian<endian::big,
-	     endian::native>(sa.sin_addr.s_addr);
+	addr = convert_endian<endian::big, endian::native>(sa.sin_addr.s_addr);
 	return *this;
 }
 
@@ -114,7 +108,6 @@ void Endpoint::ensureEndian() {
 	maybeFlip(addr);
 	maybeFlip(port);
 }
-
 
 bool operator<(const Endpoint &l, const Endpoint &r) {
 	return std::tie(l.port, l.addr) < std::tie(r.port, r.addr);
@@ -133,16 +126,14 @@ auto checkAddress(const void *addr_ptr, size_t addr_len, Endpoint &e) {
 	e = addr;
 	return protocols::fs::Error::none;
 }
-} // namespace
+}  // namespace
 
 using namespace protocols::fs;
 
 struct Udp4Socket {
 	Udp4Socket(Udp4 *parent) : parent_(parent) {}
 
-	~Udp4Socket() {
-		parent_->unbind(local_);
-	}
+	~Udp4Socket() { parent_->unbind(local_); }
 
 	static auto make_socket(Udp4 *parent) {
 		auto s = smarter::make_shared<Udp4Socket>(parent);
@@ -150,19 +141,17 @@ struct Udp4Socket {
 		return s;
 	}
 
-	static async::result<protocols::fs::Error> connect(void* obj,
-			const char *creds,
-			const void *addr_ptr, size_t addr_size) {
+	static async::result<protocols::fs::Error>
+	connect(void *obj, const char *creds, const void *addr_ptr, size_t addr_size) {
 		auto self = static_cast<Udp4Socket *>(obj);
 		Endpoint remote;
 
 		if (auto e = checkAddress(addr_ptr, addr_size, remote);
-			e != protocols::fs::Error::none) {
+		    e != protocols::fs::Error::none) {
 			co_return e;
 		}
 
-		if (self->local_.port == 0
-				&& !self->bindAvailable()) {
+		if (self->local_.port == 0 && !self->bindAvailable()) {
 			std::cout << "netserver: no source port" << std::endl;
 			co_return protocols::fs::Error::addressNotAvailable;
 		}
@@ -176,9 +165,8 @@ struct Udp4Socket {
 		co_return protocols::fs::Error::none;
 	}
 
-	static async::result<protocols::fs::Error> bind(void* obj,
-			const char *creds,
-			const void *addr_ptr, size_t addr_size) {
+	static async::result<protocols::fs::Error>
+	bind(void *obj, const char *creds, const void *addr_ptr, size_t addr_size) {
 		auto self = static_cast<Udp4Socket *>(obj);
 		Endpoint local;
 
@@ -187,7 +175,7 @@ struct Udp4Socket {
 		}
 
 		if (auto e = checkAddress(addr_ptr, addr_size, local);
-			e != protocols::fs::Error::none) {
+		    e != protocols::fs::Error::none) {
 			co_return e;
 		}
 
@@ -215,10 +203,15 @@ struct Udp4Socket {
 		co_return protocols::fs::Error::none;
 	}
 
-	static async::result<RecvResult> recvmsg(void *obj,
-			const char *creds,
-			uint32_t flags, void *data, size_t len,
-			void *addr_buf, size_t addr_size, size_t max_ctrl_len) {
+	static async::result<RecvResult>
+	recvmsg(void *obj,
+	        const char *creds,
+	        uint32_t flags,
+	        void *data,
+	        size_t len,
+	        void *addr_buf,
+	        size_t addr_size,
+	        size_t max_ctrl_len) {
 		using arch::convert_endian;
 		using arch::endian;
 		auto self = static_cast<Udp4Socket *>(obj);
@@ -229,20 +222,22 @@ struct Udp4Socket {
 		sockaddr_in addr {
 			.sin_family = AF_INET,
 			.sin_port = convert_endian<endian::big>(element->header.src),
-			.sin_addr = {
-				convert_endian<endian::big>(element->packet->header.source)
-			}
+			.sin_addr = { convert_endian<endian::big>(element->packet->header.source) }
 		};
 		std::memset(addr_buf, 0, addr_size);
 		std::memcpy(addr_buf, &addr, std::min(addr_size, sizeof(addr)));
 		co_return RecvData { copy_size, sizeof(addr), {} };
 	}
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>> sendmsg(void *obj,
-			const char *creds, uint32_t flags,
-			void *data, size_t len,
-			void *addr_ptr, size_t addr_size,
-			std::vector<uint32_t> fds) {
+	static async::result<frg::expected<protocols::fs::Error, size_t>>
+	sendmsg(void *obj,
+	        const char *creds,
+	        uint32_t flags,
+	        void *data,
+	        size_t len,
+	        void *addr_ptr,
+	        size_t addr_size,
+	        std::vector<uint32_t> fds) {
 		using arch::convert_endian;
 		using arch::endian;
 		auto self = static_cast<Udp4Socket *>(obj);
@@ -250,7 +245,7 @@ struct Udp4Socket {
 		auto source = self->local_;
 		if (addr_size != 0) {
 			if (auto e = checkAddress(addr_ptr, addr_size, target);
-				e != protocols::fs::Error::none) {
+			    e != protocols::fs::Error::none) {
 				std::cout << "netserver: trimmed sendmsg addr" << std::endl;
 				co_return e;
 			}
@@ -296,25 +291,24 @@ struct Udp4Socket {
 		}
 
 		Checksum chk;
-		PseudoHeader psh {
-			.src = convert_endian<endian::big>(ti->source),
-			.dst = target.addr,
-			.len = header.len
-		};
+		PseudoHeader psh { .src = convert_endian<endian::big>(ti->source),
+			           .dst = target.addr,
+			           .len = header.len };
 		chk.update(&psh, sizeof(psh));
 		chk.update(&header, sizeof(header));
 		chk.update(data, len);
 		header.chk = convert_endian<endian::big>(chk.finalize());
 
-		std::cout << "netserver:" << std::endl << std::hex
-			<< std::setw(8) << psh.src << std::endl
-			<< std::setw(8) << psh.dst << std::endl
-			<< std::setw(8) << psh.len << std::endl
+		std::cout << "netserver:" << std::endl
+		          << std::hex << std::setw(8) << psh.src << std::endl
+		          << std::setw(8) << psh.dst << std::endl
+		          << std::setw(8) << psh.len << std::endl
 
-			<< std::setw(8) << header.src << std::endl
-			<< std::setw(8) << header.dst << std::endl
-			<< std::setw(8) << header.len << std::endl
-			<< std::setw(8) << header.chk << std::endl << std::dec;
+		          << std::setw(8) << header.src << std::endl
+		          << std::setw(8) << header.dst << std::endl
+		          << std::setw(8) << header.len << std::endl
+		          << std::setw(8) << header.chk << std::endl
+		          << std::dec;
 
 		if (header.chk == 0) {
 			header.chk = ~header.chk;
@@ -323,15 +317,17 @@ struct Udp4Socket {
 		std::memcpy(buf.data(), &header, sizeof(header));
 		std::memcpy(buf.data() + sizeof(header), data, len);
 
-		auto error = co_await ip4().sendFrame(std::move(*ti),
-			buf.data(), buf.size(),
-			static_cast<uint16_t>(IpProto::udp));
+		auto error = co_await ip4().sendFrame(
+		        std::move(*ti),
+		        buf.data(),
+		        buf.size(),
+		        static_cast<uint16_t>(IpProto::udp)
+		);
 		if (error != protocols::fs::Error::none) {
 			co_return error;
 		}
 		co_return len;
 	}
-
 
 	constexpr static FileOperations ops {
 		.bind = &bind,
@@ -342,9 +338,7 @@ struct Udp4Socket {
 
 	bool bindAvailable(uint32_t addr = INADDR_ANY) {
 		static std::mt19937 rng;
-		static std::uniform_int_distribution<uint16_t> dist {
-			32768, 60999
-		};
+		static std::uniform_int_distribution<uint16_t> dist { 32768, 60999 };
 		// TODO(arsen): this rng probably is suboptimal, at some point
 		// in the future replace it with a CSRNG or a hash function
 		// see also: RFC6056, Section 3.3.3
@@ -387,8 +381,7 @@ void Udp4::feedDatagram(smarter::shared_ptr<const Ip4Packet> packet) {
 	auto i = binds.lower_bound({ 0, udp.header.dst });
 	for (; i != binds.end() && i->first.port == udp.header.dst; i++) {
 		auto ep = i->first;
-		if (ep.addr == udp.packet->header.destination
-			|| ep.addr == INADDR_ANY) {
+		if (ep.addr == udp.packet->header.destination || ep.addr == INADDR_ANY) {
 			i->second->queue_.emplace(std::move(udp));
 			break;
 		}
@@ -399,8 +392,7 @@ bool Udp4::tryBind(smarter::shared_ptr<Udp4Socket> socket, Endpoint addr) {
 	auto i = binds.lower_bound(addr);
 	for (; i != binds.end() && i->first.port == addr.port; i++) {
 		auto ep = i->first;
-		if (ep.addr == INADDR_ANY || addr.addr == INADDR_ANY
-			|| ep.addr == addr.addr) {
+		if (ep.addr == INADDR_ANY || addr.addr == INADDR_ANY || ep.addr == addr.addr) {
 			return false;
 		}
 	}
@@ -416,6 +408,5 @@ bool Udp4::unbind(Endpoint e) {
 void Udp4::serveSocket(helix::UniqueLane lane) {
 	using protocols::fs::servePassthrough;
 	auto sock = Udp4Socket::make_socket(this);
-	async::detach(servePassthrough(std::move(lane), std::move(sock),
-			&Udp4Socket::ops));
+	async::detach(servePassthrough(std::move(lane), std::move(sock), &Udp4Socket::ops));
 }

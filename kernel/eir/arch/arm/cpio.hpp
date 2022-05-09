@@ -1,9 +1,9 @@
 #pragma once
 
-#include <frg/string.hpp>
 #include <frg/span.hpp>
+#include <frg/string.hpp>
 
-struct CpioHeader { 
+struct CpioHeader {
 	char magic[6];
 	char inode[8];
 	char mode[8];
@@ -27,25 +27,19 @@ struct CpioFile {
 
 struct CpioRange {
 	struct Iterator {
-		Iterator(void *ptr)
-		: ptr_{static_cast<uint8_t *>(ptr)} {}
+		Iterator(void *ptr) : ptr_ { static_cast<uint8_t *>(ptr) } {}
 
 		Iterator &operator++() {
 			next();
 			return *this;
 		}
 
-		CpioFile operator*() {
-			return parse();
-		}
+		CpioFile operator*() { return parse(); }
 
-		uint8_t *get() {
-			return ptr_;
-		}
+		uint8_t *get() { return ptr_; }
 
-		bool operator==(const Iterator &other) const {
-			return other.ptr_ == ptr_;
-		}
+		bool operator==(const Iterator &other) const { return other.ptr_ == ptr_; }
+
 	private:
 		uint32_t parseHex(const char *c, int n) {
 			uint32_t v = 0;
@@ -74,13 +68,14 @@ struct CpioRange {
 			auto nameSize = parseHex(hdr.nameSize, 8);
 			auto fileSize = parseHex(hdr.fileSize, 8);
 
-			frg::string_view path{reinterpret_cast<char *>(ptr_) + sizeof(CpioHeader), nameSize - 1};
-			frg::span<uint8_t> data{
-				ptr_ + ((sizeof(CpioHeader) + nameSize + 3) & ~uint32_t{3}),
+			frg::string_view path { reinterpret_cast<char *>(ptr_) + sizeof(CpioHeader),
+				                nameSize - 1 };
+			frg::span<uint8_t> data {
+				ptr_ + ((sizeof(CpioHeader) + nameSize + 3) & ~uint32_t { 3 }),
 				fileSize
 			};
 
-			return {path, data};
+			return { path, data };
 		}
 
 		void next() {
@@ -93,22 +88,19 @@ struct CpioRange {
 			auto nameSize = parseHex(hdr.nameSize, 8);
 			auto fileSize = parseHex(hdr.fileSize, 8);
 
-			ptr_ += ((sizeof(CpioHeader) + nameSize + 3) & ~uint32_t{3})
-				+ ((fileSize + 3) & ~uint32_t{3});
+			ptr_ += ((sizeof(CpioHeader) + nameSize + 3) & ~uint32_t { 3 })
+			      + ((fileSize + 3) & ~uint32_t { 3 });
 		}
 
 		uint8_t *ptr_;
 	};
 
-	CpioRange(void *data)
-	: data_{data} { }
+	CpioRange(void *data) : data_ { data } {}
 
-	Iterator begin() {
-		return Iterator{data_};
-	}
+	Iterator begin() { return Iterator { data_ }; }
 
 	Iterator end() {
-		Iterator it{data_};
+		Iterator it { data_ };
 
 		// Seek to the end of the archive (we don't know the archive size)
 		while ((*it).name != "TRAILER!!!")

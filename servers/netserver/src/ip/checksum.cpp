@@ -2,7 +2,7 @@
 
 #include <arch/bit.hpp>
 
-void Checksum::update(uint16_t word)  {
+void Checksum::update(uint16_t word) {
 	state_ += word;
 	while (state_ >> 16 != 0) {
 		state_ = (state_ >> 16) + (state_ & 0xffff);
@@ -11,7 +11,7 @@ void Checksum::update(uint16_t word)  {
 
 void Checksum::update(const void *data, size_t size) {
 	using namespace arch;
-	auto iter = static_cast<const unsigned char*>(data);
+	auto iter = static_cast<const unsigned char *>(data);
 	if (size % 2 != 0) {
 		size--;
 		update(iter[size] << 8);
