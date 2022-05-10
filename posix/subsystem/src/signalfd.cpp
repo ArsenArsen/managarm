@@ -20,9 +20,9 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  smarter::shared_ptr<File> {file},
-		  &File::fileOperations
+			std::move(lane),
+			smarter::shared_ptr<File> {file},
+			&File::fileOperations
 		));
 	}
 
@@ -48,25 +48,25 @@ public:
 	}
 
 	async::result<frg::expected<Error, PollWaitResult>> pollWait(
-	  Process *process,
-	  uint64_t inSeq,
-	  int pollMask,
-	  async::cancellation_token cancellation
+		Process *process,
+		uint64_t inSeq,
+		int pollMask,
+		async::cancellation_token cancellation
 	) override {
 		(void) pollMask;  // TODO: utilize mask.
 		auto result =
-		  co_await process->signalContext()->pollSignal(inSeq, _mask, cancellation);
+			co_await process->signalContext()->pollSignal(inSeq, _mask, cancellation);
 		co_return PollWaitResult {
-		  std::get<0>(result),
-		  (std::get<1>(result) & _mask) ? EPOLLIN : 0};
+			std::get<0>(result),
+			(std::get<1>(result) & _mask) ? EPOLLIN : 0};
 	}
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *process
 	) override {
 		auto result = process->signalContext()->checkSignal();
 		co_return PollStatusResult {
-		  std::get<0>(result),
-		  (std::get<1>(result) & _mask) ? EPOLLIN : 0};
+			std::get<0>(result),
+			(std::get<1>(result) & _mask) ? EPOLLIN : 0};
 	}
 
 	helix::BorrowedDescriptor getPassthroughLane() override { return _passthrough; }

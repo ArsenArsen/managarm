@@ -37,7 +37,7 @@ void UnixDeviceRegistry::install(std::shared_ptr<UnixDevice> device) {
 	auto node_path = device->nodePath();
 	if (!node_path.empty())
 		async::detach(
-		  createDeviceNode(std::move(node_path), device->type(), device->getId())
+			createDeviceNode(std::move(node_path), device->type(), device->getId())
 		);
 }
 
@@ -49,11 +49,11 @@ std::shared_ptr<UnixDevice> UnixDeviceRegistry::get(DeviceId id) {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> openDevice(
-  VfsType type,
-  DeviceId id,
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  SemanticFlags semantic_flags
+	VfsType type,
+	DeviceId id,
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	SemanticFlags semantic_flags
 ) {
 	if (type == VfsType::charDevice) {
 		auto device = charRegistry.get(id);
@@ -96,7 +96,7 @@ async::result<void> createDeviceNode(std::string path, VfsType type, DeviceId id
 			// TODO: Check for errors from mkdir().
 			if (!link)
 				link = std::get<std::shared_ptr<FsLink>>(
-				  co_await node->mkdir(path.substr(k, s - k))
+					co_await node->mkdir(path.substr(k, s - k))
 				);
 			k = s + 1;
 			node = link->getTarget();
@@ -132,8 +132,8 @@ private:
 		size_t progress = 0;
 		while (progress < length) {
 			size_t chunk = co_await _file.writeSome(
-			  reinterpret_cast<const char *>(data) + progress,
-			  length - progress
+				reinterpret_cast<const char *>(data) + progress,
+				length - progress
 			);
 			progress += chunk;
 		}
@@ -141,10 +141,10 @@ private:
 	}
 
 	async::result<frg::expected<Error, PollWaitResult>> pollWait(
-	  Process *,
-	  uint64_t sequence,
-	  int mask,
-	  async::cancellation_token cancellation = {}
+		Process *,
+		uint64_t sequence,
+		int mask,
+		async::cancellation_token cancellation = {}
 	) override {
 		auto resultOrError = co_await _file.pollWait(sequence, mask, cancellation);
 		assert(resultOrError);
@@ -153,7 +153,7 @@ private:
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *) override {
 		auto pollOverIpc =
-		  [this]() -> async::result<frg::expected<Error, PollStatusResult>> {
+			[this]() -> async::result<frg::expected<Error, PollStatusResult>> {
 			auto resultOrError = co_await _file.pollStatus();
 			assert(resultOrError);
 			co_return resultOrError.value();
@@ -161,8 +161,8 @@ private:
 
 		if (!_statusMapping) {
 			std::cout << "posix: No file status page. DeviceFile::pollStatus()"
-			             " falls back to slower IPC request"
-			          << std::endl;
+				     " falls back to slower IPC request"
+				  << std::endl;
 			co_return co_await pollOverIpc();
 		}
 
@@ -173,8 +173,8 @@ private:
 		if (seqlock & 1) {
 			if (logStatusSeqlock)
 				std::cout << "posix: Status page update in progess;"
-				             " falling back to IPC request."
-				          << std::endl;
+					     " falling back to IPC request."
+					  << std::endl;
 			co_return co_await pollOverIpc();
 		}
 
@@ -187,8 +187,8 @@ private:
 		if (__atomic_load_n(&page->seqlock, __ATOMIC_RELAXED) != seqlock) {
 			if (logStatusSeqlock)
 				std::cout << "posix: Stale data from status page;"
-				             " falling back to IPC request."
-				          << std::endl;
+					     " falling back to IPC request."
+					  << std::endl;
 			co_return co_await pollOverIpc();
 		}
 
@@ -205,11 +205,11 @@ private:
 
 public:
 	DeviceFile(
-	  helix::UniqueLane control,
-	  helix::UniqueLane lane,
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  helix::Mapping status_mapping
+		helix::UniqueLane control,
+		helix::UniqueLane lane,
+		std::shared_ptr<MountView> mount,
+		std::shared_ptr<FsLink> link,
+		helix::Mapping status_mapping
 	)
 	: File {StructName::get("devicefile"), std::move(mount), std::move(link)}
 	, _control {std::move(control)}
@@ -238,17 +238,17 @@ private:
 // --------------------------------------------------------
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> openExternalDevice(
-  helix::BorrowedLane lane,
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  SemanticFlags semantic_flags
+	helix::BorrowedLane lane,
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: openExternalDevice() received illegal arguments:"
-		          << std::bitset<32>(semantic_flags)
-		          << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
-		             "semanticWrite(0x4) are allowed.\e[39m"
-		          << std::endl;
+			  << std::bitset<32>(semantic_flags)
+			  << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
+			     "semanticWrite(0x4) are allowed.\e[39m"
+			  << std::endl;
 		co_return Error::illegalArguments;
 	}
 
@@ -262,13 +262,13 @@ async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> openE
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp, pull_pt, pull_page] = co_await helix_ng::exchangeMsgs(
-	  lane,
-	  helix_ng::offer(
-	    helix_ng::sendBuffer(ser.data(), ser.size()),
-	    helix_ng::recvInline(),
-	    helix_ng::pullDescriptor(),
-	    helix_ng::pullDescriptor()
-	  )
+		lane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline(),
+			helix_ng::pullDescriptor(),
+			helix_ng::pullDescriptor()
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -286,11 +286,11 @@ async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> openE
 	}
 
 	auto file = smarter::make_shared<DeviceFile>(
-	  helix::UniqueLane {},
-	  pull_pt.descriptor(),
-	  std::move(mount),
-	  std::move(link),
-	  std::move(status_mapping)
+		helix::UniqueLane {},
+		pull_pt.descriptor(),
+		std::move(mount),
+		std::move(link),
+		std::move(status_mapping)
 	);
 	file->setupWeakFile(file);
 	co_return File::constructHandle(std::move(file));
@@ -302,12 +302,12 @@ FutureMaybe<std::shared_ptr<FsLink>> mountExternalDevice(helix::BorrowedLane lan
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp, pull_node] = co_await helix_ng::exchangeMsgs(
-	  lane,
-	  helix_ng::offer(
-	    helix_ng::sendBuffer(ser.data(), ser.size()),
-	    helix_ng::recvInline(),
-	    helix_ng::pullDescriptor()
-	  )
+		lane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline(),
+			helix_ng::pullDescriptor()
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());

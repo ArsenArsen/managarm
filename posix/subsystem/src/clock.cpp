@@ -24,12 +24,12 @@ async::detached fetchTrackerPage() {
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp, pull_memory] = co_await helix_ng::exchangeMsgs(
-	  trackerLane,
-	  helix_ng::offer(
-	    helix_ng::sendBuffer(ser.data(), ser.size()),
-	    helix_ng::recvInline(),
-	    helix_ng::pullDescriptor()
-	  )
+		trackerLane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline(),
+			helix_ng::pullDescriptor()
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -58,12 +58,12 @@ async::result<void> enumerateTracker() {
 	auto filter = mbus::Conjunction({mbus::EqualsFilter("class", "clocktracker")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  std::cout << "POSIX: Found clocktracker" << std::endl;
+		[](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+			std::cout << "POSIX: Found clocktracker" << std::endl;
 
-		  trackerLane = helix::UniqueLane(co_await entity.bind());
-		  fetchTrackerPage();
-	  }
+			trackerLane = helix::UniqueLane(co_await entity.bind());
+			fetchTrackerPage();
+		}
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));

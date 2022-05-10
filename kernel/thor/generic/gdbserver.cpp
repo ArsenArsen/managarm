@@ -72,10 +72,10 @@ uint8_t computeCsum(frg::span<uint8_t> s) {
 
 struct GdbServer {
 	GdbServer(
-	  smarter::shared_ptr<Thread, ActiveHandle> thread,
-	  frg::string_view path,
-	  smarter::shared_ptr<KernelIoChannel> channel,
-	  smarter::shared_ptr<WorkQueue> wq
+		smarter::shared_ptr<Thread, ActiveHandle> thread,
+		frg::string_view path,
+		smarter::shared_ptr<KernelIoChannel> channel,
+		smarter::shared_ptr<WorkQueue> wq
 	)
 	: thread_ {std::move(thread)}
 	, path_ {path}
@@ -244,14 +244,14 @@ coroutine<frg::expected<Error>> GdbServer::run() {
 
 			if (responseStage_ != ResponseStage::none) {
 				infoLogger() << "thor, gdbserver: Ignoring ill-sequenced request"
-				             << frg::endlog;
+					     << frg::endlog;
 				continue;
 			}
 
 			// Verify checksum.
 			if (!is_hex(csumByte1) || !is_hex(csumByte2)) {
-				infoLogger()
-				  << "thor, gdbserver: NACK due to missing checksum" << frg::endlog;
+				infoLogger() << "thor, gdbserver: NACK due to missing checksum"
+					     << frg::endlog;
 				FRG_CO_TRY(co_await channel_->writeOutput('-'));
 				continue;
 			}
@@ -259,7 +259,7 @@ coroutine<frg::expected<Error>> GdbServer::run() {
 			auto expectedCsum = computeCsum({inBuffer_.data(), inBuffer_.size()});
 			if (csum != expectedCsum) {
 				infoLogger() << "thor, gdbserver: NACK due to checksum mismatch"
-				             << frg::endlog;
+					     << frg::endlog;
 				FRG_CO_TRY(co_await channel_->writeOutput('-'));
 				continue;
 			}
@@ -271,14 +271,14 @@ coroutine<frg::expected<Error>> GdbServer::run() {
 			if (!outcome) {
 				if (outcome.error() == ProtocolError::unknownPacket) {
 					infoLogger() << "thor, gdbserver: Unknown packet,"
-					                " dumping:"
-					             << frg::endlog;
+							" dumping:"
+						     << frg::endlog;
 				} else {
 					assert(outcome.error() == ProtocolError::malformedPacket);
 					infoLogger() << "thor, gdbserver: Remote violated procotol "
-					                "specification,"
-					                " dumping:"
-					             << frg::endlog;
+							"specification,"
+							" dumping:"
+						     << frg::endlog;
 				}
 				hexdump({inBuffer_.data(), inBuffer_.size()});
 			}
@@ -290,7 +290,7 @@ coroutine<frg::expected<Error>> GdbServer::run() {
 				responseStage_ = ResponseStage::none;
 			} else {
 				infoLogger()
-				  << "thor, gdbserver: Ignoring stray ACK" << frg::endlog;
+					<< "thor, gdbserver: Ignoring stray ACK" << frg::endlog;
 			}
 		} else if (firstByte == '-') {
 			if (responseStage_ == ResponseStage::responseSent) {
@@ -298,11 +298,11 @@ coroutine<frg::expected<Error>> GdbServer::run() {
 				responseStage_ = ResponseStage::responseReady;
 			} else {
 				infoLogger()
-				  << "thor, gdbserver: Ignoring stray NACK" << frg::endlog;
+					<< "thor, gdbserver: Ignoring stray NACK" << frg::endlog;
 			}
 		} else {
 			infoLogger() << "thor, gdbserver: Packet starts with unexpected byte: "
-			             << frg::hex_fmt(firstByte) << frg::endlog;
+				     << frg::hex_fmt(firstByte) << frg::endlog;
 		}
 	}
 }
@@ -374,7 +374,7 @@ coroutine<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 		frg::vector<uint8_t, KernelAlloc> mem {*kernelAlloc};
 		mem.resize(length);
 		auto actualLength = co_await thread_->getAddressSpace()
-		                      ->readPartialSpace(address, mem.data(), length, wq_);
+					    ->readPartialSpace(address, mem.data(), length, wq_);
 
 		for (size_t i = 0; i < actualLength; ++i)
 			resp.appendHexByte(mem[i]);
@@ -396,22 +396,22 @@ coroutine<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 			if (object.matchFullString("exec-file")) {
 				// TODO: consider the annex (= process ID).
 				s = frg::span<const uint8_t> {
-				  reinterpret_cast<const uint8_t *>(path_.data()),
-				  path_.size()};
+					reinterpret_cast<const uint8_t *>(path_.data()),
+					path_.size()};
 			} else if (object.matchFullString("features") && annex.matchFullString("target.xml")) {
 				const char *xml =
-				  "<target version=\"1.0\">"
+					"<target version=\"1.0\">"
 #if defined(__x86_64__)
-				  "<architecture>i386:x86-64</architecture>"
+					"<architecture>i386:x86-64</architecture>"
 #elif defined(__aarch64__)
-				  "<architecture>aarch64</architecture>"
+					"<architecture>aarch64</architecture>"
 #else
 #	error Unknown architecture
 #endif
-				  "</target>";
+					"</target>";
 				s = frg::span<const uint8_t> {
-				  reinterpret_cast<const uint8_t *>(xml),
-				  strlen(xml)};
+					reinterpret_cast<const uint8_t *>(xml),
+					strlen(xml)};
 			}
 
 			if (s) {
@@ -448,9 +448,9 @@ coroutine<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 }  // anonymous namespace
 
 void launchGdbServer(
-  smarter::shared_ptr<Thread, ActiveHandle> thread,
-  frg::string_view path,
-  smarter::shared_ptr<WorkQueue> wq
+	smarter::shared_ptr<Thread, ActiveHandle> thread,
+	frg::string_view path,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	auto channel = solicitIoChannel("kernel-gdbserver");
 	if (!channel) {
@@ -458,14 +458,14 @@ void launchGdbServer(
 		return;
 	}
 	infoLogger() << "thor: Launching gdbserver on I/O channel " << channel->descriptiveTag()
-	             << frg::endlog;
+		     << frg::endlog;
 
 	auto svr = frg::construct<GdbServer>(
-	  *kernelAlloc,
-	  std::move(thread),
-	  path,
-	  std::move(channel),
-	  std::move(wq)
+		*kernelAlloc,
+		std::move(thread),
+		path,
+		std::move(channel),
+		std::move(wq)
 	);
 	async::detach_with_allocator(*kernelAlloc, async::transform(svr->run(), [](auto outcome) {
 		if (!outcome)

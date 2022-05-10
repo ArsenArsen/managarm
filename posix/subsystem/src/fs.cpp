@@ -35,9 +35,9 @@ std::shared_ptr<FsLink> FsNode::treeLink() {
 void FsNode::addObserver(std::shared_ptr<FsObserver> observer) {
 	if (!(_defaultOps & defaultSupportsObservers))
 		std::cout << "\e[31m"
-		             "posix: FsNode does not support observers"
-		             "\e[39m"
-		          << std::endl;
+			     "posix: FsNode does not support observers"
+			     "\e[39m"
+			  << std::endl;
 
 	// TODO: For increased efficiency, Observers could be stored in an intrusive list.
 	auto borrowed = observer.get();
@@ -115,30 +115,30 @@ FsNode::traverseLinks(std::deque<std::string>) {
 
 async::result<Error> FsNode::chmod(int mode) {
 	std::cout << "\e[31m"
-	             "posix: chmod() is not implemented for this FsNode"
-	             "\e[39m"
-	          << std::endl;
+		     "posix: chmod() is not implemented for this FsNode"
+		     "\e[39m"
+		  << std::endl;
 	co_return Error::accessDenied;
 }
 
 async::result<Error> FsNode::utimensat(
-  uint64_t atime_sec,
-  uint64_t atime_nsec,
-  uint64_t mtime_sec,
-  uint64_t mtime_nsec
+	uint64_t atime_sec,
+	uint64_t atime_nsec,
+	uint64_t mtime_sec,
+	uint64_t mtime_nsec
 ) {
 	std::cout << "\e[31m"
-	             "posix: utimensat() is not implemented for this FsNode"
-	             "\e[39m"
-	          << std::endl;
+		     "posix: utimensat() is not implemented for this FsNode"
+		     "\e[39m"
+		  << std::endl;
 	co_return Error::accessDenied;
 }
 
 async::result<frg::expected<Error, std::shared_ptr<FsLink>>> FsNode::mksocket(std::string name) {
 	std::cout << "\e[31m"
-	             "posix: mksocket() is not implemented for this FsNode"
-	             "\e[39m"
-	          << std::endl;
+		     "posix: mksocket() is not implemented for this FsNode"
+		     "\e[39m"
+		  << std::endl;
 	co_return Error::illegalOperationTarget;
 }
 

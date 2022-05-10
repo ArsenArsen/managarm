@@ -25,11 +25,10 @@ struct Device final : UnixDevice {
 
 	std::string nodePath() override { return _name; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		return openExternalDevice(_lane, std::move(mount), std::move(link), semantic_flags);
 	}
 
@@ -50,41 +49,43 @@ async::detached run() {
 	auto charFilter = mbus::Conjunction({mbus::EqualsFilter("generic.devtype", "char")});
 
 	auto blockHandler = mbus::ObserverHandler {}.withAttach(
-	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  std::cout << "POSIX: Installing block device "
-		            << std::get<mbus::StringItem>(properties.at("generic.devname")).value
-		            << std::endl;
+		[](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+			std::cout << "POSIX: Installing block device "
+				  << std::get<mbus::StringItem>(properties.at("generic.devname"))
+					     .value
+				  << std::endl;
 
-		  auto lane = helix::UniqueLane(co_await entity.bind());
-		  auto device = std::make_shared<Device>(
-		    VfsType::blockDevice,
-		    std::get<mbus::StringItem>(properties.at("generic.devname")).value,
-		    std::move(lane)
-		  );
-		  // We use 240 here, the major for block devices local and experimental use
-		  // and allocate minors sequentially.
-		  device->assignId({240, minorAllocator.allocate()});
-		  blockRegistry.install(device);
-	  }
+			auto lane = helix::UniqueLane(co_await entity.bind());
+			auto device = std::make_shared<Device>(
+				VfsType::blockDevice,
+				std::get<mbus::StringItem>(properties.at("generic.devname")).value,
+				std::move(lane)
+			);
+			// We use 240 here, the major for block devices local and experimental use
+			// and allocate minors sequentially.
+			device->assignId({240, minorAllocator.allocate()});
+			blockRegistry.install(device);
+		}
 	);
 
 	auto charHandler = mbus::ObserverHandler {}.withAttach(
-	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  std::cout << "POSIX: Installing char device "
-		            << std::get<mbus::StringItem>(properties.at("generic.devname")).value
-		            << std::endl;
+		[](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+			std::cout << "POSIX: Installing char device "
+				  << std::get<mbus::StringItem>(properties.at("generic.devname"))
+					     .value
+				  << std::endl;
 
-		  auto lane = helix::UniqueLane(co_await entity.bind());
-		  auto device = std::make_shared<Device>(
-		    VfsType::charDevice,
-		    std::get<mbus::StringItem>(properties.at("generic.devname")).value,
-		    std::move(lane)
-		  );
-		  // We use 234 here, the major for char devices dynamic allocation and
-		  // allocate minors sequentially.
-		  device->assignId({234, minorAllocator.allocate()});
-		  charRegistry.install(device);
-	  }
+			auto lane = helix::UniqueLane(co_await entity.bind());
+			auto device = std::make_shared<Device>(
+				VfsType::charDevice,
+				std::get<mbus::StringItem>(properties.at("generic.devname")).value,
+				std::move(lane)
+			);
+			// We use 234 here, the major for char devices dynamic allocation and
+			// allocate minors sequentially.
+			device->assignId({234, minorAllocator.allocate()});
+			charRegistry.install(device);
+		}
 	);
 
 	co_await root.linkObserver(std::move(blockFilter), std::move(blockHandler));

@@ -47,49 +47,49 @@ void printScalarAccessors(pb::io::Printer &printer, const pb::FieldDescriptor *f
 
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "inline $out_type$ $name$() const {\n"
-		  "  return m_$name$;\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "out_type",
-		  out_type
+			"inline $out_type$ $name$() const {\n"
+			"  return m_$name$;\n"
+			"}\n",
+			"name",
+			field->name(),
+			"out_type",
+			out_type
 		);
 		printer.Print(
-		  "inline void set_$name$($out_type$ value) {\n"
-		  "  m_$name$ = value;\n"
-		  "  p_$name$ = true;\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "out_type",
-		  out_type
+			"inline void set_$name$($out_type$ value) {\n"
+			"  m_$name$ = value;\n"
+			"  p_$name$ = true;\n"
+			"}\n",
+			"name",
+			field->name(),
+			"out_type",
+			out_type
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "inline void add_$name$($out_type$ value) {\n"
-		  "  m_$name$.push(value);\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "out_type",
-		  out_type
+			"inline void add_$name$($out_type$ value) {\n"
+			"  m_$name$.push(value);\n"
+			"}\n",
+			"name",
+			field->name(),
+			"out_type",
+			out_type
 		);
 		printer.Print(
-		  "inline size_t $name$_size() const {\n"
-		  "  return m_$name$.size();\n"
-		  "}\n",
-		  "name",
-		  field->name()
+			"inline size_t $name$_size() const {\n"
+			"  return m_$name$.size();\n"
+			"}\n",
+			"name",
+			field->name()
 		);
 		printer.Print(
-		  "inline $out_type$ $name$(size_t i) const {\n"
-		  "  return m_$name$[i];\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "out_type",
-		  out_type
+			"inline $out_type$ $name$(size_t i) const {\n"
+			"  return m_$name$[i];\n"
+			"}\n",
+			"name",
+			field->name(),
+			"out_type",
+			out_type
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -99,25 +99,25 @@ void printScalarAccessors(pb::io::Printer &printer, const pb::FieldDescriptor *f
 void printScalarSize(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "if(p_$name$) {\n"
-		  "  cachedSize_ += pb2frigg::varintSize($number$ << 3);\n"
-		  "  cachedSize_ += pb2frigg::varintSize(m_$name$);\n"
-		  "}\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"if(p_$name$) {\n"
+			"  cachedSize_ += pb2frigg::varintSize($number$ << 3);\n"
+			"  cachedSize_ += pb2frigg::varintSize(m_$name$);\n"
+			"}\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "cachedSize_ += m_$name$.size()"
-		  " * pb2frigg::varintSize($number$ << 3);\n"
-		  "for(size_t i = 0; i < m_$name$.size(); i++)\n"
-		  "  cachedSize_ += pb2frigg::varintSize(m_$name$[i]);\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"cachedSize_ += m_$name$.size()"
+			" * pb2frigg::varintSize($number$ << 3);\n"
+			"for(size_t i = 0; i < m_$name$.size(); i++)\n"
+			"  cachedSize_ += pb2frigg::varintSize(m_$name$[i]);\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -148,27 +148,30 @@ void printScalarSerialize(pb::io::Printer &printer, const pb::FieldDescriptor *f
 
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "if(p_$name$)\n"
-		  "  $emit_function$(writer, $number$, m_$name$);\n",
-		  "emit_function",
-		  emit_function,
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"if(p_$name$)\n"
+			"  $emit_function$(writer, $number$, m_$name$);\n",
+			"emit_function",
+			emit_function,
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else if (field->is_repeated()) {
-		printer
-		  .Print("for(size_t i = 0; i < m_$name$.size(); i++)\n", "name", field->name());
+		printer.Print(
+			"for(size_t i = 0; i < m_$name$.size(); i++)\n",
+			"name",
+			field->name()
+		);
 		printer.Indent();
 		printer.Print(
-		  "$emit_function$(writer, $number$, m_$name$[i]);\n",
-		  "emit_function",
-		  emit_function,
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"$emit_function$(writer, $number$, m_$name$[i]);\n",
+			"emit_function",
+			emit_function,
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 		printer.Outdent();
 	} else {
@@ -205,35 +208,35 @@ void printScalarParse(pb::io::Printer &printer, const pb::FieldDescriptor *field
 
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "case $number$:\n"
-		  "  FRG_ASSERT(header.wire == $wire_constant$);\n",
-		  "wire_constant",
-		  wire_constant,
-		  "number",
-		  std::to_string(field->number())
+			"case $number$:\n"
+			"  FRG_ASSERT(header.wire == $wire_constant$);\n",
+			"wire_constant",
+			wire_constant,
+			"number",
+			std::to_string(field->number())
 		);
 		printer.Print(
-		  "  m_$name$ = $fetch_function$(reader);\n"
-		  "  p_$name$ = true;\n"
-		  "  break;\n",
-		  "name",
-		  field->name(),
-		  "fetch_function",
-		  fetch_function
+			"  m_$name$ = $fetch_function$(reader);\n"
+			"  p_$name$ = true;\n"
+			"  break;\n",
+			"name",
+			field->name(),
+			"fetch_function",
+			fetch_function
 		);
 	} else if (field->is_repeated()) {
 		printer.Print("case $number$:\n", "number", std::to_string(field->number()));
 		printer.Indent();
 		printer.Print(
-		  "FRG_ASSERT(header.wire == $wire_constant$);\n"
-		  "m_$name$.push($fetch_function$(reader));\n"
-		  "break;\n",
-		  "wire_constant",
-		  wire_constant,
-		  "fetch_function",
-		  fetch_function,
-		  "name",
-		  field->name()
+			"FRG_ASSERT(header.wire == $wire_constant$);\n"
+			"m_$name$.push($fetch_function$(reader));\n"
+			"break;\n",
+			"wire_constant",
+			wire_constant,
+			"fetch_function",
+			fetch_function,
+			"name",
+			field->name()
 		);
 		printer.Outdent();
 	} else {
@@ -265,20 +268,20 @@ void printScalarMember(pb::io::Printer &printer, const pb::FieldDescriptor *fiel
 
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "$out_type$ m_$name$;\n"
-		  "bool p_$name$;\n",
-		  "out_type",
-		  out_type,
-		  "name",
-		  field->name()
+			"$out_type$ m_$name$;\n"
+			"bool p_$name$;\n",
+			"out_type",
+			out_type,
+			"name",
+			field->name()
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "frg::vector<$out_type$, Allocator> m_$name$;\n",
-		  "out_type",
-		  out_type,
-		  "name",
-		  field->name()
+			"frg::vector<$out_type$, Allocator> m_$name$;\n",
+			"out_type",
+			out_type,
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -300,19 +303,19 @@ void printStringInitialize(pb::io::Printer &printer, const pb::FieldDescriptor *
 void printStringAccessors(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "inline const frg::string<Allocator> &$name$() const {\n"
-		  "  return m_$name$;\n"
-		  "}\n",
-		  "name",
-		  field->name()
+			"inline const frg::string<Allocator> &$name$() const {\n"
+			"  return m_$name$;\n"
+			"}\n",
+			"name",
+			field->name()
 		);
 		printer.Print(
-		  "inline void set_$name$(frg::string<Allocator> value) {\n"
-		  "  m_$name$ = std::move(value);\n"
-		  "  p_$name$ = true;\n"
-		  "}\n",
-		  "name",
-		  field->name()
+			"inline void set_$name$(frg::string<Allocator> value) {\n"
+			"  m_$name$ = std::move(value);\n"
+			"  p_$name$ = true;\n"
+			"}\n",
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -322,16 +325,16 @@ void printStringAccessors(pb::io::Printer &printer, const pb::FieldDescriptor *f
 void printStringSize(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "if(p_$name$) {\n"
-		  "  cachedSize_ += pb2frigg::varintSize($number$ << 3);\n"
-		  "  size_t $name$_length = m_$name$.size();\n"
-		  "  cachedSize_ += pb2frigg::varintSize($name$_length);\n"
-		  "  cachedSize_ += $name$_length;\n"
-		  "}\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"if(p_$name$) {\n"
+			"  cachedSize_ += pb2frigg::varintSize($number$ << 3);\n"
+			"  size_t $name$_length = m_$name$.size();\n"
+			"  cachedSize_ += pb2frigg::varintSize($name$_length);\n"
+			"  cachedSize_ += $name$_length;\n"
+			"}\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -341,13 +344,13 @@ void printStringSize(pb::io::Printer &printer, const pb::FieldDescriptor *field)
 void printStringSerialize(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "if(p_$name$)\n"
-		  "  pb2frigg::emitString(writer, $number$,"
-		  " m_$name$.data(), m_$name$.size());\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"if(p_$name$)\n"
+			"  pb2frigg::emitString(writer, $number$,"
+			" m_$name$.data(), m_$name$.size());\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -359,13 +362,13 @@ void printStringParse(pb::io::Printer &printer, const pb::FieldDescriptor *field
 		printer.Print("case $number$: {\n", "number", std::to_string(field->number()));
 		printer.Indent();
 		printer.Print(
-		  "FRG_ASSERT(header.wire == pb2frigg::wireDelimited);\n"
-		  "size_t $name$_length = peekVarint(reader);\n"
-		  "m_$name$.resize($name$_length);\n"
-		  "reader.peek(m_$name$.data(), $name$_length);\n"
-		  "p_$name$ = true;\n",
-		  "name",
-		  field->name()
+			"FRG_ASSERT(header.wire == pb2frigg::wireDelimited);\n"
+			"size_t $name$_length = peekVarint(reader);\n"
+			"m_$name$.resize($name$_length);\n"
+			"reader.peek(m_$name$.data(), $name$_length);\n"
+			"p_$name$ = true;\n",
+			"name",
+			field->name()
 		);
 		printer.Outdent();
 		printer.Print("} break;\n");
@@ -377,10 +380,10 @@ void printStringParse(pb::io::Printer &printer, const pb::FieldDescriptor *field
 void printStringMember(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional() || field->is_required()) {
 		printer.Print(
-		  "frg::string<Allocator> m_$name$;\n"
-		  "bool p_$name$;\n",
-		  "name",
-		  field->name()
+			"frg::string<Allocator> m_$name$;\n"
+			"bool p_$name$;\n",
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -410,49 +413,49 @@ void printEmbeddedAccessors(pb::io::Printer &printer, const pb::FieldDescriptor 
 
 	if (field->is_optional()) {
 		printer.Print(
-		  "inline const $msg_type$<Allocator> &$name$() const {\n"
-		  "  return m_$name$;\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "msg_type",
-		  qualified
+			"inline const $msg_type$<Allocator> &$name$() const {\n"
+			"  return m_$name$;\n"
+			"}\n",
+			"name",
+			field->name(),
+			"msg_type",
+			qualified
 		);
 		printer.Print(
-		  "inline $msg_type$<Allocator> &mutable_$name$() {\n"
-		  "  p_$name$ = true;\n"
-		  "  return m_$name$;\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "msg_type",
-		  qualified
+			"inline $msg_type$<Allocator> &mutable_$name$() {\n"
+			"  p_$name$ = true;\n"
+			"  return m_$name$;\n"
+			"}\n",
+			"name",
+			field->name(),
+			"msg_type",
+			qualified
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "inline void add_$name$($msg_type$<Allocator> message) {\n"
-		  "  m_$name$.push(std::move(message));\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "msg_type",
-		  qualified
+			"inline void add_$name$($msg_type$<Allocator> message) {\n"
+			"  m_$name$.push(std::move(message));\n"
+			"}\n",
+			"name",
+			field->name(),
+			"msg_type",
+			qualified
 		);
 		printer.Print(
-		  "inline size_t $name$_size() const {\n"
-		  "  return m_$name$.size();\n"
-		  "}\n",
-		  "name",
-		  field->name()
+			"inline size_t $name$_size() const {\n"
+			"  return m_$name$.size();\n"
+			"}\n",
+			"name",
+			field->name()
 		);
 		printer.Print(
-		  "inline const $msg_type$<Allocator> &$name$(size_t i) const {\n"
-		  "  return m_$name$[i];\n"
-		  "}\n",
-		  "name",
-		  field->name(),
-		  "msg_type",
-		  qualified
+			"inline const $msg_type$<Allocator> &$name$(size_t i) const {\n"
+			"  return m_$name$[i];\n"
+			"}\n",
+			"name",
+			field->name(),
+			"msg_type",
+			qualified
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -462,30 +465,30 @@ void printEmbeddedAccessors(pb::io::Printer &printer, const pb::FieldDescriptor 
 void printEmbeddedSize(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional()) {
 		printer.Print(
-		  "if(p_$name$) {\n"
-		  "  cachedSize_ += pb2frigg::varintSize($number$ << 3);\n"
-		  "  size_t $name$_length = m_$name$.ByteSize();\n"
-		  "  cachedSize_ += pb2frigg::varintSize($name$_length);\n"
-		  "  cachedSize_ += $name$_length;\n"
-		  "}\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"if(p_$name$) {\n"
+			"  cachedSize_ += pb2frigg::varintSize($number$ << 3);\n"
+			"  size_t $name$_length = m_$name$.ByteSize();\n"
+			"  cachedSize_ += pb2frigg::varintSize($name$_length);\n"
+			"  cachedSize_ += $name$_length;\n"
+			"}\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "cachedSize_ += m_$name$.size()"
-		  " * pb2frigg::varintSize($number$ << 3);\n"
-		  "for(size_t i = 0; i < m_$name$.size(); i++) {\n"
-		  "  size_t $name$_length = m_$name$[i].ByteSize();\n"
-		  "  cachedSize_ += pb2frigg::varintSize($name$_length);\n"
-		  "  cachedSize_ += $name$_length;\n"
-		  "}\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"cachedSize_ += m_$name$.size()"
+			" * pb2frigg::varintSize($number$ << 3);\n"
+			"for(size_t i = 0; i < m_$name$.size(); i++) {\n"
+			"  size_t $name$_length = m_$name$[i].ByteSize();\n"
+			"  cachedSize_ += pb2frigg::varintSize($name$_length);\n"
+			"  cachedSize_ += $name$_length;\n"
+			"}\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -495,33 +498,33 @@ void printEmbeddedSize(pb::io::Printer &printer, const pb::FieldDescriptor *fiel
 void printEmbeddedSerialize(pb::io::Printer &printer, const pb::FieldDescriptor *field) {
 	if (field->is_optional()) {
 		printer.Print(
-		  "if(p_$name$) {\n"
-		  "  pokeHeader(writer, pb2frigg::Header{$number$,"
-		  " pb2frigg::wireDelimited});\n"
-		  "  pokeVarint(writer, m_$name$.GetCachedSize());\n"
-		  "  m_$name$.SerializeWithCachedSizesToArray((uint8_t *)array"
-		  " + writer.offset(), m_$name$.GetCachedSize());\n"
-		  "  writer.advance(m_$name$.GetCachedSize());\n"
-		  "}\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"if(p_$name$) {\n"
+			"  pokeHeader(writer, pb2frigg::Header{$number$,"
+			" pb2frigg::wireDelimited});\n"
+			"  pokeVarint(writer, m_$name$.GetCachedSize());\n"
+			"  m_$name$.SerializeWithCachedSizesToArray((uint8_t *)array"
+			" + writer.offset(), m_$name$.GetCachedSize());\n"
+			"  writer.advance(m_$name$.GetCachedSize());\n"
+			"}\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "for(size_t i = 0; i < m_$name$.size(); i++) {\n"
-		  "  pokeHeader(writer, pb2frigg::Header{$number$,"
-		  " pb2frigg::wireDelimited});\n"
-		  "  pokeVarint(writer, m_$name$[i].GetCachedSize());\n"
-		  "  m_$name$[i].SerializeWithCachedSizesToArray((uint8_t *)array"
-		  " + writer.offset(), m_$name$[i].GetCachedSize());\n"
-		  "  writer.advance(m_$name$[i].GetCachedSize());\n"
-		  "}\n",
-		  "number",
-		  std::to_string(field->number()),
-		  "name",
-		  field->name()
+			"for(size_t i = 0; i < m_$name$.size(); i++) {\n"
+			"  pokeHeader(writer, pb2frigg::Header{$number$,"
+			" pb2frigg::wireDelimited});\n"
+			"  pokeVarint(writer, m_$name$[i].GetCachedSize());\n"
+			"  m_$name$[i].SerializeWithCachedSizesToArray((uint8_t *)array"
+			" + writer.offset(), m_$name$[i].GetCachedSize());\n"
+			"  writer.advance(m_$name$[i].GetCachedSize());\n"
+			"}\n",
+			"number",
+			std::to_string(field->number()),
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -539,16 +542,16 @@ void printEmbeddedParse(pb::io::Printer &printer, const pb::FieldDescriptor *fie
 		printer.Print("case $number$: {\n", "number", std::to_string(field->number()));
 		printer.Indent();
 		printer.Print(
-		  "FRG_ASSERT(header.wire == pb2frigg::wireDelimited);\n"
-		  "size_t $name$_length = peekVarint(reader);\n"
-		  "m_$name$.ParseFromArray((uint8_t *)array + reader.offset(), "
-		  "$name$_length);\n"
-		  "reader.advance($name$_length);\n"
-		  "p_$name$ = true;\n",
-		  "msg_type",
-		  qualified,
-		  "name",
-		  field->name()
+			"FRG_ASSERT(header.wire == pb2frigg::wireDelimited);\n"
+			"size_t $name$_length = peekVarint(reader);\n"
+			"m_$name$.ParseFromArray((uint8_t *)array + reader.offset(), "
+			"$name$_length);\n"
+			"reader.advance($name$_length);\n"
+			"p_$name$ = true;\n",
+			"msg_type",
+			qualified,
+			"name",
+			field->name()
 		);
 		printer.Outdent();
 		printer.Print("} break;\n");
@@ -556,17 +559,17 @@ void printEmbeddedParse(pb::io::Printer &printer, const pb::FieldDescriptor *fie
 		printer.Print("case $number$: {\n", "number", std::to_string(field->number()));
 		printer.Indent();
 		printer.Print(
-		  "FRG_ASSERT(header.wire == pb2frigg::wireDelimited);\n"
-		  "size_t $name$_length = peekVarint(reader);\n"
-		  "$msg_type$<Allocator> element(*allocator_);\n"
-		  "element.ParseFromArray((uint8_t *)array + reader.offset(), "
-		  "$name$_length);\n"
-		  "m_$name$.push(std::move(element));\n"
-		  "reader.advance($name$_length);\n",
-		  "msg_type",
-		  qualified,
-		  "name",
-		  field->name()
+			"FRG_ASSERT(header.wire == pb2frigg::wireDelimited);\n"
+			"size_t $name$_length = peekVarint(reader);\n"
+			"$msg_type$<Allocator> element(*allocator_);\n"
+			"element.ParseFromArray((uint8_t *)array + reader.offset(), "
+			"$name$_length);\n"
+			"m_$name$.push(std::move(element));\n"
+			"reader.advance($name$_length);\n",
+			"msg_type",
+			qualified,
+			"name",
+			field->name()
 		);
 		printer.Outdent();
 		printer.Print("} break;\n");
@@ -584,20 +587,20 @@ void printEmbeddedMember(pb::io::Printer &printer, const pb::FieldDescriptor *fi
 
 	if (field->is_optional()) {
 		printer.Print(
-		  "$msg_type$<Allocator> m_$name$;\n"
-		  "bool p_$name$;\n",
-		  "msg_type",
-		  qualified,
-		  "name",
-		  field->name()
+			"$msg_type$<Allocator> m_$name$;\n"
+			"bool p_$name$;\n",
+			"msg_type",
+			qualified,
+			"name",
+			field->name()
 		);
 	} else if (field->is_repeated()) {
 		printer.Print(
-		  "frg::vector<$msg_type$<Allocator>, Allocator> m_$name$;\n",
-		  "msg_type",
-		  qualified,
-		  "name",
-		  field->name()
+			"frg::vector<$msg_type$<Allocator>, Allocator> m_$name$;\n",
+			"msg_type",
+			qualified,
+			"name",
+			field->name()
 		);
 	} else {
 		assert(!"Unexpected field configuration");
@@ -617,11 +620,11 @@ void generateEnum(pb::io::Printer &printer, const pb::EnumDescriptor *enumeratio
 	for (int i = 0; i < enumeration->value_count(); i++) {
 		const pb::EnumValueDescriptor *value = enumeration->value(i);
 		printer.Print(
-		  "$name$ = $number$",
-		  "name",
-		  value->name(),
-		  "number",
-		  std::to_string(value->number())
+			"$name$ = $number$",
+			"name",
+			value->name(),
+			"number",
+			std::to_string(value->number())
 		);
 
 		if (i + 1 < enumeration->value_count())
@@ -638,11 +641,11 @@ void generateEnum(pb::io::Printer &printer, const pb::EnumDescriptor *enumeratio
 void generateMessage(pb::io::Printer &printer, const pb::Descriptor *descriptor) {
 	// generate a containing class for each message
 	printer.Print(
-	  "template<typename Allocator>\n"
-	  "class $name$ {\n"
-	  "public:\n",
-	  "name",
-	  descriptor->name()
+		"template<typename Allocator>\n"
+		"class $name$ {\n"
+		"public:\n",
+		"name",
+		descriptor->name()
 	);
 	printer.Indent();
 
@@ -654,18 +657,18 @@ void generateMessage(pb::io::Printer &printer, const pb::Descriptor *descriptor)
 	// generate the default constructor
 	printer.Print("\n");
 	printer.Print(
-	  "$name$(Allocator &allocator)\n"
-	  ": allocator_{&allocator}, cachedSize_{0}",
-	  "name",
-	  descriptor->name()
+		"$name$(Allocator &allocator)\n"
+		": allocator_{&allocator}, cachedSize_{0}",
+		"name",
+		descriptor->name()
 	);
 
 	for (int i = 0; i < descriptor->field_count(); i++) {
 		const pb::FieldDescriptor *field = descriptor->field(i);
 
 		printer.Print(
-		  ",\n"
-		  "  "
+			",\n"
+			"  "
 		);
 
 		switch (field->type()) {
@@ -718,8 +721,8 @@ void generateMessage(pb::io::Printer &printer, const pb::Descriptor *descriptor)
 
 	// generate the size computation function
 	printer.Print(
-	  "\n"
-	  "size_t ByteSize() {\n"
+		"\n"
+		"size_t ByteSize() {\n"
 	);
 	printer.Indent();
 	printer.Print("cachedSize_ = 0;\n");
@@ -750,16 +753,16 @@ void generateMessage(pb::io::Printer &printer, const pb::Descriptor *descriptor)
 	printer.Print("return cachedSize_;\n");
 	printer.Outdent();
 	printer.Print(
-	  "}\n"
-	  "size_t GetCachedSize() {\n"
-	  "  return cachedSize_;\n"
-	  "}\n"
+		"}\n"
+		"size_t GetCachedSize() {\n"
+		"  return cachedSize_;\n"
+		"}\n"
 	);
 
 	// generate the serialization function
 	printer.Print(
-	  "\n"
-	  "void SerializeWithCachedSizesToArray(void *array, size_t length) {\n"
+		"\n"
+		"void SerializeWithCachedSizesToArray(void *array, size_t length) {\n"
 	);
 	printer.Indent();
 	printer.Print("pb2frigg::BufferWriter writer((uint8_t *)array, length);\n");
@@ -790,28 +793,28 @@ void generateMessage(pb::io::Printer &printer, const pb::Descriptor *descriptor)
 	printer.Print("FRG_ASSERT(writer.offset() == length);\n");
 	printer.Outdent();
 	printer.Print(
-	  "}\n"
-	  "void SerializeToString(frg::string<Allocator> *string) {\n"
-	  "  string->resize(ByteSize());\n"
-	  "  SerializeWithCachedSizesToArray(string->data(), string->size());\n"
-	  "}\n"
+		"}\n"
+		"void SerializeToString(frg::string<Allocator> *string) {\n"
+		"  string->resize(ByteSize());\n"
+		"  SerializeWithCachedSizesToArray(string->data(), string->size());\n"
+		"}\n"
 	);
 
 	// generate the deserialization function
 	printer.Print(
-	  "\n"
-	  "void ParseFromArray(const void *buffer, size_t buffer_size) {\n"
+		"\n"
+		"void ParseFromArray(const void *buffer, size_t buffer_size) {\n"
 	);
 	printer.Indent();
 	printer.Print(
-	  "const uint8_t *array = static_cast<const uint8_t *>(buffer);\n"
-	  "pb2frigg::BufferReader reader(array, buffer_size);\n"
-	  "while(!reader.atEnd()) {\n"
+		"const uint8_t *array = static_cast<const uint8_t *>(buffer);\n"
+		"pb2frigg::BufferReader reader(array, buffer_size);\n"
+		"while(!reader.atEnd()) {\n"
 	);
 	printer.Indent();
 	printer.Print(
-	  "auto header = fetchHeader(reader);\n"
-	  "switch(header.field) {\n"
+		"auto header = fetchHeader(reader);\n"
+		"switch(header.field) {\n"
 	);
 
 	for (int i = 0; i < descriptor->field_count(); i++) {
@@ -887,18 +890,18 @@ void generateMessage(pb::io::Printer &printer, const pb::Descriptor *descriptor)
 class FriggGenerator : public pb::compiler::CodeGenerator {
 public:
 	virtual bool Generate(
-	  const pb::FileDescriptor *file,
-	  const std::string &parameter,
-	  pb::compiler::GeneratorContext *context,
-	  std::string *error
+		const pb::FileDescriptor *file,
+		const std::string &parameter,
+		pb::compiler::GeneratorContext *context,
+		std::string *error
 	) const;
 };
 
 bool FriggGenerator::Generate(
-  const pb::FileDescriptor *file,
-  const std::string &parameter,
-  pb::compiler::GeneratorContext *context,
-  std::string *error
+	const pb::FileDescriptor *file,
+	const std::string &parameter,
+	pb::compiler::GeneratorContext *context,
+	std::string *error
 ) const {
 	std::string path = file->name();
 	size_t file_dot = path.rfind('.');
@@ -934,10 +937,10 @@ bool FriggGenerator::Generate(
 		for (int i = 0; i < file->message_type_count(); i++) {
 			printer.Print("\n");
 			printer.Print(
-			  "template<typename Allocator>\n"
-			  "class $msg_type$;\n",
-			  "msg_type",
-			  file->message_type(i)->name()
+				"template<typename Allocator>\n"
+				"class $msg_type$;\n",
+				"msg_type",
+				file->message_type(i)->name()
 			);
 		}
 

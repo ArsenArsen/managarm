@@ -39,11 +39,11 @@ async::result<void> Table::parse() {
 			continue;
 
 		partitions.push_back(Partition {
-		  *this,
-		  entry->uniqueGuid,
-		  entry->typeGuid,
-		  entry->firstLba,
-		  entry->lastLba - entry->firstLba + 1});
+			*this,
+			entry->uniqueGuid,
+			entry->typeGuid,
+			entry->firstLba,
+			entry->lastLba - entry->firstLba + 1});
 	}
 
 	free(header_buffer);

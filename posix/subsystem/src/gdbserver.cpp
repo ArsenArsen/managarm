@@ -261,14 +261,14 @@ async::result<void> GdbServer::run() {
 
 			if (responseStage_ != ResponseStage::none) {
 				std::cout << "posix, gdbserver: Ignoring ill-sequenced request"
-				          << std::endl;
+					  << std::endl;
 				continue;
 			}
 
 			// Verify checksum.
 			if (!is_hex(csumByte1) || !is_hex(csumByte2)) {
 				std::cout << "posix, gdbserver: NACK due to missing checksum"
-				          << std::endl;
+					  << std::endl;
 				co_await sendByte('-');
 				continue;
 			}
@@ -276,7 +276,7 @@ async::result<void> GdbServer::run() {
 			auto expectedCsum = computeCsum({inBuffer_.data(), inBuffer_.size()});
 			if (csum != expectedCsum) {
 				std::cout << "posix, gdbserver: NACK due to checksum mismatch"
-				          << std::endl;
+					  << std::endl;
 				co_await sendByte('-');
 				continue;
 			}
@@ -288,14 +288,14 @@ async::result<void> GdbServer::run() {
 			if (!outcome) {
 				if (outcome.error() == ProtocolError::unknownPacket) {
 					std::cout << "posix, gdbserver: Unknown packet,"
-					             " dumping:"
-					          << std::endl;
+						     " dumping:"
+						  << std::endl;
 				} else {
 					assert(outcome.error() == ProtocolError::malformedPacket);
 					std::cout << "posix, gdbserver: Remote violated procotol "
-					             "specification,"
-					             " dumping:"
-					          << std::endl;
+						     "specification,"
+						     " dumping:"
+						  << std::endl;
 				}
 				hexdump({inBuffer_.data(), inBuffer_.size()});
 			}
@@ -317,7 +317,7 @@ async::result<void> GdbServer::run() {
 			}
 		} else {
 			std::cout << "posix, gdbserver: Packet starts with unexpected byte: "
-			          << std::hex << firstByte << std::dec << std::endl;
+				  << std::hex << firstByte << std::dec << std::endl;
 		}
 	}
 }
@@ -342,12 +342,16 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 		uintptr_t pcrs[2];
 		uintptr_t gprs[kHelNumGprs];
 
-		HEL_CHECK(
-		  helLoadRegisters(process_->threadDescriptor().getHandle(), kHelRegsProgram, pcrs)
-		);
-		HEL_CHECK(
-		  helLoadRegisters(process_->threadDescriptor().getHandle(), kHelRegsGeneral, gprs)
-		);
+		HEL_CHECK(helLoadRegisters(
+			process_->threadDescriptor().getHandle(),
+			kHelRegsProgram,
+			pcrs
+		));
+		HEL_CHECK(helLoadRegisters(
+			process_->threadDescriptor().getHandle(),
+			kHelRegsGeneral,
+			gprs
+		));
 
 #if defined(__x86_64__)
 		resp.appendLeHex64(gprs[0]);  // RAX.
@@ -380,8 +384,8 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 				resp.appendString("xx");
 #else
 		std::cout << "posix, gdbserver: Register access is not implemented for this "
-		             "architecture"
-		          << std::endl;
+			     "architecture"
+			  << std::endl;
 #endif
 	} else if (req.matchString("m")) {  // Read memory.
 		uint64_t address;
@@ -397,10 +401,10 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 			// We load the memory byte for byte until we fail, readMemory does not
 			// support partial reads yet.
 			auto loadMemory = co_await helix_ng::readMemory(
-			  process_->vmContext()->getSpace(),
-			  address + i,
-			  1,
-			  mem.data() + i
+				process_->vmContext()->getSpace(),
+				address + i,
+				1,
+				mem.data() + i
 			);
 			if (loadMemory.error())
 				break;
@@ -428,17 +432,17 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 
 			if (object.matchFullString("auxv") && annex.fullyConsumed()) {
 				auto begin =
-				  reinterpret_cast<std::byte *>(process_->clientAuxBegin());
+					reinterpret_cast<std::byte *>(process_->clientAuxBegin());
 				auto end = reinterpret_cast<std::byte *>(process_->clientAuxEnd());
 				for (auto it = begin; it != end; ++it) {
 					// We load the memory byte for byte until we fail,
 					// readMemory does not support partial reads yet.
 					std::byte b;
 					auto loadMemory = co_await helix_ng::readMemory(
-					  process_->vmContext()->getSpace(),
-					  reinterpret_cast<uintptr_t>(it),
-					  1,
-					  &b
+						process_->vmContext()->getSpace(),
+						reinterpret_cast<uintptr_t>(it),
+						1,
+						&b
 					);
 					if (loadMemory.error())
 						break;
@@ -448,22 +452,22 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 			} else if (object.matchFullString("exec-file")) {
 				// TODO: consider the annex (= process ID).
 				s = frg::span<const std::byte> {
-				  reinterpret_cast<const std::byte *>(path_.data()),
-				  path_.size()};
+					reinterpret_cast<const std::byte *>(path_.data()),
+					path_.size()};
 			} else if (object.matchFullString("features") && annex.matchFullString("target.xml")) {
 				const char *xml =
-				  "<target version=\"1.0\">"
+					"<target version=\"1.0\">"
 #if defined(__x86_64__)
-				  "<architecture>i386:x86-64</architecture>"
+					"<architecture>i386:x86-64</architecture>"
 #elif defined(__aarch64__)
-				  "<architecture>aarch64</architecture>"
+					"<architecture>aarch64</architecture>"
 #else
 #	error Unknown architecture
 #endif
-				  "</target>";
+					"</target>";
 				s = frg::span<const std::byte> {
-				  reinterpret_cast<const std::byte *>(xml),
-				  strlen(xml)};
+					reinterpret_cast<const std::byte *>(xml),
+					strlen(xml)};
 			}
 
 			if (s) {

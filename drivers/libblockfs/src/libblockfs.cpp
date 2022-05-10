@@ -87,31 +87,31 @@ read(void *object, const char *, void *buffer, size_t length) {
 	// TODO: If we *know* that the pages are already available,
 	//       we can also fall back to the following "old" mapping code.
 	/*
-	        auto mapOffset = chunk_offset & ~size_t(0xFFF);
-	        auto mapSize = (((chunk_offset & size_t(0xFFF)) + chunkSize + 0xFFF) &
+		auto mapOffset = chunk_offset & ~size_t(0xFFF);
+		auto mapSize = (((chunk_offset & size_t(0xFFF)) + chunkSize + 0xFFF) &
 	   ~size_t(0xFFF));
 
-	        helix::LockMemoryView lockMemory;
-	        auto &&submit =
+		helix::LockMemoryView lockMemory;
+		auto &&submit =
 	   helix::submitLockMemoryView(helix::BorrowedDescriptor(self->inode->frontalMemory),
-	                        &lockMemory, mapOffset, mapSize, helix::Dispatcher::global());
-	        co_await submit.wait();
-	        HEL_CHECK(lockMemory.error());
+				&lockMemory, mapOffset, mapSize, helix::Dispatcher::global());
+		co_await submit.wait();
+		HEL_CHECK(lockMemory.error());
 
-	        // Map the page cache into the address space.
-	        helix::Mapping fileMap{helix::BorrowedDescriptor{self->inode->frontalMemory},
-	                        static_cast<ptrdiff_t>(mapOffset), mapSize,
-	                        kHelMapProtRead | kHelMapDontRequireBacking};
+		// Map the page cache into the address space.
+		helix::Mapping fileMap{helix::BorrowedDescriptor{self->inode->frontalMemory},
+				static_cast<ptrdiff_t>(mapOffset), mapSize,
+				kHelMapProtRead | kHelMapDontRequireBacking};
 
-	        memcpy(buffer, reinterpret_cast<char *>(fileMap.get()) + (chunk_offset - mapOffset),
-	                        chunkSize);
+		memcpy(buffer, reinterpret_cast<char *>(fileMap.get()) + (chunk_offset - mapOffset),
+				chunkSize);
 	*/
 
 	auto readMemory = co_await helix_ng::readMemory(
-	  helix::BorrowedDescriptor(self->inode->frontalMemory),
-	  chunk_offset,
-	  chunkSize,
-	  buffer
+		helix::BorrowedDescriptor(self->inode->frontalMemory),
+		chunk_offset,
+		chunkSize,
+		buffer
 	);
 	HEL_CHECK(readMemory.error());
 
@@ -147,27 +147,25 @@ pread(void *object, int64_t offset, const char *, void *buffer, size_t length) {
 
 	helix::LockMemoryView lock_memory;
 	auto &&submit = helix::submitLockMemoryView(
-	  helix::BorrowedDescriptor(self->inode->frontalMemory),
-	  &lock_memory,
-	  map_offset,
-	  map_size,
-	  helix::Dispatcher::global()
+		helix::BorrowedDescriptor(self->inode->frontalMemory),
+		&lock_memory,
+		map_offset,
+		map_size,
+		helix::Dispatcher::global()
 	);
 	co_await submit.async_wait();
 	HEL_CHECK(lock_memory.error());
 
 	// Map the page cache into the address space.
 	helix::Mapping file_map {
-	  helix::BorrowedDescriptor {self->inode->frontalMemory},
-	  static_cast<ptrdiff_t>(map_offset),
-	  map_size,
-	  kHelMapProtRead | kHelMapDontRequireBacking};
+		helix::BorrowedDescriptor {self->inode->frontalMemory},
+		static_cast<ptrdiff_t>(map_offset),
+		map_size,
+		kHelMapProtRead | kHelMapDontRequireBacking};
 
-	memcpy(
-	  buffer,
-	  reinterpret_cast<char *>(file_map.get()) + (chunk_offset - map_offset),
-	  chunk_size
-	);
+	memcpy(buffer,
+	       reinterpret_cast<char *>(file_map.get()) + (chunk_offset - map_offset),
+	       chunk_size);
 	co_return chunk_size;
 }
 
@@ -226,19 +224,19 @@ async::result<void> setFileFlags(void *, int) {
 }
 
 constexpr protocols::fs::FileOperations fileOperations {
-  .seekAbs = &seekAbs,
-  .seekRel = &seekRel,
-  .seekEof = &seekEof,
-  .read = &read,
-  .pread = &pread,
-  .write = &write,
-  .pwrite = &pwrite,
-  .readEntries = &readEntries,
-  .accessMemory = &accessMemory,
-  .truncate = &truncate,
-  .flock = &flock,
-  .getFileFlags = &getFileFlags,
-  .setFileFlags = &setFileFlags,
+	.seekAbs = &seekAbs,
+	.seekRel = &seekRel,
+	.seekEof = &seekEof,
+	.read = &read,
+	.pread = &pread,
+	.write = &write,
+	.pwrite = &pwrite,
+	.readEntries = &readEntries,
+	.accessMemory = &accessMemory,
+	.truncate = &truncate,
+	.flock = &flock,
+	.getFileFlags = &getFileFlags,
+	.setFileFlags = &setFileFlags,
 };
 
 async::result<frg::expected<protocols::fs::Error, protocols::fs::GetLinkResult>>
@@ -249,9 +247,9 @@ getLink(std::shared_ptr<void> object, std::string name) {
 	auto entry = FRG_CO_TRY(co_await self->findEntry(name));
 	if (!entry)
 		co_return protocols::fs::GetLinkResult {
-		  nullptr,
-		  -1,
-		  protocols::fs::FileType::unknown};
+			nullptr,
+			-1,
+			protocols::fs::FileType::unknown};
 
 	protocols::fs::FileType type;
 	switch (entry->fileType) {
@@ -278,9 +276,9 @@ link(std::shared_ptr<void> object, std::string name, int64_t ino) {
 	auto entry = co_await self->link(std::move(name), ino, kTypeRegular);
 	if (!entry)
 		co_return protocols::fs::GetLinkResult {
-		  nullptr,
-		  -1,
-		  protocols::fs::FileType::unknown};
+			nullptr,
+			-1,
+			protocols::fs::FileType::unknown};
 
 	protocols::fs::FileType type;
 	switch (entry->fileType) {
@@ -312,24 +310,23 @@ unlink(std::shared_ptr<void> object, std::string name) {
 	co_return {};
 }
 
-async::detached serve(
-  smarter::shared_ptr<ext2fs::OpenFile> file,
-  helix::UniqueLane local_ctrl,
-  helix::UniqueLane local_pt
-) {
+async::detached
+serve(smarter::shared_ptr<ext2fs::OpenFile> file,
+      helix::UniqueLane local_ctrl,
+      helix::UniqueLane local_pt) {
 	async::cancellation_event cancel_pt;
 
 	// Cancel the passthrough lane once the file line is closed.
 	async::detach(
-	  protocols::fs::serveFile(std::move(local_ctrl), file.get(), &fileOperations),
-	  [&] { cancel_pt.cancel(); }
+		protocols::fs::serveFile(std::move(local_ctrl), file.get(), &fileOperations),
+		[&] { cancel_pt.cancel(); }
 	);
 
 	co_await protocols::fs::servePassthrough(
-	  std::move(local_pt),
-	  file,
-	  &fileOperations,
-	  cancel_pt
+		std::move(local_pt),
+		file,
+		&fileOperations,
+		cancel_pt
 	);
 }
 
@@ -366,9 +363,9 @@ async::result<protocols::fs::OpenResult> open(std::shared_ptr<void> object) {
 	self->diskInode()->atime = time.tv_sec;
 
 	auto syncInode = co_await helix_ng::synchronizeSpace(
-	  helix::BorrowedDescriptor {kHelNullHandle},
-	  self->diskMapping.get(),
-	  self->fs.inodeSize
+		helix::BorrowedDescriptor {kHelNullHandle},
+		self->diskMapping.get(),
+		self->fs.inodeSize
 	);
 	HEL_CHECK(syncInode.error());
 
@@ -383,16 +380,16 @@ async::result<std::string> readSymlink(std::shared_ptr<void> object) {
 
 	if (self->fileSize() <= 60) {
 		co_return std::string {
-		  self->diskInode()->data.embedded,
-		  self->diskInode()->data.embedded + self->fileSize()};
+			self->diskInode()->data.embedded,
+			self->diskInode()->data.embedded + self->fileSize()};
 	} else {
 		std::string result;
 		result.resize(self->fileSize());
 		co_await helix_ng::readMemory(
-		  helix::BorrowedDescriptor(self->frontalMemory),
-		  0,
-		  self->fileSize(),
-		  result.data()
+			helix::BorrowedDescriptor(self->frontalMemory),
+			0,
+			self->fileSize(),
+			result.data()
 		);
 		co_return result;
 	}
@@ -429,11 +426,11 @@ async::result<protocols::fs::Error> chmod(std::shared_ptr<void> object, int mode
 }
 
 async::result<protocols::fs::Error> utimensat(
-  std::shared_ptr<void> object,
-  uint64_t atime_sec,
-  uint64_t atime_nsec,
-  uint64_t mtime_sec,
-  uint64_t mtime_nsec
+	std::shared_ptr<void> object,
+	uint64_t atime_sec,
+	uint64_t atime_nsec,
+	uint64_t mtime_sec,
+	uint64_t mtime_nsec
 ) {
 	auto self = std::static_pointer_cast<ext2fs::Inode>(object);
 	auto result = co_await self->utimensat(atime_sec, atime_nsec, mtime_sec, mtime_nsec);
@@ -465,13 +462,14 @@ traverseLinks(std::shared_ptr<void> object, std::deque<std::string> components) 
 		if (component == "..") {
 			if (parent == self)
 				co_return std::make_tuple(
-				  nodes,
-				  protocols::fs::FileType::unknown,
-				  0
+					nodes,
+					protocols::fs::FileType::unknown,
+					0
 				);
 
-			parent =
-			  self->fs.accessInode(FRG_CO_TRY(co_await parent->findEntry(".."))->inode);
+			parent = self->fs.accessInode(
+				FRG_CO_TRY(co_await parent->findEntry(".."))->inode
+			);
 			nodes.pop_back();
 		} else {
 			entry = FRG_CO_TRY(co_await parent->findEntry(component));
@@ -523,18 +521,18 @@ traverseLinks(std::shared_ptr<void> object, std::deque<std::string> components) 
 }
 
 constexpr protocols::fs::NodeOperations nodeOperations {
-  .getStats = &getStats,
-  .getLink = &getLink,
-  .link = &link,
-  .unlink = &unlink,
-  .open = &open,
-  .readSymlink = &readSymlink,
-  .mkdir = &mkdir,
-  .symlink = &symlink,
-  .chmod = &chmod,
-  .utimensat = &utimensat,
-  .obstructLink = &obstructLink,
-  .traverseLinks = &traverseLinks};
+	.getStats = &getStats,
+	.getLink = &getLink,
+	.link = &link,
+	.unlink = &unlink,
+	.open = &open,
+	.readSymlink = &readSymlink,
+	.mkdir = &mkdir,
+	.symlink = &symlink,
+	.chmod = &chmod,
+	.utimensat = &utimensat,
+	.obstructLink = &obstructLink,
+	.traverseLinks = &traverseLinks};
 
 async::result<protocols::fs::ReadResult>
 rawRead(void *object, const char *, void *buffer, size_t length) {
@@ -558,10 +556,10 @@ rawRead(void *object, const char *, void *buffer, size_t length) {
 	self->offset += chunkSize;
 
 	auto readMemory = co_await helix_ng::readMemory(
-	  helix::BorrowedDescriptor(self->rawFs->frontalMemory),
-	  chunk_offset,
-	  chunkSize,
-	  buffer
+		helix::BorrowedDescriptor(self->rawFs->frontalMemory),
+		chunk_offset,
+		chunkSize,
+		buffer
 	);
 	HEL_CHECK(readMemory.error());
 
@@ -610,8 +608,8 @@ rawIoctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conversat
 
 		auto ser = rsp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		  conversation,
-		  helix_ng::sendBuffer(ser.data(), ser.size())
+			conversation,
+			helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else {
@@ -620,12 +618,12 @@ rawIoctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conversat
 }
 
 constexpr protocols::fs::FileOperations rawOperations {
-  .seekAbs = rawSeekAbs,
-  .seekRel = rawSeekRel,
-  .seekEof = rawSeekEof,
-  .read = rawRead,
-  .ioctl = rawIoctl,
-  .flock = rawFlock,
+	.seekAbs = rawSeekAbs,
+	.seekRel = rawSeekRel,
+	.seekEof = rawSeekEof,
+	.read = rawRead,
+	.ioctl = rawIoctl,
+	.flock = rawFlock,
 };
 
 }  // anonymous namespace
@@ -639,8 +637,10 @@ async::detached servePartition(helix::UniqueLane lane) {
 	std::cout << "unix device: Connection" << std::endl;
 
 	while (true) {
-		auto [accept, recv_head] =
-		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
+		auto [accept, recv_head] = co_await helix_ng::exchangeMsgs(
+			lane,
+			helix_ng::accept(helix_ng::recvInline())
+		);
 
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_head.error());
@@ -662,9 +662,9 @@ async::detached servePartition(helix::UniqueLane lane) {
 			helix::UniqueLane local_lane, remote_lane;
 			std::tie(local_lane, remote_lane) = helix::createStream();
 			protocols::fs::serveNode(
-			  std::move(local_lane),
-			  fs->accessRoot(),
-			  &nodeOperations
+				std::move(local_lane),
+				fs->accessRoot(),
+				&nodeOperations
 			);
 
 			managarm::fs::SvrResponse resp;
@@ -672,9 +672,9 @@ async::detached servePartition(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_node] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(ser.data(), ser.size()),
-			  helix_ng::pushDescriptor(remote_lane)
+				conversation,
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::pushDescriptor(remote_lane)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_node.error());
@@ -692,36 +692,36 @@ async::detached servePartition(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_node] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(ser.data(), ser.size()),
-			  helix_ng::pushDescriptor(remote_lane)
+				conversation,
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::pushDescriptor(remote_lane)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_node.error());
 		} else if (preamble.id() == managarm::fs::RenameRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::recvBuffer(tail.data(), tail.size())
+				conversation,
+				helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req =
-			  bragi::parse_head_tail<managarm::fs::RenameRequest>(recv_head, tail);
+			auto req = bragi::parse_head_tail<managarm::fs::RenameRequest>(
+				recv_head,
+				tail
+			);
 
 			if (!req) {
 				std::cout << "libblockfs: Rejecting request due to decoding failure"
-				          << std::endl;
+					  << std::endl;
 				break;
 			}
 
 			auto oldInode = fs->accessInode(req->inode_source());
 			auto newInode = fs->accessInode(req->inode_target());
 
-			assert(
-			  !req->old_name().empty() && req->old_name() != "."
-			  && req->old_name() != ".."
-			);
+			assert(!req->old_name().empty() && req->old_name() != "."
+			       && req->old_name() != "..");
 			auto old_result = co_await oldInode->findEntry(req->old_name());
 			if (!old_result) {
 				managarm::fs::SvrResponse resp;
@@ -730,8 +730,8 @@ async::detached servePartition(helix::UniqueLane lane) {
 
 				auto ser = resp.SerializeAsString();
 				auto [send_resp] = co_await helix_ng::exchangeMsgs(
-				  conversation,
-				  helix_ng::sendBuffer(ser.data(), ser.size())
+					conversation,
+					helix_ng::sendBuffer(ser.data(), ser.size())
 				);
 				HEL_CHECK(send_resp.error());
 				continue;
@@ -742,23 +742,22 @@ async::detached servePartition(helix::UniqueLane lane) {
 			if (old_file) {
 				auto result = co_await newInode->unlink(req->new_name());
 				if (!result) {
-					assert(
-					  result.error() == protocols::fs::Error::fileNotFound
+					assert(result.error() == protocols::fs::Error::fileNotFound
 					);
 					// Ignored
 				}
 				co_await newInode->link(
-				  req->new_name(),
-				  old_file.value().inode,
-				  old_file.value().fileType
+					req->new_name(),
+					old_file.value().inode,
+					old_file.value().fileType
 				);
 			} else {
 				resp.set_error(managarm::fs::Errors::FILE_NOT_FOUND);
 
 				auto ser = resp.SerializeAsString();
 				auto [send_resp] = co_await helix_ng::exchangeMsgs(
-				  conversation,
-				  helix_ng::sendBuffer(ser.data(), ser.size())
+					conversation,
+					helix_ng::sendBuffer(ser.data(), ser.size())
 				);
 				HEL_CHECK(send_resp.error());
 				continue;
@@ -771,8 +770,8 @@ async::detached servePartition(helix::UniqueLane lane) {
 
 				auto ser = resp.SerializeAsString();
 				auto [send_resp] = co_await helix_ng::exchangeMsgs(
-				  conversation,
-				  helix_ng::sendBuffer(ser.data(), ser.size())
+					conversation,
+					helix_ng::sendBuffer(ser.data(), ser.size())
 				);
 				HEL_CHECK(send_resp.error());
 				continue;
@@ -781,8 +780,8 @@ async::detached servePartition(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(ser.data(), ser.size())
+				conversation,
+				helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		} else if (req.req_type() == managarm::fs::CntReqType::DEV_OPEN) {
@@ -790,9 +789,9 @@ async::detached servePartition(helix::UniqueLane lane) {
 			std::tie(local_lane, remote_lane) = helix::createStream();
 			auto file = smarter::make_shared<raw::OpenFile>(rawFs);
 			async::detach(protocols::fs::servePassthrough(
-			  std::move(local_lane),
-			  file,
-			  &rawOperations
+				std::move(local_lane),
+				file,
+				&rawOperations
 			));
 
 			managarm::fs::SvrResponse resp;
@@ -800,15 +799,15 @@ async::detached servePartition(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_node] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(ser.data(), ser.size()),
-			  helix_ng::pushDescriptor(remote_lane)
+				conversation,
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::pushDescriptor(remote_lane)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_node.error());
 		} else {
 			throw std::runtime_error(
-			  "Unexpected request type " + std::to_string((int) req.req_type())
+				"Unexpected request type " + std::to_string((int) req.req_type())
 			);
 		}
 	}
@@ -829,17 +828,19 @@ async::detached runDevice(BlockDevice *device) {
 		auto root = co_await mbus::Instance::global().getRoot();
 
 		mbus::Properties descriptor {
-		  {"unix.devtype", mbus::StringItem {"block"}},
-		  {"unix.blocktype", mbus::StringItem {"disk"}},
-		  {"drvcore.mbus-parent", mbus::StringItem {std::to_string(device->parentId)}}};
+			{"unix.devtype", mbus::StringItem {"block"}},
+			{"unix.blocktype", mbus::StringItem {"disk"}},
+			{"drvcore.mbus-parent",
+			 mbus::StringItem {std::to_string(device->parentId)}}};
 
-		auto handler =
-		  mbus::ObjectHandler {}.withBind([]() -> async::result<helix::UniqueDescriptor> {
-			  std::cout << "\e[31mlibblockfs: Disks don't currently serve "
-			               "requests\e[39m"
-			            << std::endl;
-			  co_return {};
-		  });
+		auto handler = mbus::ObjectHandler {}.withBind(
+			[]() -> async::result<helix::UniqueDescriptor> {
+				std::cout << "\e[31mlibblockfs: Disks don't currently serve "
+					     "requests\e[39m"
+					  << std::endl;
+				co_return {};
+			}
+		);
 
 		auto obj = co_await root.createObject("disk", descriptor, std::move(handler));
 		diskId = obj.getId();
@@ -848,21 +849,19 @@ async::detached runDevice(BlockDevice *device) {
 	int partId = 0;
 	for (size_t i = 0; i < table->numPartitions(); ++i) {
 		auto type = table->getPartition(i).type();
-		printf(
-		  "Partition %lu, type: %.8X-%.4X-%.4X-%.2X%.2X-%.2X%.2X%.2X%.2X%.2X%.2X\n",
-		  i,
-		  type.a,
-		  type.b,
-		  type.c,
-		  type.d[0],
-		  type.d[1],
-		  type.e[0],
-		  type.e[1],
-		  type.e[2],
-		  type.e[3],
-		  type.e[4],
-		  type.e[5]
-		);
+		printf("Partition %lu, type: %.8X-%.4X-%.4X-%.2X%.2X-%.2X%.2X%.2X%.2X%.2X%.2X\n",
+		       i,
+		       type.a,
+		       type.b,
+		       type.c,
+		       type.d[0],
+		       type.d[1],
+		       type.e[0],
+		       type.e[1],
+		       type.e[2],
+		       type.e[3],
+		       type.e[4],
+		       type.e[5]);
 
 		if (type != gpt::type_guids::windowsData)
 			continue;
@@ -880,20 +879,22 @@ async::detached runDevice(BlockDevice *device) {
 		auto root = co_await mbus::Instance::global().getRoot();
 
 		mbus::Properties descriptor {
-		  {"unix.devtype", mbus::StringItem {"block"}},
-		  {"unix.blocktype", mbus::StringItem {"partition"}},
-		  {"unix.partid", mbus::StringItem {std::to_string(partId++)}},
-		  {"unix.diskid", mbus::StringItem {std::to_string(diskId)}},
-		  {"drvcore.mbus-parent", mbus::StringItem {std::to_string(device->parentId)}}};
+			{"unix.devtype", mbus::StringItem {"block"}},
+			{"unix.blocktype", mbus::StringItem {"partition"}},
+			{"unix.partid", mbus::StringItem {std::to_string(partId++)}},
+			{"unix.diskid", mbus::StringItem {std::to_string(diskId)}},
+			{"drvcore.mbus-parent",
+			 mbus::StringItem {std::to_string(device->parentId)}}};
 
-		auto handler =
-		  mbus::ObjectHandler {}.withBind([]() -> async::result<helix::UniqueDescriptor> {
-			  helix::UniqueLane local_lane, remote_lane;
-			  std::tie(local_lane, remote_lane) = helix::createStream();
-			  servePartition(std::move(local_lane));
+		auto handler = mbus::ObjectHandler {}.withBind(
+			[]() -> async::result<helix::UniqueDescriptor> {
+				helix::UniqueLane local_lane, remote_lane;
+				std::tie(local_lane, remote_lane) = helix::createStream();
+				servePartition(std::move(local_lane));
 
-			  co_return std::move(remote_lane);
-		  });
+				co_return std::move(remote_lane);
+			}
+		);
 
 		co_await root.createObject("partition", descriptor, std::move(handler));
 	}

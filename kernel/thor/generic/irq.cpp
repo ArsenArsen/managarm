@@ -151,7 +151,7 @@ IrqPin::IrqPin(frg::string<KernelAlloc> name)
 
 			auto ms = static_cast<uint64_t>(50) * (1 << self->_unstallExponent);
 			co_await generalTimerEngine()->sleepFor(
-			  static_cast<uint64_t>(50'000'000) * (1 << self->_unstallExponent)
+				static_cast<uint64_t>(50'000'000) * (1 << self->_unstallExponent)
 			);
 
 			// Kick the IRQ.
@@ -162,11 +162,11 @@ IrqPin::IrqPin(frg::string<KernelAlloc> name)
 				if (!(self->_maskState & maskedForNack))
 					continue;
 				infoLogger() << "\e[35m"
-				                "thor: Unstalling IRQ "
-				             << self->name() << " after " << ms
-				             << " ms"
-				                "\e[39m"
-				             << frg::endlog;
+						"thor: Unstalling IRQ "
+					     << self->name() << " after " << ms
+					     << " ms"
+						"\e[39m"
+					     << frg::endlog;
 				self->_kick(false);
 			}
 		}
@@ -181,8 +181,8 @@ void IrqPin::configure(IrqConfiguration desired) {
 
 	if (!_activeCfg.specified()) {
 		infoLogger() << "thor: Configuring IRQ " << _name
-		             << " to trigger mode: " << static_cast<int>(desired.trigger)
-		             << ", polarity: " << static_cast<int>(desired.polarity) << frg::endlog;
+			     << " to trigger mode: " << static_cast<int>(desired.trigger)
+			     << ", polarity: " << static_cast<int>(desired.polarity) << frg::endlog;
 		_strategy = program(desired.trigger, desired.polarity);
 
 		_activeCfg = desired;
@@ -215,17 +215,17 @@ void IrqPin::raise() {
 
 		if (complain) {
 			infoLogger() << "\e[35mthor: IRQ controller raised " << _name
-			             << " despite being masked (" << _maskedRaiseCtr
-			             << "x)"
-			                "\e[39m"
-			             << frg::endlog;
+				     << " despite being masked (" << _maskedRaiseCtr
+				     << "x)"
+					"\e[39m"
+				     << frg::endlog;
 			dumpHardwareState();
 
 			for (auto it = _sinkList.begin(); it != _sinkList.end(); ++it) {
 				auto lock = frg::guard(&(*it)->_mutex);
 				if ((*it)->_status == IrqStatus::standBy) {
 					infoLogger() << "thor: IRQ sink " << (*it)->name()
-					             << " is in standBy state" << frg::endlog;
+						     << " is in standBy state" << frg::endlog;
 				} else {
 					(*it)->dumpHardwareState();
 				}
@@ -310,11 +310,11 @@ void IrqPin::_dispatch() {
 	if (_dispatchAcks || _dispatchKicks) {
 		if (logService)
 			infoLogger() << "\e[37m"
-			                "thor: IRQ pin "
-			             << name()
-			             << " is acked (asynchronously)"
-			                "\e[39m"
-			             << frg::endlog;
+					"thor: IRQ pin "
+				     << name()
+				     << " is acked (asynchronously)"
+					"\e[39m"
+				     << frg::endlog;
 
 		_inService = false;
 		_maskState &= ~maskedForService;
@@ -330,12 +330,12 @@ void IrqPin::_dispatch() {
 		// Note that _inService returns true for NAKed IRQs.
 
 		infoLogger() << "\e[31mthor: IRQ " << _name << " was nacked (asynchronously)!\e[39m"
-		             << frg::endlog;
+			     << frg::endlog;
 		for (auto it = _sinkList.begin(); it != _sinkList.end(); ++it) {
 			auto lock = frg::guard(&(*it)->_mutex);
 			if ((*it)->_status == IrqStatus::standBy) {
 				infoLogger() << "thor: IRQ sink " << (*it)->name()
-				             << " is in standBy state" << frg::endlog;
+					     << " is in standBy state" << frg::endlog;
 			} else {
 				(*it)->dumpHardwareState();
 			}
@@ -356,7 +356,8 @@ void IrqPin::warnIfPending() {
 	if (!_inService || (_maskState & maskedForNack))
 		return;
 
-	if (systemClockSource()->currentNanos() - _raiseClock > 1000000000 && !_warnedAfterPending) {
+	if (systemClockSource()->currentNanos() - _raiseClock > 1000000000
+	    && !_warnedAfterPending) {
 		auto log = infoLogger();
 		log << "\e[35mthor: Pending IRQ " << _name
 		    << " has not been"
@@ -379,11 +380,11 @@ void IrqPin::_doService() {
 
 	if (logService)
 		infoLogger() << "\e[37m"
-		                "thor: IRQ pin "
-		             << _name
-		             << " enters service"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: IRQ pin "
+			     << _name
+			     << " enters service"
+				"\e[39m"
+			     << frg::endlog;
 
 	_inService = true;
 	// maskThenEoi IRQs are masked while then are in service.
@@ -422,11 +423,11 @@ void IrqPin::_doService() {
 		if (anyAck) {
 			if (logService)
 				infoLogger() << "\e[37m"
-				                "thor: IRQ pin "
-				             << name()
-				             << " is acked (asynchronously)"
-				                "\e[39m"
-				             << frg::endlog;
+						"thor: IRQ pin "
+					     << name()
+					     << " is acked (asynchronously)"
+						"\e[39m"
+					     << frg::endlog;
 
 			if (_unstallExponent > 0)
 				--_unstallExponent;
@@ -435,7 +436,7 @@ void IrqPin::_doService() {
 			_maskState &= ~maskedForService;
 		} else {
 			infoLogger() << "\e[31mthor: IRQ " << _name
-			             << " was nacked (synchronously)!\e[39m" << frg::endlog;
+				     << " was nacked (synchronously)!\e[39m" << frg::endlog;
 			for (auto it = _sinkList.begin(); it != _sinkList.end(); ++it) {
 				auto lock = frg::guard(&(*it)->_mutex);
 				assert((*it)->_status != IrqStatus::standBy);
@@ -499,7 +500,7 @@ IrqStatus IrqObject::raise() {
 		} else {
 			assert(!result);
 			infoLogger()
-			  << "thor: IRQ automation does not handle the IRQ?" << frg::endlog;
+				<< "thor: IRQ automation does not handle the IRQ?" << frg::endlog;
 			return IrqStatus::indefinite;
 		}
 	} else

@@ -30,9 +30,9 @@ private:
 		if (timer->initial) {
 			helix::AwaitClock await_initial;
 			auto &&submit = helix::submitAwaitClock(
-			  &await_initial,
-			  tick + timer->initial,
-			  helix::Dispatcher::global()
+				&await_initial,
+				tick + timer->initial,
+				helix::Dispatcher::global()
 			);
 			timer->asyncId = await_initial.asyncId();
 			co_await submit.async_wait();
@@ -60,15 +60,14 @@ private:
 		while (true) {
 			helix::AwaitClock await_interval;
 			auto &&submit = helix::submitAwaitClock(
-			  &await_interval,
-			  tick + timer->interval,
-			  helix::Dispatcher::global()
+				&await_interval,
+				tick + timer->interval,
+				helix::Dispatcher::global()
 			);
 			timer->asyncId = await_interval.asyncId();
 			co_await submit.async_wait();
 			timer->asyncId = 0;
-			assert(
-			  !await_interval.error() || await_interval.error() == kHelErrCancelled
+			assert(!await_interval.error() || await_interval.error() == kHelErrCancelled
 			);
 			tick += timer->interval;
 
@@ -90,10 +89,10 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  file,
-		  &File::fileOperations,
-		  file->_cancelServe
+			std::move(lane),
+			file,
+			&File::fileOperations,
+			file->_cancelServe
 		));
 	}
 
@@ -127,7 +126,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t in_seq, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		(void) mask;  // TODO: utilize mask.
 		if (logTimerfd)
 			std::cout << "posix: timerfd::pollWait(" << in_seq << ")" << std::endl;
@@ -152,9 +151,10 @@ public:
 		auto current = std::exchange(_activeTimer, nullptr);
 		if (current) {
 			assert(current->asyncId);
-			HEL_CHECK(
-			  helCancelAsync(helix::Dispatcher::global().acquire(), current->asyncId)
-			);
+			HEL_CHECK(helCancelAsync(
+				helix::Dispatcher::global().acquire(),
+				current->asyncId
+			));
 		}
 
 		if (initial || interval) {
@@ -198,26 +198,26 @@ void setTime(File *file, struct timespec initial, struct timespec interval) {
 
 	if (logTimerfd)
 		std::cout << "setTime() initial: " << initial.tv_sec << " + " << initial.tv_nsec
-		          << ", interval: " << interval.tv_sec << " + " << interval.tv_nsec
-		          << std::endl;
+			  << ", interval: " << interval.tv_sec << " + " << interval.tv_nsec
+			  << std::endl;
 
 	// Note: __builtin_mul_overflow() with signed arguments requires a call to a
 	// compiler-rt function for clang. Cast to unsigned to avoid this issue.
 
 	uint64_t initial_nanos;
 	if (__builtin_mul_overflow(
-	            static_cast<uint64_t>(initial.tv_sec),
-	            1000000000,
-	            &initial_nanos
+		    static_cast<uint64_t>(initial.tv_sec),
+		    1000000000,
+		    &initial_nanos
 	    )
 	    || __builtin_add_overflow(initial.tv_nsec, initial_nanos, &initial_nanos))
 		throw std::runtime_error("Overflow in timerfd setup");
 
 	uint64_t interval_nanos;
 	if (__builtin_mul_overflow(
-	            static_cast<uint64_t>(interval.tv_sec),
-	            1000000000,
-	            &interval_nanos
+		    static_cast<uint64_t>(interval.tv_sec),
+		    1000000000,
+		    &interval_nanos
 	    )
 	    || __builtin_add_overflow(interval.tv_nsec, interval_nanos, &interval_nanos))
 		throw std::runtime_error("Overflow in timerfd setup");

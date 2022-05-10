@@ -118,25 +118,25 @@ uint32_t earlyIdt[256 * 4];
 
 extern "C" void handleEarlyDivideByZeroFault(void *rip) {
 	panicLogger() << "Division by zero during boot\n"
-	              << "Faulting IP: " << rip << frg::endlog;
+		      << "Faulting IP: " << rip << frg::endlog;
 }
 
 extern "C" void handleEarlyOpcodeFault(void *rip) {
 	panicLogger() << "Invalid opcode during boot\n"
-	              << "Faulting IP: " << rip << frg::endlog;
+		      << "Faulting IP: " << rip << frg::endlog;
 }
 
 extern "C" void handleEarlyDoubleFault(uint64_t errcode, void *rip) {
 	(void) errcode;
 
 	panicLogger() << "Double fault during boot\n"
-	              << "Faulting IP: " << rip << frg::endlog;
+		      << "Faulting IP: " << rip << frg::endlog;
 }
 
 extern "C" void handleEarlyProtectionFault(uint64_t errcode, void *rip) {
 	panicLogger() << "Protection fault during boot\n"
-	              << "Segment: " << errcode << "\n"
-	              << "Faulting IP: " << rip << frg::endlog;
+		      << "Segment: " << errcode << "\n"
+		      << "Faulting IP: " << rip << frg::endlog;
 }
 
 extern "C" void handleEarlyPageFault(uint64_t errcode, void *rip) {
@@ -145,7 +145,7 @@ extern "C" void handleEarlyPageFault(uint64_t errcode, void *rip) {
 	asm volatile("mov %%cr2, %0" : "=r"(pfAddress));
 
 	panicLogger() << "Page fault at " << (void *) pfAddress << " during boot\n"
-	              << "Faulting IP: " << rip << frg::endlog;
+		      << "Faulting IP: " << rip << frg::endlog;
 }
 
 void setupEarlyInterruptHandlers() {
@@ -161,10 +161,10 @@ void setupEarlyInterruptHandlers() {
 	asm volatile("lgdt (%0)" : : "r"(&gdtr));
 
 	asm volatile(
-	  "pushq $0x8\n"
-	  "\rpushq $.L_reloadEarlyCs\n"
-	  "\rlretq\n"
-	  ".L_reloadEarlyCs:"
+		"pushq $0x8\n"
+		"\rpushq $.L_reloadEarlyCs\n"
+		"\rlretq\n"
+		".L_reloadEarlyCs:"
 	);
 
 	// setup the idt
@@ -298,7 +298,7 @@ void handleSyscall(SyscallImageAccessor image);
 
 void handleDebugFault(FaultImageAccessor image) {
 	infoLogger() << "\e[35mthor: Debug fault "
-	             << "at ip: " << (void *) *image.ip() << "\e[39m" << frg::endlog;
+		     << "at ip: " << (void *) *image.ip() << "\e[39m" << frg::endlog;
 }
 
 extern "C" void onPlatformFault(FaultImageAccessor image, int number) {
@@ -312,24 +312,25 @@ extern "C" void onPlatformFault(FaultImageAccessor image, int number) {
 	uint16_t cs = *image.cs();
 	if (logEveryFault)
 		infoLogger() << "Fault #" << number << ", from cs: 0x" << frg::hex_fmt(cs)
-		             << ", ip: " << (void *) *image.ip() << frg::endlog;
+			     << ", ip: " << (void *) *image.ip() << frg::endlog;
 
 	if (inStub(*image.ip()))
 		panicLogger() << "Fault #" << number << " in stub section, cs: 0x"
-		              << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip()
-		              << frg::endlog;
-	if (cs != kSelSystemIrqCode && cs != kSelClientUserCode && cs != kSelExecutorFaultCode && cs != kSelExecutorSyscallCode)
+			      << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip()
+			      << frg::endlog;
+	if (cs != kSelSystemIrqCode && cs != kSelClientUserCode && cs != kSelExecutorFaultCode
+	    && cs != kSelExecutorSyscallCode)
 		panicLogger() << "Fault #" << number << ", from unexpected cs: 0x"
-		              << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << "\n"
-		              << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
-		              << frg::hex_fmt(*image.ss()) << ", RSP: " << (void *) *image.sp()
-		              << frg::endlog;
+			      << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << "\n"
+			      << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
+			      << frg::hex_fmt(*image.ss()) << ", RSP: " << (void *) *image.sp()
+			      << frg::endlog;
 	if (!(*image.rflags() & 0x200))
 		panicLogger() << "Fault #" << number << ", with IF=0, cs: 0x" << frg::hex_fmt(cs)
-		              << ", ip: " << (void *) *image.ip() << "\n"
-		              << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
-		              << frg::hex_fmt(*image.ss()) << ", RSP: " << (void *) *image.sp()
-		              << frg::endlog;
+			      << ", ip: " << (void *) *image.ip() << "\n"
+			      << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
+			      << frg::hex_fmt(*image.ss()) << ", RSP: " << (void *) *image.sp()
+			      << frg::endlog;
 
 	disableUserAccess();
 
@@ -351,10 +352,10 @@ extern "C" void onPlatformFault(FaultImageAccessor image, int number) {
 	} break;
 	default:
 		panicLogger() << "Unexpected fault number " << number << ", from cs: 0x"
-		              << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << "\n"
-		              << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
-		              << frg::hex_fmt(*image.ss()) << ", RSP: " << (void *) *image.sp()
-		              << frg::endlog;
+			      << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << "\n"
+			      << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
+			      << frg::hex_fmt(*image.ss()) << ", RSP: " << (void *) *image.sp()
+			      << frg::endlog;
 	}
 
 	disableInts();
@@ -363,14 +364,12 @@ extern "C" void onPlatformFault(FaultImageAccessor image, int number) {
 extern "C" void onPlatformIrq(IrqImageAccessor image, int number) {
 	if (inStub(*image.ip()))
 		panicLogger() << "IRQ " << number << " in stub section, cs: 0x"
-		              << frg::hex_fmt(*image.cs()) << ", ip: " << (void *) *image.ip()
-		              << frg::endlog;
+			      << frg::hex_fmt(*image.cs()) << ", ip: " << (void *) *image.ip()
+			      << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(
-	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
-	);
+	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -381,51 +380,47 @@ extern "C" void onPlatformIrq(IrqImageAccessor image, int number) {
 extern "C" void onPlatformLegacyIrq(IrqImageAccessor image, int number) {
 	if (inStub(*image.ip()))
 		panicLogger() << "IRQ " << number << " in stub section, cs: 0x"
-		              << frg::hex_fmt(*image.cs()) << ", ip: " << (void *) *image.ip()
-		              << frg::endlog;
+			      << frg::hex_fmt(*image.cs()) << ", ip: " << (void *) *image.ip()
+			      << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(
-	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
-	);
+	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
 
 	if (checkLegacyPicIsr(number)) {
 		infoLogger() << "\e[31m"
-		                "thor: Spurious IRQ "
-		             << number
-		             << " of legacy PIC"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: Spurious IRQ "
+			     << number
+			     << " of legacy PIC"
+				"\e[39m"
+			     << frg::endlog;
 	} else {
 		infoLogger() << "\e[31m"
-		                "thor: Ignoring non-spurious IRQ "
-		             << number
-		             << " of legacy PIC"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: Ignoring non-spurious IRQ "
+			     << number
+			     << " of legacy PIC"
+				"\e[39m"
+			     << frg::endlog;
 	}
 }
 
 extern "C" void onPlatformPreemption(IrqImageAccessor image) {
 	if (inStub(*image.ip()))
 		panicLogger() << "Preemption IRQ"
-		                 " in stub section, cs: 0x"
-		              << frg::hex_fmt(*image.cs()) << ", ip: " << (void *) *image.ip()
-		              << frg::endlog;
+				 " in stub section, cs: 0x"
+			      << frg::hex_fmt(*image.cs()) << ", ip: " << (void *) *image.ip()
+			      << frg::endlog;
 
 	uint16_t cs = *image.cs();
 	if (logEveryPreemption)
 		infoLogger() << "thor [CPU " << getLocalApicId() << "]: Preemption from cs: 0x"
-		             << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << frg::endlog;
+			     << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << frg::endlog;
 
-	assert(
-	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
-	);
+	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -453,14 +448,12 @@ extern "C" void onPlatformSyscall(SyscallImageAccessor image) {
 extern "C" void onPlatformShootdown(IrqImageAccessor image) {
 	if (inStub(*image.ip()))
 		panicLogger() << "Shootdown IPI"
-		              << " in stub section, cs: 0x" << frg::hex_fmt(*image.cs())
-		              << ", ip: " << (void *) *image.ip() << frg::endlog;
+			      << " in stub section, cs: 0x" << frg::hex_fmt(*image.cs())
+			      << ", ip: " << (void *) *image.ip() << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(
-	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
-	);
+	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -476,14 +469,12 @@ extern "C" void onPlatformShootdown(IrqImageAccessor image) {
 extern "C" void onPlatformPing(IrqImageAccessor image) {
 	if (inStub(*image.ip()))
 		panicLogger() << "Ping IPI"
-		              << " in stub section, cs: 0x" << frg::hex_fmt(*image.cs())
-		              << ", ip: " << (void *) *image.ip() << frg::endlog;
+			      << " in stub section, cs: 0x" << frg::hex_fmt(*image.cs())
+			      << ", ip: " << (void *) *image.ip() << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(
-	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
-	);
+	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -512,8 +503,8 @@ extern "C" void onPlatformNmi(NmiImageAccessor image) {
 	// If we interrupted user space or a kernel stub, we might need to update GS.
 	auto gs = common::x86::rdmsr(common::x86::kMsrIndexGsBase);
 	common::x86::wrmsr(
-	  common::x86::kMsrIndexGsBase,
-	  reinterpret_cast<uintptr_t>(*image.expectedGs())
+		common::x86::kMsrIndexGsBase,
+		reinterpret_cast<uintptr_t>(*image.expectedGs())
 	);
 
 	auto cpuData = getCpuData();
@@ -534,12 +525,12 @@ extern "C" void onPlatformNmi(NmiImageAccessor image) {
 
 	if (!explained) {
 		infoLogger() << "thor [CPU " << getLocalApicId() << "]: NMI triggered at heartbeat "
-		             << cpuData->heartbeat.load(std::memory_order_relaxed) << frg::endlog;
+			     << cpuData->heartbeat.load(std::memory_order_relaxed) << frg::endlog;
 		infoLogger() << "thor [CPU " << getLocalApicId() << "]: From CS: 0x"
-		             << frg::hex_fmt(*image.cs()) << ", IP: " << (void *) *image.ip()
-		             << frg::endlog;
+			     << frg::hex_fmt(*image.cs()) << ", IP: " << (void *) *image.ip()
+			     << frg::endlog;
 		infoLogger() << "thor [CPU " << getLocalApicId() << "]: RFLAGS is "
-		             << (void *) *image.rflags() << frg::endlog;
+			     << (void *) *image.rflags() << frg::endlog;
 
 		if (!getLocalApicId())
 			sendGlobalNmi();

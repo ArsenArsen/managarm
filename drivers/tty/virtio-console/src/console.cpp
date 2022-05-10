@@ -13,17 +13,19 @@ async::result<helix::UniqueLane> enumerateKerncfgByteRing(const char *purpose) {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	auto filter = mbus::Conjunction(
-	  {mbus::EqualsFilter("class", "kerncfg-byte-ring"), mbus::EqualsFilter("purpose", purpose)}
+		{mbus::EqualsFilter("class", "kerncfg-byte-ring"),
+		 mbus::EqualsFilter("purpose", purpose)}
 	);
 
 	async::promise<helix::UniqueLane, frg::stl_allocator> promise;
 	auto future = promise.get_future();
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	  [&promise](mbus::Entity entity, mbus::Properties properties) mutable -> async::detached {
-		  std::cout << "virtio-console: Found kerncfg" << std::endl;
-		  promise.set_value(helix::UniqueLane(co_await entity.bind()));
-	  }
+		[&promise](mbus::Entity entity, mbus::Properties properties) mutable
+		-> async::detached {
+			std::cout << "virtio-console: Found kerncfg" << std::endl;
+			promise.set_value(helix::UniqueLane(co_await entity.bind()));
+		}
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
@@ -31,10 +33,10 @@ async::result<helix::UniqueLane> enumerateKerncfgByteRing(const char *purpose) {
 }
 
 async::result<std::tuple<size_t, uint64_t, uint64_t>> getKerncfgByteRingPart(
-  helix::BorrowedLane lane,
-  arch::dma_buffer_view chunk,
-  uint64_t dequeue,
-  uint64_t watermark
+	helix::BorrowedLane lane,
+	arch::dma_buffer_view chunk,
+	uint64_t dequeue,
+	uint64_t watermark
 ) {
 	managarm::kerncfg::CntRequest req;
 	req.set_req_type(managarm::kerncfg::CntReqType::GET_BUFFER_CONTENTS);
@@ -44,12 +46,12 @@ async::result<std::tuple<size_t, uint64_t, uint64_t>> getKerncfgByteRingPart(
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp, recv_buffer] = co_await helix_ng::exchangeMsgs(
-	  lane,
-	  helix_ng::offer(
-	    helix_ng::sendBuffer(ser.data(), ser.size()),
-	    helix_ng::recvInline(),
-	    helix_ng::recvBuffer(chunk.data(), chunk.size())
-	  )
+		lane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline(),
+			helix_ng::recvBuffer(chunk.data(), chunk.size())
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -92,13 +94,17 @@ async::detached Device::runDevice() {
 		arch::dma_buffer chunkBuffer {&dmaPool_, 1 << 16};
 
 		while (true) {
-			auto [size, effectiveDequeue, newDequeue] =
-			  co_await getKerncfgByteRingPart(lane, chunkBuffer, dequeue, watermark);
+			auto [size, effectiveDequeue, newDequeue] = co_await getKerncfgByteRingPart(
+				lane,
+				chunkBuffer,
+				dequeue,
+				watermark
+			);
 
 			// TODO: improve this by passing the "true" dequeue pointer to userspace.
 			if (dequeue != effectiveDequeue)
 				std::cerr << "virtio-console: warning, we possibly missed "
-				          << (effectiveDequeue - dequeue) << " bytes" << std::endl;
+					  << (effectiveDequeue - dequeue) << " bytes" << std::endl;
 
 			dequeue = newDequeue;
 

@@ -46,25 +46,25 @@ int main() {
 	auto init_udev = udev_new();
 	if (!init_udev) {
 		std::cerr << "\e[31m"
-		             "init: udev_new() failed"
-		             "\e[39m"
-		          << std::endl;
+			     "init: udev_new() failed"
+			     "\e[39m"
+			  << std::endl;
 		abort();
 	}
 
 	auto init_udev_mon = udev_monitor_new_from_netlink(init_udev, "udev");
 	if (!init_udev_mon) {
 		std::cerr << "\e[31m"
-		             "init: udev_monitor_new_from_netlink() failed"
-		             "\e[39m"
-		          << std::endl;
+			     "init: udev_monitor_new_from_netlink() failed"
+			     "\e[39m"
+			  << std::endl;
 		abort();
 	}
 	if (udev_monitor_enable_receiving(init_udev_mon) < 0) {
 		std::cerr << "\e[31m"
-		             "init: udev_monitor_new_from_netlink() failed"
-		             "\e[39m"
-		          << std::endl;
+			     "init: udev_monitor_new_from_netlink() failed"
+			     "\e[39m"
+			  << std::endl;
 		abort();
 	}
 
@@ -72,26 +72,22 @@ int main() {
 #if defined(__x86_64__)
 	auto input_ps2 = fork();
 	if (!input_ps2) {
-		execl(
-		  "/usr/bin/runsvr",
-		  "/usr/bin/runsvr",
-		  "run",
-		  "/usr/lib/managarm/server/input-atkbd.bin",
-		  nullptr
-		);
+		execl("/usr/bin/runsvr",
+		      "/usr/bin/runsvr",
+		      "run",
+		      "/usr/lib/managarm/server/input-atkbd.bin",
+		      nullptr);
 	} else
 		assert(input_ps2 != -1);
 #endif
 
 	auto input_hid = fork();
 	if (!input_hid) {
-		execl(
-		  "/usr/bin/runsvr",
-		  "/usr/bin/runsvr",
-		  "run",
-		  "/usr/lib/managarm/server/input-usbhid.bin",
-		  nullptr
-		);
+		execl("/usr/bin/runsvr",
+		      "/usr/bin/runsvr",
+		      "run",
+		      "/usr/lib/managarm/server/input-usbhid.bin",
+		      nullptr);
 	} else
 		assert(input_hid != -1);
 
@@ -154,9 +150,9 @@ int main() {
 		auto dev = udev_monitor_receive_device(init_udev_mon);
 		if (!dev) {
 			std::cerr << "\e[31m"
-			             "init: udev_monitor_receive_device() failed"
-			             "\e[39m"
-			          << std::endl;
+				     "init: udev_monitor_receive_device() failed"
+				     "\e[39m"
+				  << std::endl;
 			abort();
 		}
 		auto syspath = udev_device_get_syspath(dev);
@@ -217,7 +213,7 @@ int main() {
 			execl(command.c_str(), command.c_str(), nullptr);
 		} else {
 			std::cout << "init: init does not know how to launch " << launch
-			          << std::endl;
+				  << std::endl;
 		}
 		throw std::runtime_error("Could not execute desktop");
 		// execl("/usr/bin/kmscube", "kmscube", nullptr);

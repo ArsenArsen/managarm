@@ -63,7 +63,7 @@ int64_t getCmosTime() {
 	int64_t min = decodeRtc(readCmos(rtcMinutes));
 	int64_t h = decodeRtc(readCmos(rtcHours));
 	infoLogger() << "thor: Reading RTC returns " << y << "-" << mon << "-" << d << " " << h
-	             << ":" << min << ":" << s << frg::endlog;
+		     << ":" << min << ":" << s << frg::endlog;
 
 	// Code from http://howardhinnant.github.io/date_algorithms.html
 	y -= (mon <= 2);
@@ -186,7 +186,7 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 
 	auto stream = createStream();
 	auto descError =
-	  co_await PushDescriptorSender {conversation, LaneDescriptor {stream.get<1>()}};
+		co_await PushDescriptorSender {conversation, LaneDescriptor {stream.get<1>()}};
 	// TODO: improve error handling here.
 	assert(descError == Error::success);
 
@@ -201,18 +201,18 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 }  // anonymous namespace
 
 static initgraph::Task initRtcTask {
-  &globalInitEngine,
-  "x86.init-rtc",
-  initgraph::Requires {getFibersAvailableStage()},
-  [] {
-	  // Create a fiber to manage requests to the RTC mbus object.
-	  KernelFiber::run([=] {
-		  async::detach_with_allocator(*kernelAlloc, []() -> coroutine<void> {
-			  auto objectLane = co_await createObject(*mbusClient);
-			  while (true)
-				  co_await handleBind(objectLane);
-		  }());
-	  });
-  }};
+	&globalInitEngine,
+	"x86.init-rtc",
+	initgraph::Requires {getFibersAvailableStage()},
+	[] {
+		// Create a fiber to manage requests to the RTC mbus object.
+		KernelFiber::run([=] {
+			async::detach_with_allocator(*kernelAlloc, []() -> coroutine<void> {
+				auto objectLane = co_await createObject(*mbusClient);
+				while (true)
+					co_await handleBind(objectLane);
+			}());
+		});
+	}};
 
 }  // namespace thor

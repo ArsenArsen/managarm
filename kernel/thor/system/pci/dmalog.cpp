@@ -36,9 +36,9 @@ struct DmalogDevice final
 	constexpr static size_t ringSize = kPageSize;
 
 	DmalogDevice(
-	  frg::string<KernelAlloc> tag,
-	  frg::string<KernelAlloc> descriptiveTag,
-	  void *mmioPtr
+		frg::string<KernelAlloc> tag,
+		frg::string<KernelAlloc> descriptiveTag,
+		void *mmioPtr
 	)
 	: IrqSink {frg::string<KernelAlloc> {*kernelAlloc, "dmalog-"} + tag + frg::string<KernelAlloc> {*kernelAlloc, "-irq"}}
 	, KernelIoChannel {std::move(tag), std::move(descriptiveTag)}
@@ -52,39 +52,39 @@ struct DmalogDevice final
 
 		// Map the output/input ring buffers twice such users can always see the available
 		// part of the buffer in one (virtually) contiguous memory range.
-		outView_ =
-		  reinterpret_cast<std::byte *>(KernelVirtualMemory::global().allocate(2 * ringSize)
-		  );
-		inView_ =
-		  reinterpret_cast<std::byte *>(KernelVirtualMemory::global().allocate(2 * ringSize)
-		  );
-
-		// TODO: We need to map more memory if we want to support rings > kPageSize.
-		KernelPageSpace::global().mapSingle4k(
-		  reinterpret_cast<uintptr_t>(outView_),
-		  outPhysical_,
-		  page_access::write,
-		  CachingMode::writeBack
+		outView_ = reinterpret_cast<std::byte *>(
+			KernelVirtualMemory::global().allocate(2 * ringSize)
 		);
-		KernelPageSpace::global().mapSingle4k(
-		  reinterpret_cast<uintptr_t>(outView_) + kPageSize,
-		  outPhysical_,
-		  page_access::write,
-		  CachingMode::writeBack
+		inView_ = reinterpret_cast<std::byte *>(
+			KernelVirtualMemory::global().allocate(2 * ringSize)
 		);
 
 		// TODO: We need to map more memory if we want to support rings > kPageSize.
 		KernelPageSpace::global().mapSingle4k(
-		  reinterpret_cast<uintptr_t>(inView_),
-		  inPhysical_,
-		  page_access::write,
-		  CachingMode::writeBack
+			reinterpret_cast<uintptr_t>(outView_),
+			outPhysical_,
+			page_access::write,
+			CachingMode::writeBack
 		);
 		KernelPageSpace::global().mapSingle4k(
-		  reinterpret_cast<uintptr_t>(inView_) + kPageSize,
-		  inPhysical_,
-		  page_access::write,
-		  CachingMode::writeBack
+			reinterpret_cast<uintptr_t>(outView_) + kPageSize,
+			outPhysical_,
+			page_access::write,
+			CachingMode::writeBack
+		);
+
+		// TODO: We need to map more memory if we want to support rings > kPageSize.
+		KernelPageSpace::global().mapSingle4k(
+			reinterpret_cast<uintptr_t>(inView_),
+			inPhysical_,
+			page_access::write,
+			CachingMode::writeBack
+		);
+		KernelPageSpace::global().mapSingle4k(
+			reinterpret_cast<uintptr_t>(inView_) + kPageSize,
+			inPhysical_,
+			page_access::write,
+			CachingMode::writeBack
 		);
 
 		PageAccessor ctrlAccessor {ctrlPhysical_};
@@ -103,7 +103,7 @@ struct DmalogDevice final
 
 		outHead_ += n;
 		updateWritableSpan(
-		  {outView_ + (outHead_ & (ringSize - 1)), ringSize - (outHead_ - outTail_)}
+			{outView_ + (outHead_ & (ringSize - 1)), ringSize - (outHead_ - outTail_)}
 		);
 	}
 
@@ -138,8 +138,8 @@ struct DmalogDevice final
 				auto chunk = frg::min(size - progress, kPageSize - misalign);
 
 				outDesc_->buffers[k] = {
-				  .ptr = outPhysical_ + misalign,
-				  .length = chunk};
+					.ptr = outPhysical_ + misalign,
+					.length = chunk};
 				progress += chunk;
 				++k;
 			}
@@ -166,8 +166,8 @@ struct DmalogDevice final
 				auto chunk = frg::min(size - progress, kPageSize - misalign);
 
 				inDesc_->buffers[k] = {
-				  .ptr = inPhysical_ + misalign,
-				  .length = chunk};
+					.ptr = inPhysical_ + misalign,
+					.length = chunk};
 				progress += chunk;
 				++k;
 			}
@@ -268,46 +268,47 @@ private:
 };
 
 static initgraph::Task enumerateDmalog {
-  &globalInitEngine,
-  "pci.enumerate-dmalog",
-  initgraph::Requires {getDevicesEnumeratedStage()},
-  initgraph::Entails {getIoChannelsDiscoveredStage()},
-  [] {
-	  for (smarter::shared_ptr<PciDevice> pciDevice : *allDevices) {
-		  if (pciDevice->vendor != 0x1234 || pciDevice->deviceId != 0x69e8 || pciDevice->revision != 0x12)
-			  continue;
+	&globalInitEngine,
+	"pci.enumerate-dmalog",
+	initgraph::Requires {getDevicesEnumeratedStage()},
+	initgraph::Entails {getIoChannelsDiscoveredStage()},
+	[] {
+		for (smarter::shared_ptr<PciDevice> pciDevice : *allDevices) {
+			if (pciDevice->vendor != 0x1234 || pciDevice->deviceId != 0x69e8
+			    || pciDevice->revision != 0x12)
+				continue;
 
-		  auto mmioPtr = KernelVirtualMemory::global().allocate(0x10000);
-		  KernelPageSpace::global().mapSingle4k(
-		    reinterpret_cast<uintptr_t>(mmioPtr),
-		    pciDevice->bars[0].address,
-		    page_access::write,
-		    CachingMode::null
-		  );
+			auto mmioPtr = KernelVirtualMemory::global().allocate(0x10000);
+			KernelPageSpace::global().mapSingle4k(
+				reinterpret_cast<uintptr_t>(mmioPtr),
+				pciDevice->bars[0].address,
+				page_access::write,
+				CachingMode::null
+			);
 
-		  char tag[64] {};
-		  size_t n;
-		  auto tagSpace = arch::mem_space {mmioPtr}.subspace(0x40);
-		  for (n = 0; n < 64; ++n) {
-			  auto c = tagSpace.load(arch::scalar_register<uint8_t>(n));
-			  if (!c)
-				  break;
-			  tag[n] = c;
-		  }
-		  infoLogger() << "thor: Found PCI-based dmalog at " << pciDevice->bus << ":"
-		               << pciDevice->slot << ", tag: " << tag << frg::endlog;
+			char tag[64] {};
+			size_t n;
+			auto tagSpace = arch::mem_space {mmioPtr}.subspace(0x40);
+			for (n = 0; n < 64; ++n) {
+				auto c = tagSpace.load(arch::scalar_register<uint8_t>(n));
+				if (!c)
+					break;
+				tag[n] = c;
+			}
+			infoLogger() << "thor: Found PCI-based dmalog at " << pciDevice->bus << ":"
+				     << pciDevice->slot << ", tag: " << tag << frg::endlog;
 
-		  auto dmalog = smarter::allocate_shared<DmalogDevice>(
-		    *kernelAlloc,
-		    frg::string<KernelAlloc> {*kernelAlloc, tag},
-		    frg::string<KernelAlloc> {*kernelAlloc, tag},
-		    mmioPtr
-		  );
-		  IrqPin::attachSink(pciDevice->getIrqPin(), dmalog.get());
-		  pciDevice->enableIrq();
-		  publishIoChannel(std::move(dmalog));
-	  }
-  }};
+			auto dmalog = smarter::allocate_shared<DmalogDevice>(
+				*kernelAlloc,
+				frg::string<KernelAlloc> {*kernelAlloc, tag},
+				frg::string<KernelAlloc> {*kernelAlloc, tag},
+				mmioPtr
+			);
+			IrqPin::attachSink(pciDevice->getIrqPin(), dmalog.get());
+			pciDevice->enableIrq();
+			publishIoChannel(std::move(dmalog));
+		}
+	}};
 
 }  // anonymous namespace
 

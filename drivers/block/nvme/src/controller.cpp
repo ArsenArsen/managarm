@@ -37,11 +37,11 @@ constexpr int ready = 1 << 0;
 }  // namespace flags
 
 Controller::Controller(
-  int64_t parentId,
-  protocols::hw::Device hwDevice,
-  helix::Mapping hbaRegs,
-  helix::UniqueDescriptor,
-  helix::UniqueDescriptor irq
+	int64_t parentId,
+	protocols::hw::Device hwDevice,
+	helix::Mapping hbaRegs,
+	helix::UniqueDescriptor,
+	helix::UniqueDescriptor irq
 )
 : hwDevice_ {std::move(hwDevice)}
 , regsMapping_ {std::move(hbaRegs)}
@@ -75,9 +75,11 @@ async::detached Controller::handleIrqs() {
 		}
 
 		if (found) {
-			HEL_CHECK(
-			  helAcknowledgeIrq(irq_.getHandle(), kHelAckAcknowledge, irqSequence_)
-			);
+			HEL_CHECK(helAcknowledgeIrq(
+				irq_.getHandle(),
+				kHelAckAcknowledge,
+				irqSequence_
+			));
 		} else {
 			HEL_CHECK(helAcknowledgeIrq(irq_.getHandle(), kHelAckNack, irqSequence_));
 		}
@@ -133,9 +135,9 @@ async::result<void> Controller::reset() {
 	co_await enable();
 
 	auto ioQ = std::make_unique<Queue>(
-	  1,
-	  queueDepth_,
-	  regs_.subspace(doorbellsOffset + 1 * 8 * dbStride_)
+		1,
+		queueDepth_,
+		regs_.subspace(doorbellsOffset + 1 * 8 * dbStride_)
 	);
 	ioQ->init();
 
@@ -173,7 +175,7 @@ async::result<Command::Result> Controller::createCQ(Queue *q) {
 	cmdBuf.prp1 = convert_endian<endian::little, endian::native>((uint64_t) q->getCqPhysAddr());
 	cmdBuf.cqid = convert_endian<endian::little, endian::native>((uint16_t) q->getQueueId());
 	cmdBuf.qSize =
-	  convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
+		convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
 	cmdBuf.cqFlags = convert_endian<endian::little, endian::native>((uint16_t) flags);
 	cmdBuf.irqVector = 0;  // TODO: set to MSI vector
 
@@ -194,7 +196,7 @@ async::result<Command::Result> Controller::createSQ(Queue *q) {
 	cmdBuf.prp1 = convert_endian<endian::little, endian::native>((uint64_t) q->getSqPhysAddr());
 	cmdBuf.sqid = convert_endian<endian::little, endian::native>((uint16_t) q->getQueueId());
 	cmdBuf.qSize =
-	  convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
+		convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
 	cmdBuf.sqFlags = convert_endian<endian::little, endian::native>((uint16_t) flags);
 	cmdBuf.cqid = convert_endian<endian::little, endian::native>((uint16_t) q->getQueueId());
 

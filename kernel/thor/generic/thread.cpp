@@ -52,19 +52,21 @@ void Thread::migrateCurrent() {
 	localScheduler()->forceReschedule();
 
 	forkExecutor(
-	  [&] {
-		  runOnStack(
-		    [](Continuation cont, Executor *executor, frg::unique_lock<Mutex> lock) {
-			    scrubStack(executor, cont);
-			    lock.unlock();
-			    localScheduler()->commitReschedule();
-		    },
-		    getCpuData()->detachedStack.base(),
-		    &this_thread->_executor,
-		    std::move(lock)
-		  );
-	  },
-	  &this_thread->_executor
+		[&] {
+			runOnStack(
+				[](Continuation cont,
+				   Executor *executor,
+				   frg::unique_lock<Mutex> lock) {
+					scrubStack(executor, cont);
+					lock.unlock();
+					localScheduler()->commitReschedule();
+				},
+				getCpuData()->detachedStack.base(),
+				&this_thread->_executor,
+				std::move(lock)
+			);
+		},
+		&this_thread->_executor
 	);
 }
 
@@ -86,7 +88,7 @@ void Thread::blockCurrent() {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) thisThread.get() << " is blocked"
-		             << frg::endlog;
+			     << frg::endlog;
 
 	assert(thisThread->_runState == kRunActive);
 	thisThread->_runState = kRunBlocked;
@@ -96,19 +98,21 @@ void Thread::blockCurrent() {
 	thisThread->_uninvoke();
 
 	forkExecutor(
-	  [&] {
-		  runOnStack(
-		    [](Continuation cont, Executor *executor, frg::unique_lock<Mutex> lock) {
-			    scrubStack(executor, cont);
-			    lock.unlock();
-			    localScheduler()->commitReschedule();
-		    },
-		    getCpuData()->detachedStack.base(),
-		    &thisThread->_executor,
-		    std::move(lock)
-		  );
-	  },
-	  &thisThread->_executor
+		[&] {
+			runOnStack(
+				[](Continuation cont,
+				   Executor *executor,
+				   frg::unique_lock<Mutex> lock) {
+					scrubStack(executor, cont);
+					lock.unlock();
+					localScheduler()->commitReschedule();
+				},
+				getCpuData()->detachedStack.base(),
+				&thisThread->_executor,
+				std::move(lock)
+			);
+		},
+		&thisThread->_executor
 	);
 }
 
@@ -120,7 +124,7 @@ void Thread::deferCurrent() {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) this_thread.get() << " is deferred"
-		             << frg::endlog;
+			     << frg::endlog;
 
 	assert(this_thread->_runState == kRunActive);
 	this_thread->_runState = kRunDeferred;
@@ -129,12 +133,12 @@ void Thread::deferCurrent() {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	  [](Continuation, frg::unique_lock<Mutex> lock) {
-		  lock.unlock();
-		  localScheduler()->commitReschedule();
-	  },
-	  getCpuData()->detachedStack.base(),
-	  std::move(lock)
+		[](Continuation, frg::unique_lock<Mutex> lock) {
+			lock.unlock();
+			localScheduler()->commitReschedule();
+		},
+		getCpuData()->detachedStack.base(),
+		std::move(lock)
 	);
 }
 
@@ -145,7 +149,7 @@ void Thread::deferCurrent(IrqImageAccessor image) {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) this_thread.get() << " is deferred"
-		             << frg::endlog;
+			     << frg::endlog;
 
 	assert(this_thread->_runState == kRunActive);
 	this_thread->_runState = kRunDeferred;
@@ -155,14 +159,14 @@ void Thread::deferCurrent(IrqImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	  [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
-		  scrubStack(image, cont);
-		  lock.unlock();
-		  localScheduler()->commitReschedule();
-	  },
-	  getCpuData()->detachedStack.base(),
-	  image,
-	  std::move(lock)
+		[](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
+			scrubStack(image, cont);
+			lock.unlock();
+			localScheduler()->commitReschedule();
+		},
+		getCpuData()->detachedStack.base(),
+		image,
+		std::move(lock)
 	);
 }
 
@@ -173,7 +177,7 @@ void Thread::suspendCurrent(IrqImageAccessor image) {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) this_thread.get() << " is suspended"
-		             << frg::endlog;
+			     << frg::endlog;
 
 	assert(this_thread->_runState == kRunActive);
 	this_thread->_runState = kRunSuspended;
@@ -183,14 +187,14 @@ void Thread::suspendCurrent(IrqImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	  [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
-		  scrubStack(image, cont);
-		  lock.unlock();
-		  localScheduler()->commitReschedule();
-	  },
-	  getCpuData()->detachedStack.base(),
-	  image,
-	  std::move(lock)
+		[](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
+			scrubStack(image, cont);
+			lock.unlock();
+			localScheduler()->commitReschedule();
+		},
+		getCpuData()->detachedStack.base(),
+		image,
+		std::move(lock)
 	);
 }
 
@@ -201,7 +205,7 @@ void Thread::interruptCurrent(Interrupt interrupt, FaultImageAccessor image) {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) this_thread.get()
-		             << " is (synchronously) interrupted" << frg::endlog;
+			     << " is (synchronously) interrupted" << frg::endlog;
 
 	assert(this_thread->_runState == kRunActive);
 	this_thread->_runState = kRunInterrupted;
@@ -214,35 +218,33 @@ void Thread::interruptCurrent(Interrupt interrupt, FaultImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	  [](
-	    Continuation cont,
-	    FaultImageAccessor image,
-	    Interrupt interrupt,
-	    Thread *thread,
-	    frg::unique_lock<Mutex> lock
-	  ) {
-		  ObserveQueue queue;
-		  queue.splice(queue.end(), thread->_observeQueue);
-		  auto sequence = thread->_stateSeq;
+		[](Continuation cont,
+		   FaultImageAccessor image,
+		   Interrupt interrupt,
+		   Thread *thread,
+		   frg::unique_lock<Mutex> lock) {
+			ObserveQueue queue;
+			queue.splice(queue.end(), thread->_observeQueue);
+			auto sequence = thread->_stateSeq;
 
-		  scrubStack(image, cont);
-		  lock.unlock();
+			scrubStack(image, cont);
+			lock.unlock();
 
-		  while (!queue.empty()) {
-			  auto node = queue.pop_front();
-			  async::execution::set_value(
-			    node->receiver,
-			    frg::make_tuple(Error::success, sequence, interrupt)
-			  );
-		  }
+			while (!queue.empty()) {
+				auto node = queue.pop_front();
+				async::execution::set_value(
+					node->receiver,
+					frg::make_tuple(Error::success, sequence, interrupt)
+				);
+			}
 
-		  localScheduler()->commitReschedule();
-	  },
-	  getCpuData()->detachedStack.base(),
-	  image,
-	  interrupt,
-	  this_thread.get(),
-	  std::move(lock)
+			localScheduler()->commitReschedule();
+		},
+		getCpuData()->detachedStack.base(),
+		image,
+		interrupt,
+		this_thread.get(),
+		std::move(lock)
 	);
 }
 
@@ -253,7 +255,7 @@ void Thread::interruptCurrent(Interrupt interrupt, SyscallImageAccessor image) {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) this_thread.get()
-		             << " is (synchronously) interrupted" << frg::endlog;
+			     << " is (synchronously) interrupted" << frg::endlog;
 
 	assert(this_thread->_runState == kRunActive);
 	this_thread->_runState = kRunInterrupted;
@@ -266,35 +268,33 @@ void Thread::interruptCurrent(Interrupt interrupt, SyscallImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	  [](
-	    Continuation cont,
-	    SyscallImageAccessor image,
-	    Interrupt interrupt,
-	    Thread *thread,
-	    frg::unique_lock<Mutex> lock
-	  ) {
-		  ObserveQueue queue;
-		  queue.splice(queue.end(), thread->_observeQueue);
-		  auto sequence = thread->_stateSeq;
+		[](Continuation cont,
+		   SyscallImageAccessor image,
+		   Interrupt interrupt,
+		   Thread *thread,
+		   frg::unique_lock<Mutex> lock) {
+			ObserveQueue queue;
+			queue.splice(queue.end(), thread->_observeQueue);
+			auto sequence = thread->_stateSeq;
 
-		  scrubStack(image, cont);
-		  lock.unlock();
+			scrubStack(image, cont);
+			lock.unlock();
 
-		  while (!queue.empty()) {
-			  auto node = queue.pop_front();
-			  async::execution::set_value(
-			    node->receiver,
-			    frg::make_tuple(Error::success, sequence, interrupt)
-			  );
-		  }
+			while (!queue.empty()) {
+				auto node = queue.pop_front();
+				async::execution::set_value(
+					node->receiver,
+					frg::make_tuple(Error::success, sequence, interrupt)
+				);
+			}
 
-		  localScheduler()->commitReschedule();
-	  },
-	  getCpuData()->detachedStack.base(),
-	  image,
-	  interrupt,
-	  this_thread.get(),
-	  std::move(lock)
+			localScheduler()->commitReschedule();
+		},
+		getCpuData()->detachedStack.base(),
+		image,
+		interrupt,
+		this_thread.get(),
+		std::move(lock)
 	);
 }
 
@@ -305,19 +305,19 @@ void Thread::raiseSignals(SyscallImageAccessor image) {
 
 	if (logTransitions)
 		infoLogger() << "thor: raiseSignals() in " << (void *) this_thread.get()
-		             << frg::endlog;
+			     << frg::endlog;
 	assert(this_thread->_runState == kRunActive);
 
 	if (this_thread->_pendingKill) {
 		if (logRunStates)
 			infoLogger() << "thor: " << (void *) this_thread.get()
-			             << " was (asynchronously) killed" << frg::endlog;
+				     << " was (asynchronously) killed" << frg::endlog;
 
 		this_thread->_runState = kRunTerminated;
 		++this_thread->_stateSeq;
 		saveExecutor(
-		  &this_thread->_executor,
-		  image
+			&this_thread->_executor,
+			image
 		);  // FIXME: Why do we save the state here?
 		getCpuData()->scheduler.update();
 		Scheduler::suspendCurrent();
@@ -326,39 +326,37 @@ void Thread::raiseSignals(SyscallImageAccessor image) {
 		this_thread->_uninvoke();
 
 		runOnStack(
-		  [](
-		    Continuation cont,
-		    SyscallImageAccessor image,
-		    Thread *thread,
-		    frg::unique_lock<Mutex> lock
-		  ) {
-			  ObserveQueue queue;
-			  queue.splice(queue.end(), thread->_observeQueue);
+			[](Continuation cont,
+			   SyscallImageAccessor image,
+			   Thread *thread,
+			   frg::unique_lock<Mutex> lock) {
+				ObserveQueue queue;
+				queue.splice(queue.end(), thread->_observeQueue);
 
-			  scrubStack(image, cont);
-			  lock.unlock();
+				scrubStack(image, cont);
+				lock.unlock();
 
-			  while (!queue.empty()) {
-				  auto node = queue.pop_front();
-				  async::execution::set_value(
-				    node->receiver,
-				    frg::make_tuple(Error::threadExited, 0, kIntrNull)
-				  );
-			  }
+				while (!queue.empty()) {
+					auto node = queue.pop_front();
+					async::execution::set_value(
+						node->receiver,
+						frg::make_tuple(Error::threadExited, 0, kIntrNull)
+					);
+				}
 
-			  localScheduler()->commitReschedule();
-		  },
-		  getCpuData()->detachedStack.base(),
-		  image,
-		  this_thread.get(),
-		  std::move(lock)
+				localScheduler()->commitReschedule();
+			},
+			getCpuData()->detachedStack.base(),
+			image,
+			this_thread.get(),
+			std::move(lock)
 		);
 	}
 
 	if (this_thread->_pendingSignal == kSigInterrupt) {
 		if (logRunStates)
 			infoLogger() << "thor: " << (void *) this_thread.get()
-			             << " was (asynchronously) interrupted" << frg::endlog;
+				     << " was (asynchronously) interrupted" << frg::endlog;
 
 		this_thread->_runState = kRunInterrupted;
 		this_thread->_lastInterrupt = kIntrRequested;
@@ -371,33 +369,35 @@ void Thread::raiseSignals(SyscallImageAccessor image) {
 		this_thread->_uninvoke();
 
 		runOnStack(
-		  [](
-		    Continuation cont,
-		    SyscallImageAccessor image,
-		    Thread *thread,
-		    frg::unique_lock<Mutex> lock
-		  ) {
-			  ObserveQueue queue;
-			  queue.splice(queue.end(), thread->_observeQueue);
-			  auto sequence = thread->_stateSeq;
+			[](Continuation cont,
+			   SyscallImageAccessor image,
+			   Thread *thread,
+			   frg::unique_lock<Mutex> lock) {
+				ObserveQueue queue;
+				queue.splice(queue.end(), thread->_observeQueue);
+				auto sequence = thread->_stateSeq;
 
-			  scrubStack(image, cont);
-			  lock.unlock();
+				scrubStack(image, cont);
+				lock.unlock();
 
-			  while (!queue.empty()) {
-				  auto node = queue.pop_front();
-				  async::execution::set_value(
-				    node->receiver,
-				    frg::make_tuple(Error::success, sequence, kIntrRequested)
-				  );
-			  }
+				while (!queue.empty()) {
+					auto node = queue.pop_front();
+					async::execution::set_value(
+						node->receiver,
+						frg::make_tuple(
+							Error::success,
+							sequence,
+							kIntrRequested
+						)
+					);
+				}
 
-			  localScheduler()->commitReschedule();
-		  },
-		  getCpuData()->detachedStack.base(),
-		  image,
-		  this_thread.get(),
-		  std::move(lock)
+				localScheduler()->commitReschedule();
+			},
+			getCpuData()->detachedStack.base(),
+			image,
+			this_thread.get(),
+			std::move(lock)
 		);
 	}
 }
@@ -418,7 +418,7 @@ void Thread::unblockOther(smarter::borrowed_ptr<Thread> thread) {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) thread.get() << " is deferred (via unblock)"
-		             << frg::endlog;
+			     << frg::endlog;
 
 	thread->_runState = kRunDeferred;
 	Scheduler::resume(thread.get());
@@ -449,7 +449,7 @@ Error Thread::resumeOther(smarter::borrowed_ptr<Thread> thread) {
 
 	if (logRunStates)
 		infoLogger() << "thor: " << (void *) thread.get() << " is suspended (via resume)"
-		             << frg::endlog;
+			     << frg::endlog;
 
 	thread->_runState = kRunSuspended;
 	Scheduler::resume(thread.get());
@@ -457,9 +457,9 @@ Error Thread::resumeOther(smarter::borrowed_ptr<Thread> thread) {
 }
 
 Thread::Thread(
-  smarter::shared_ptr<Universe> universe,
-  smarter::shared_ptr<AddressSpace, BindableHandle> address_space,
-  AbiParameters abi
+	smarter::shared_ptr<Universe> universe,
+	smarter::shared_ptr<AddressSpace, BindableHandle> address_space,
+	AbiParameters abi
 )
 : flags {0}
 , _mainWorkQueue {this}
@@ -489,7 +489,7 @@ Thread::~Thread() {
 void Thread::dispose(ActiveHandle) {
 	if (logCleanup)
 		infoLogger() << "\e[31mthor: Killing thread due to destruction\e[39m"
-		             << frg::endlog;
+			     << frg::endlog;
 	_kill();
 	_mainWorkQueue.selfPtr = {};
 	_pagingWorkQueue.selfPtr = {};
@@ -517,14 +517,14 @@ void Thread::observe_(uint64_t inSeq, ObserveNode *node) {
 	switch (state) {
 	case kRunInterrupted:
 		async::execution::set_value(
-		  node->receiver,
-		  frg::make_tuple(Error::success, sequence, interrupt)
+			node->receiver,
+			frg::make_tuple(Error::success, sequence, interrupt)
 		);
 		break;
 	case kRunTerminated:
 		async::execution::set_value(
-		  node->receiver,
-		  frg::make_tuple(Error::threadExited, 0, kIntrNull)
+			node->receiver,
+			frg::make_tuple(Error::threadExited, 0, kIntrNull)
 		);
 		break;
 	default:
@@ -550,14 +550,14 @@ void Thread::invoke() {
 
 	if (logRunStates)
 		infoLogger() << "thor: "
-		             << " " << _credentials[0] << " " << _credentials[1] << " "
-		             << _credentials[2] << " " << _credentials[3] << " " << _credentials[4]
-		             << " " << _credentials[5] << " " << _credentials[6] << " "
-		             << _credentials[7] << " " << _credentials[8] << " " << _credentials[9]
-		             << " " << _credentials[10] << " " << _credentials[11] << " "
-		             << _credentials[12] << " " << _credentials[13] << " "
-		             << _credentials[14] << " " << _credentials[15] << " is activated"
-		             << frg::endlog;
+			     << " " << _credentials[0] << " " << _credentials[1] << " "
+			     << _credentials[2] << " " << _credentials[3] << " " << _credentials[4]
+			     << " " << _credentials[5] << " " << _credentials[6] << " "
+			     << _credentials[7] << " " << _credentials[8] << " " << _credentials[9]
+			     << " " << _credentials[10] << " " << _credentials[11] << " "
+			     << _credentials[12] << " " << _credentials[13] << " "
+			     << _credentials[14] << " " << _credentials[15] << " is activated"
+			     << frg::endlog;
 
 	// If there is work to do, return to the WorkQueue and not to user space.
 	if (_runState == kRunSuspended && _mainWorkQueue.check())
@@ -596,14 +596,15 @@ void Thread::handlePreemption(IrqImageAccessor image) {
 		_uninvoke();
 
 		runOnStack(
-		  [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
-			  scrubStack(image, cont);
-			  lock.unlock();
-			  localScheduler()->commitReschedule();
-		  },
-		  getCpuData()->detachedStack.base(),
-		  image,
-		  std::move(lock)
+			[](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock
+			) {
+				scrubStack(image, cont);
+				lock.unlock();
+				localScheduler()->commitReschedule();
+			},
+			getCpuData()->detachedStack.base(),
+			image,
+			std::move(lock)
 		);
 	} else {
 		localScheduler()->renewSchedule();
@@ -634,8 +635,8 @@ void Thread::_kill() {
 		while (!queue.empty()) {
 			auto node = queue.pop_front();
 			async::execution::set_value(
-			  node->receiver,
-			  frg::make_tuple(Error::threadExited, 0, kIntrNull)
+				node->receiver,
+				frg::make_tuple(Error::threadExited, 0, kIntrNull)
 			);
 		}
 	} else {

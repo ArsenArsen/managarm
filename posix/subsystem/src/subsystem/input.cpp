@@ -53,11 +53,10 @@ struct Device final
 
 	std::string nodePath() override { return "input/event" + std::to_string(_index); }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		return openExternalDevice(_lane, std::move(mount), std::move(link), semantic_flags);
 	}
 
@@ -94,12 +93,12 @@ async::result<std::string> CapabilityAttribute::show(sysfs::Object *object) {
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp, recv_data] = co_await helix_ng::exchangeMsgs(
-	  lane,
-	  helix_ng::offer(
-	    helix_ng::sendBuffer(ser.data(), ser.size()),
-	    helix_ng::recvInline(),
-	    helix_ng::recvBuffer(buffer.data(), buffer.size() * sizeof(uint64_t))
-	  )
+		lane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline(),
+			helix_ng::recvBuffer(buffer.data(), buffer.size() * sizeof(uint64_t))
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -135,26 +134,30 @@ async::detached run() {
 	auto filter = mbus::Conjunction({mbus::EqualsFilter("unix.subsystem", "input")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  int index = evdevAllocator.allocate();
-		  std::cout << "POSIX: Installing input device input/event" << index << std::endl;
+		[](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+			int index = evdevAllocator.allocate();
+			std::cout << "POSIX: Installing input device input/event" << index
+				  << std::endl;
 
-		  auto lane = helix::UniqueLane(co_await entity.bind());
-		  auto device =
-		    std::make_shared<Device>(VfsType::charDevice, index, std::move(lane));
-		  device->assignId({13, 64 + index});  // evdev devices start at minor 64.
+			auto lane = helix::UniqueLane(co_await entity.bind());
+			auto device = std::make_shared<Device>(
+				VfsType::charDevice,
+				index,
+				std::move(lane)
+			);
+			device->assignId({13, 64 + index});  // evdev devices start at minor 64.
 
-		  charRegistry.install(device);
-		  drvcore::installDevice(device);
+			charRegistry.install(device);
+			drvcore::installDevice(device);
 
-		  // TODO: Do this before the device becomes visible in sysfs!
-		  auto link = device->directoryNode()->directMkdir("capabilities");
-		  auto caps = static_cast<sysfs::DirectoryNode *>(link->getTarget().get());
-		  caps->directMkattr(device.get(), &evCapability);
-		  caps->directMkattr(device.get(), &keyCapability);
-		  caps->directMkattr(device.get(), &relCapability);
-		  caps->directMkattr(device.get(), &absCapability);
-	  }
+			// TODO: Do this before the device becomes visible in sysfs!
+			auto link = device->directoryNode()->directMkdir("capabilities");
+			auto caps = static_cast<sysfs::DirectoryNode *>(link->getTarget().get());
+			caps->directMkattr(device.get(), &evCapability);
+			caps->directMkattr(device.get(), &keyCapability);
+			caps->directMkattr(device.get(), &relCapability);
+			caps->directMkattr(device.get(), &absCapability);
+		}
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));

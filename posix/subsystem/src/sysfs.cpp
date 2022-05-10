@@ -45,10 +45,10 @@ void AttributeFile::serve(smarter::shared_ptr<AttributeFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	  std::move(lane),
-	  file,
-	  &File::fileOperations,
-	  file->_cancelServe
+		std::move(lane),
+		file,
+		&File::fileOperations,
+		file->_cancelServe
 	));
 }
 
@@ -94,8 +94,8 @@ AttributeFile::writeAll(Process *, const void *data, size_t length) {
 
 	auto node = static_cast<AttributeNode *>(associatedLink()->getTarget().get());
 	co_await node->_attr->store(
-	  node->_object,
-	  std::string {reinterpret_cast<const char *>(data), length}
+		node->_object,
+		std::string {reinterpret_cast<const char *>(data), length}
 	);
 	co_return length;
 }
@@ -114,10 +114,10 @@ void DirectoryFile::serve(smarter::shared_ptr<DirectoryFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	  std::move(lane),
-	  file,
-	  &File::fileOperations,
-	  file->_cancelServe
+		std::move(lane),
+		file,
+		&File::fileOperations,
+		file->_cancelServe
 	));
 }
 
@@ -204,15 +204,15 @@ async::result<frg::expected<Error, FileStats>> AttributeNode::getStats() {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> AttributeNode::open(
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  SemanticFlags semantic_flags
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
-		          << std::bitset<32>(semantic_flags)
-		          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are allowed.\e[39m"
-		          << std::endl;
+			  << std::bitset<32>(semantic_flags)
+			  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are allowed.\e[39m"
+			  << std::endl;
 		co_return Error::illegalArguments;
 	}
 
@@ -321,15 +321,15 @@ std::shared_ptr<FsLink> DirectoryNode::treeLink() {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> DirectoryNode::open(
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  SemanticFlags semantic_flags
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
-		          << std::bitset<32>(semantic_flags)
-		          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are allowed.\e[39m"
-		          << std::endl;
+			  << std::bitset<32>(semantic_flags)
+			  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are allowed.\e[39m"
+			  << std::endl;
 		co_return Error::illegalArguments;
 	}
 
@@ -383,7 +383,7 @@ void Object::addObject() {
 	if (_parent) {
 		assert(_parent->_dirLink);
 		auto parent_dir =
-		  static_cast<DirectoryNode *>(_parent->_dirLink->getTarget().get());
+			static_cast<DirectoryNode *>(_parent->_dirLink->getTarget().get());
 		_dirLink = parent_dir->directMkdir(_name);
 	} else {
 		auto parent_dir = static_cast<DirectoryNode *>(getSysfs()->getTarget().get());

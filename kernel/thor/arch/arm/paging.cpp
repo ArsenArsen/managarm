@@ -12,44 +12,44 @@ constexpr inline static uint64_t tlbiValue(uint16_t asid, uint64_t va = 0) {
 
 void invalidatePage(const void *address) {
 	asm volatile(
-	  "dsb st;\n\t\
+		"dsb st;\n\t\
 			tlbi vale1, %0;\n\t\
 			dsb sy; isb"
-	  :
-	  : "r"(tlbiValue(0, reinterpret_cast<uintptr_t>(address)))
-	  : "memory"
+		:
+		: "r"(tlbiValue(0, reinterpret_cast<uintptr_t>(address)))
+		: "memory"
 	);
 }
 
 void invalidateAsid(int asid) {
 	asm volatile(
-	  "dsb st;\n\t\
+		"dsb st;\n\t\
 			tlbi aside1, %0;\n\t\
 			dsb sy; isb"
-	  :
-	  : "r"(tlbiValue(asid))
-	  : "memory"
+		:
+		: "r"(tlbiValue(asid))
+		: "memory"
 	);
 }
 
 void invalidatePage(int asid, const void *address) {
 	asm volatile(
-	  "dsb st;\n\t\
+		"dsb st;\n\t\
 			tlbi vae1, %0;\n\t\
 			dsb sy; isb"
-	  :
-	  : "r"(tlbiValue(asid, reinterpret_cast<uintptr_t>(address)))
-	  : "memory"
+		:
+		: "r"(tlbiValue(asid, reinterpret_cast<uintptr_t>(address)))
+		: "memory"
 	);
 }
 
 // TODO: TLBI ALLE1 is invalid in EL1...
 void invalidateFullTlb() {
 	asm volatile(
-	  "dsb st;\n\t\
+		"dsb st;\n\t\
 			tlbi alle1;\n\t\
 			dsb sy; isb" ::
-	    : "memory"
+			: "memory"
 	);
 }
 
@@ -95,8 +95,7 @@ void PageBinding::rebind() {
 
 void PageBinding::rebind(smarter::shared_ptr<PageSpace> space) {
 	assert(!intsAreEnabled());
-	assert(
-	  !_boundSpace || _boundSpace.get() != space.get()
+	assert(!_boundSpace || _boundSpace.get() != space.get()
 	);  // This would be unnecessary work.
 	auto context = &getCpuData()->pageContext;
 
@@ -128,9 +127,12 @@ void PageBinding::rebind(smarter::shared_ptr<PageSpace> space) {
 
 	// Mark every shootdown request in the unbound space as shot-down.
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	if (unbound_space) {
 		auto lock = frg::guard(&unbound_space->_mutex);
@@ -142,9 +144,12 @@ void PageBinding::rebind(smarter::shared_ptr<PageSpace> space) {
 
 				// Signal completion of the shootdown.
 				if (current->_initiatorCpu != getCpuData()) {
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-						auto it =
-						  unbound_space->_shootQueue.iterator_to(current);
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
+						auto it = unbound_space->_shootQueue.iterator_to(
+							current
+						);
 						unbound_space->_shootQueue.erase(it);
 						complete.push_front(current);
 					}
@@ -182,9 +187,12 @@ void PageBinding::unbind() {
 	}
 
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	{
 		auto lock = frg::guard(&_boundSpace->_mutex);
@@ -197,9 +205,12 @@ void PageBinding::unbind() {
 				// The actual shootdown was done above.
 				// Signal completion of the shootdown.
 				if (current->_initiatorCpu != getCpuData()) {
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
 						auto it =
-						  _boundSpace->_shootQueue.iterator_to(current);
+							_boundSpace->_shootQueue.iterator_to(current
+							);
 						_boundSpace->_shootQueue.erase(it);
 						complete.push_front(current);
 					}
@@ -240,9 +251,12 @@ void PageBinding::shootdown() {
 	}
 
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	uint64_t target_seq;
 	{
@@ -257,14 +271,19 @@ void PageBinding::shootdown() {
 					// Perform the actual shootdown.
 					for (size_t pg = 0; pg < current->size; pg += kPageSize)
 						invalidatePage(
-						  _asid,
-						  reinterpret_cast<void *>(current->address + pg)
+							_asid,
+							reinterpret_cast<void *>(
+								current->address + pg
+							)
 						);
 
 					// Signal completion of the shootdown.
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
 						auto it =
-						  _boundSpace->_shootQueue.iterator_to(current);
+							_boundSpace->_shootQueue.iterator_to(current
+							);
 						_boundSpace->_shootQueue.erase(it);
 						complete.push_front(current);
 					}
@@ -310,9 +329,12 @@ void GlobalPageBinding::shootdown() {
 	auto space = &KernelPageSpace::global();
 
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	uint64_t targetSeq;
 	{
@@ -326,12 +348,14 @@ void GlobalPageBinding::shootdown() {
 				if (current->_initiatorCpu != getCpuData()) {
 					// Perform the actual shootdown.
 					for (size_t pg = 0; pg < current->size; pg += kPageSize)
-						invalidatePage(
-						  reinterpret_cast<void *>(current->address + pg)
-						);
+						invalidatePage(reinterpret_cast<void *>(
+							current->address + pg
+						));
 
 					// Signal completion of the shootdown.
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
 						auto it = space->_shootQueue.iterator_to(current);
 						space->_shootQueue.erase(it);
 						complete.push_front(current);
@@ -422,8 +446,8 @@ bool PageSpace::submitShootdown(ShootNode *node) {
 
 			for (size_t pg = 0; pg < node->size; pg += kPageSize)
 				invalidatePage(
-				  bindings[i].getAsid(),
-				  reinterpret_cast<void *>(node->address + pg)
+					bindings[i].getAsid(),
+					reinterpret_cast<void *>(node->address + pg)
 				);
 			unshot_bindings--;
 		}
@@ -505,10 +529,10 @@ constexpr inline static uint64_t kPageUc = (4 << 2);
 constexpr inline static uint64_t kPageAddress = 0xFFFFFFFFF000;
 
 void KernelPageSpace::mapSingle4k(
-  VirtualAddr pointer,
-  PhysicalAddr physical,
-  uint32_t flags,
-  CachingMode caching_mode
+	VirtualAddr pointer,
+	PhysicalAddr physical,
+	uint32_t flags,
+	CachingMode caching_mode
 ) {
 	assert((pointer % 0x1000) == 0);
 	assert((physical % 0x1000) == 0);
@@ -709,11 +733,11 @@ ClientPageSpace::~ClientPageSpace() {
 }
 
 void ClientPageSpace::mapSingle4k(
-  VirtualAddr pointer,
-  PhysicalAddr physical,
-  bool user_page,
-  uint32_t flags,
-  CachingMode caching_mode
+	VirtualAddr pointer,
+	PhysicalAddr physical,
+	bool user_page,
+	uint32_t flags,
+	CachingMode caching_mode
 ) {
 	assert(!(pointer & (kPageSize - 1)));
 
@@ -778,7 +802,7 @@ void ClientPageSpace::mapSingle4k(
 	tbl3 = reinterpret_cast<arch::scalar_variable<uint64_t> *>(accessor3.get());
 
 	uint64_t new_entry =
-	  physical | kPageValid | kPageL3Page | kPageAccess | kPageRO | kPageNotGlobal;
+		physical | kPageValid | kPageL3Page | kPageAccess | kPageRO | kPageNotGlobal;
 
 	if (flags & page_access::write)
 		new_entry |= kPageShouldBeWritable;

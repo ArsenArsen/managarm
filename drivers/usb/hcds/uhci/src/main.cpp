@@ -80,7 +80,7 @@ async::result<frg::expected<UsbError, std::string>> DeviceState::configurationDe
 async::result<frg::expected<UsbError, Configuration>> DeviceState::useConfiguration(int number) {
 	FRG_CO_TRY(co_await _controller->useConfiguration(_device, number));
 	co_return Configuration {
-	  std::make_shared<ConfigurationState>(_controller, _device, number)};
+		std::make_shared<ConfigurationState>(_controller, _device, number)};
 }
 
 async::result<frg::expected<UsbError>> DeviceState::transfer(ControlTransfer info) {
@@ -92,9 +92,9 @@ async::result<frg::expected<UsbError>> DeviceState::transfer(ControlTransfer inf
 // ----------------------------------------------------------------------------
 
 ConfigurationState::ConfigurationState(
-  std::shared_ptr<Controller> controller,
-  int device,
-  int configuration
+	std::shared_ptr<Controller> controller,
+	int device,
+	int configuration
 )
 : _controller {std::move(controller)}
 , _device(device)
@@ -129,10 +129,10 @@ InterfaceState::getEndpoint(PipeType type, int number) {
 // ----------------------------------------------------------------------------
 
 EndpointState::EndpointState(
-  std::shared_ptr<Controller> controller,
-  int device,
-  PipeType type,
-  int endpoint
+	std::shared_ptr<Controller> controller,
+	int device,
+	PipeType type,
+	int endpoint
 )
 : _controller {std::move(controller)}
 , _device(device)
@@ -297,7 +297,7 @@ async::result<frg::expected<UsbError>> StandardHub::initialize() {
 
 	arch::dma_object<HubDescriptor> hub_descriptor {_device.bufferPool()};
 	FRG_CO_TRY(co_await _device.transfer(
-	  ControlTransfer {kXferToHost, get_descriptor, hub_descriptor.view_buffer()}
+		ControlTransfer {kXferToHost, get_descriptor, hub_descriptor.view_buffer()}
 	));
 
 	_state.resize(hub_descriptor->numPorts, PortState {0, 0});
@@ -311,9 +311,9 @@ async::detached StandardHub::_run() {
 	while (true) {
 		arch::dma_array<uint8_t> report {_device.bufferPool(), (_state.size() + 1 + 7) / 8};
 		(co_await _endpoint.transfer(
-		   InterruptTransfer {XferFlags::kXferToHost, report.view_buffer()}
+			 InterruptTransfer {XferFlags::kXferToHost, report.view_buffer()}
 		 ))
-		  .unwrap();
+			.unwrap();
 
 		//		std::cout << "usb: Hub report: " << (unsigned int)report[0] <<
 		// std::endl;
@@ -324,7 +324,7 @@ async::detached StandardHub::_run() {
 			// Query issue a GetPortStatus request and inspect the status.
 			arch::dma_object<SetupPacket> status_req {_device.setupPool()};
 			status_req->type =
-			  setup_type::targetOther | setup_type::byClass | setup_type::toHost;
+				setup_type::targetOther | setup_type::byClass | setup_type::toHost;
 			status_req->request = class_requests::getStatus;
 			status_req->value = 0;
 			status_req->index = port + 1;
@@ -332,9 +332,9 @@ async::detached StandardHub::_run() {
 
 			arch::dma_array<uint16_t> result {_device.bufferPool(), 2};
 			(co_await _device.transfer(
-			   ControlTransfer {kXferToHost, status_req, result.view_buffer()}
+				 ControlTransfer {kXferToHost, status_req, result.view_buffer()}
 			 ))
-			  .unwrap();
+				.unwrap();
 			//			std::cout << "usb: Port " << port << " status: "
 			//					<< result[0] << ", " << result[1] <<
 			// std::endl;
@@ -354,16 +354,16 @@ async::detached StandardHub::_run() {
 
 				arch::dma_object<SetupPacket> clear_req {_device.setupPool()};
 				clear_req->type = setup_type::targetOther | setup_type::byClass
-				                | setup_type::toDevice;
+						| setup_type::toDevice;
 				clear_req->request = class_requests::clearFeature;
 				clear_req->value = port_features::connectChange;
 				clear_req->index = port + 1;
 				clear_req->length = 0;
 
 				(co_await _device.transfer(ControlTransfer {
-				   kXferToDevice,
-				   clear_req,
-				   arch::dma_buffer_view {}})
+					 kXferToDevice,
+					 clear_req,
+					 arch::dma_buffer_view {}})
 				).unwrap();
 			}
 
@@ -373,16 +373,16 @@ async::detached StandardHub::_run() {
 
 				arch::dma_object<SetupPacket> clear_req {_device.setupPool()};
 				clear_req->type = setup_type::targetOther | setup_type::byClass
-				                | setup_type::toDevice;
+						| setup_type::toDevice;
 				clear_req->request = class_requests::clearFeature;
 				clear_req->value = port_features::enableChange;
 				clear_req->index = port + 1;
 				clear_req->length = 0;
 
 				(co_await _device.transfer(ControlTransfer {
-				   kXferToDevice,
-				   clear_req,
-				   arch::dma_buffer_view {}})
+					 kXferToDevice,
+					 clear_req,
+					 arch::dma_buffer_view {}})
 				).unwrap();
 			}
 
@@ -392,16 +392,16 @@ async::detached StandardHub::_run() {
 
 				arch::dma_object<SetupPacket> clear_req {_device.setupPool()};
 				clear_req->type = setup_type::targetOther | setup_type::byClass
-				                | setup_type::toDevice;
+						| setup_type::toDevice;
 				clear_req->request = class_requests::clearFeature;
 				clear_req->value = port_features::resetChange;
 				clear_req->index = port + 1;
 				clear_req->length = 0;
 
 				(co_await _device.transfer(ControlTransfer {
-				   kXferToDevice,
-				   clear_req,
-				   arch::dma_buffer_view {}})
+					 kXferToDevice,
+					 clear_req,
+					 arch::dma_buffer_view {}})
 				).unwrap();
 			}
 		}
@@ -434,7 +434,7 @@ async::result<frg::expected<UsbError, bool>> StandardHub::issueReset(int port, b
 	reset_req->length = 0;
 
 	FRG_CO_TRY(co_await _device.transfer(
-	  ControlTransfer {kXferToDevice, reset_req, arch::dma_buffer_view {}}
+		ControlTransfer {kXferToDevice, reset_req, arch::dma_buffer_view {}}
 	));
 
 	// Issue a GetPortStatus request to determine if the device is low-speed.
@@ -446,9 +446,9 @@ async::result<frg::expected<UsbError, bool>> StandardHub::issueReset(int port, b
 	status_req->length = 4;
 
 	arch::dma_array<uint16_t> result {_device.bufferPool(), 2};
-	FRG_CO_TRY(
-	  co_await _device.transfer(ControlTransfer {kXferToHost, status_req, result.view_buffer()})
-	);
+	FRG_CO_TRY(co_await _device.transfer(
+		ControlTransfer {kXferToHost, status_req, result.view_buffer()}
+	));
 	*low_speed = (result[0] & port_bits::lowSpeed);
 
 	co_return true;
@@ -468,10 +468,10 @@ std::shared_ptr<StandardHub> create(Device device) {
 // ----------------------------------------------------------------------------
 
 Controller::Controller(
-  protocols::hw::Device hw_device,
-  uintptr_t base,
-  arch::io_space space,
-  helix::UniqueIrq irq
+	protocols::hw::Device hw_device,
+	uintptr_t base,
+	arch::io_space space,
+	helix::UniqueIrq irq
 )
 : _hwDevice {std::move(hw_device)}
 , _ioBase {base}
@@ -501,13 +501,13 @@ void Controller::initialize() {
 	HEL_CHECK(helAllocateMemory(4096, 0, nullptr, &list_handle));
 	void *list_mapping;
 	HEL_CHECK(helMapMemory(
-	  list_handle,
-	  kHelNullHandle,
-	  nullptr,
-	  0,
-	  4096,
-	  kHelMapProtRead | kHelMapProtWrite,
-	  &list_mapping
+		list_handle,
+		kHelNullHandle,
+		nullptr,
+		0,
+		4096,
+		kHelMapProtRead | kHelMapProtWrite,
+		&list_mapping
 	));
 
 	_frameList = (FrameList *) list_mapping;
@@ -523,8 +523,9 @@ void Controller::initialize() {
 
 	// Enable interrupts.
 	_ioSpace.store(
-	  op_regs::irqEnable,
-	  irq::timeout(true) | irq::resume(true) | irq::transaction(true) | irq::shortPacket(true)
+		op_regs::irqEnable,
+		irq::timeout(true) | irq::resume(true) | irq::transaction(true)
+			| irq::shortPacket(true)
 	);
 
 	_enumerator.observeHub(std::make_shared<RootHub>(this));
@@ -537,40 +538,40 @@ async::detached Controller::_handleIrqs() {
 
 	std::vector<uint8_t> kernlet_program;
 	fnr::emit_to(
-	  std::back_inserter(kernlet_program),
-	  // Load the USBSTS register.
-	  fnr::scope_push {}(
-	    fnr::intrin {"__pio_read16", 1, 1}(
-	      fnr::binding {0}  // UHCI PIO offset (bound to slot 0).
-	      + fnr::literal {op_regs::status.offset()}
-	    )
-	    & fnr::literal {static_cast<uint16_t>(
-	      status::transactionIrq(true) | status::errorIrq(true) | status::hostProcessError(true)
-	      | status::hostSystemError(true)
-	    )}
-	  ),
-	  // Ack the IRQ iff one of the bits was set.
-	  fnr::check_if {},
-	  fnr::scope_get {0},
-	  fnr::then {},
-	  // Write back the interrupt bits to USBSTS to deassert the IRQ.
-	  fnr::intrin {"__pio_write16", 2, 0}(
-	    fnr::binding {0}  // UHCI PIO offset (bound to slot 0).
-	      + fnr::literal {op_regs::status.offset()},
-	    fnr::scope_get {0}
-	  ),
-	  // Trigger the bitset event (bound to slot 1).
-	  fnr::intrin {"__trigger_bitset", 2, 0}(fnr::binding {1}, fnr::scope_get {0}),
-	  fnr::scope_push {}(fnr::literal {1}),
-	  fnr::else_then {},
-	  fnr::scope_push {}(fnr::literal {2}),
-	  fnr::end {}
+		std::back_inserter(kernlet_program),
+		// Load the USBSTS register.
+		fnr::scope_push {}(
+			fnr::intrin {"__pio_read16", 1, 1}(
+				fnr::binding {0}  // UHCI PIO offset (bound to slot 0).
+				+ fnr::literal {op_regs::status.offset()}
+			)
+			& fnr::literal {static_cast<uint16_t>(
+				status::transactionIrq(true) | status::errorIrq(true)
+				| status::hostProcessError(true) | status::hostSystemError(true)
+			)}
+		),
+		// Ack the IRQ iff one of the bits was set.
+		fnr::check_if {},
+		fnr::scope_get {0},
+		fnr::then {},
+		// Write back the interrupt bits to USBSTS to deassert the IRQ.
+		fnr::intrin {"__pio_write16", 2, 0}(
+			fnr::binding {0}  // UHCI PIO offset (bound to slot 0).
+				+ fnr::literal {op_regs::status.offset()},
+			fnr::scope_get {0}
+		),
+		// Trigger the bitset event (bound to slot 1).
+		fnr::intrin {"__trigger_bitset", 2, 0}(fnr::binding {1}, fnr::scope_get {0}),
+		fnr::scope_push {}(fnr::literal {1}),
+		fnr::else_then {},
+		fnr::scope_push {}(fnr::literal {2}),
+		fnr::end {}
 	);
 
 	auto kernlet_object = co_await compile(
-	  kernlet_program.data(),
-	  kernlet_program.size(),
-	  {BindType::offset, BindType::bitsetEvent}
+		kernlet_program.data(),
+		kernlet_program.size(),
+		{BindType::offset, BindType::bitsetEvent}
 	);
 
 	HelHandle event_handle;
@@ -619,9 +620,9 @@ async::detached Controller::_refreshFrame() {
 
 		helix::AwaitClock await_clock;
 		auto &&submit = helix::submitAwaitClock(
-		  &await_clock,
-		  tick + 500'000'000,
-		  helix::Dispatcher::global()
+			&await_clock,
+			tick + 500'000'000,
+			helix::Dispatcher::global()
 		);
 		co_await submit.async_wait();
 		HEL_CHECK(await_clock.error());
@@ -631,7 +632,7 @@ async::detached Controller::_refreshFrame() {
 void Controller::_updateFrame() {
 	auto frame = _ioSpace.load(op_regs::frameNumber);
 	auto counter = (frame >= _lastFrame) ? (_frameCounter + frame - _lastFrame)
-	                                     : (_frameCounter + 2048 - _lastFrame + frame);
+					     : (_frameCounter + 2048 - _lastFrame + frame);
 
 	if (counter / 1024 > _frameCounter / 1024) {
 		for (int port = 0; port < 2; port++) {
@@ -709,8 +710,11 @@ Controller::RootHub::issueReset(int port, bool *low_speed) {
 	HEL_CHECK(helGetClock(&tick));
 
 	helix::AwaitClock await_clock;
-	auto &&submit =
-	  helix::submitAwaitClock(&await_clock, tick + 50'000'000, helix::Dispatcher::global());
+	auto &&submit = helix::submitAwaitClock(
+		&await_clock,
+		tick + 50'000'000,
+		helix::Dispatcher::global()
+	);
 	co_await submit.async_wait();
 	HEL_CHECK(await_clock.error());
 
@@ -734,7 +738,7 @@ Controller::RootHub::issueReset(int port, bool *low_speed) {
 		HEL_CHECK(helGetClock(&now));
 		if (now - start > 1000'000'000) {
 			std::cout << "\e[31muhci: Could not enable device after reset\e[39m"
-			          << std::endl;
+				  << std::endl;
 			co_return false;
 		}
 	}
@@ -762,21 +766,21 @@ async::result<void> Controller::enumerateDevice(bool low_speed) {
 
 	arch::dma_object<SetupPacket> set_address {&schedulePool};
 	set_address->type =
-	  setup_type::targetDevice | setup_type::byStandard | setup_type::toDevice;
+		setup_type::targetDevice | setup_type::byStandard | setup_type::toDevice;
 	set_address->request = request_type::setAddress;
 	set_address->value = address;
 	set_address->index = 0;
 	set_address->length = 0;
 
 	(co_await _directTransfer(
-	   0,
-	   0,
-	   ControlTransfer {kXferToDevice, set_address, arch::dma_buffer_view {}},
-	   queue,
-	   low_speed,
-	   8
+		 0,
+		 0,
+		 ControlTransfer {kXferToDevice, set_address, arch::dma_buffer_view {}},
+		 queue,
+		 low_speed,
+		 8
 	 ))
-	  .unwrap();
+		.unwrap();
 
 	// Enquire the maximum packet size of the default control pipe.
 	arch::dma_object<SetupPacket> get_header {&schedulePool};
@@ -788,14 +792,14 @@ async::result<void> Controller::enumerateDevice(bool low_speed) {
 
 	arch::dma_object<DeviceDescriptor> descriptor {&schedulePool};
 	(co_await _directTransfer(
-	   address,
-	   0,
-	   ControlTransfer {kXferToHost, get_header, descriptor.view_buffer().subview(0, 8)},
-	   queue,
-	   low_speed,
-	   8
+		 address,
+		 0,
+		 ControlTransfer {kXferToHost, get_header, descriptor.view_buffer().subview(0, 8)},
+		 queue,
+		 low_speed,
+		 8
 	 ))
-	  .unwrap();
+		.unwrap();
 
 	_activeDevices[address].lowSpeed = low_speed;
 	_activeDevices[address].controlStates[0].queueEntity = queue;
@@ -804,18 +808,18 @@ async::result<void> Controller::enumerateDevice(bool low_speed) {
 	// Read the rest of the device descriptor.
 	arch::dma_object<SetupPacket> get_descriptor {&schedulePool};
 	get_descriptor->type =
-	  setup_type::targetDevice | setup_type::byStandard | setup_type::toHost;
+		setup_type::targetDevice | setup_type::byStandard | setup_type::toHost;
 	get_descriptor->request = request_type::getDescriptor;
 	get_descriptor->value = descriptor_type::device << 8;
 	get_descriptor->index = 0;
 	get_descriptor->length = sizeof(DeviceDescriptor);
 
 	(co_await transfer(
-	   address,
-	   0,
-	   ControlTransfer {kXferToHost, get_descriptor, descriptor.view_buffer()}
+		 address,
+		 0,
+		 ControlTransfer {kXferToHost, get_descriptor, descriptor.view_buffer()}
 	 ))
-	  .unwrap();
+		.unwrap();
 	assert(descriptor->length == sizeof(DeviceDescriptor));
 
 	// TODO: Read configuration descriptor from the device.
@@ -830,9 +834,10 @@ async::result<void> Controller::enumerateDevice(bool low_speed) {
 	sprintf(release, "%.4x", descriptor->bcdDevice);
 
 	std::cout << "uhci: Enumerating device of class: 0x" << class_code << ", sub class: 0x"
-	          << sub_class << ", protocol: 0x" << protocol << std::endl;
+		  << sub_class << ", protocol: 0x" << protocol << std::endl;
 
-	if (descriptor->deviceClass == 0x09 && descriptor->deviceSubclass == 0 && descriptor->deviceProtocol == 0) {
+	if (descriptor->deviceClass == 0x09 && descriptor->deviceSubclass == 0
+	    && descriptor->deviceProtocol == 0) {
 		auto state = std::make_shared<DeviceState>(shared_from_this(), address);
 		auto hub = usb::standard_hub::create(Device {std::move(state)});
 		(co_await hub->initialize()).unwrap();
@@ -840,13 +845,13 @@ async::result<void> Controller::enumerateDevice(bool low_speed) {
 	}
 
 	mbus::Properties mbus_desc {
-	  {"usb.type", mbus::StringItem {"device"}},
-	  {"usb.vendor", mbus::StringItem {vendor}},
-	  {"usb.product", mbus::StringItem {product}},
-	  {"usb.class", mbus::StringItem {class_code}},
-	  {"usb.subclass", mbus::StringItem {sub_class}},
-	  {"usb.protocol", mbus::StringItem {protocol}},
-	  {"usb.release", mbus::StringItem {release}}};
+		{"usb.type", mbus::StringItem {"device"}},
+		{"usb.vendor", mbus::StringItem {vendor}},
+		{"usb.product", mbus::StringItem {product}},
+		{"usb.class", mbus::StringItem {class_code}},
+		{"usb.subclass", mbus::StringItem {sub_class}},
+		{"usb.protocol", mbus::StringItem {protocol}},
+		{"usb.release", mbus::StringItem {release}}};
 
 	auto root = co_await mbus::Instance::global().getRoot();
 
@@ -854,14 +859,14 @@ async::result<void> Controller::enumerateDevice(bool low_speed) {
 	sprintf(name, "%.2x", address);
 
 	auto handler =
-	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		  helix::UniqueLane local_lane, remote_lane;
-		  std::tie(local_lane, remote_lane) = helix::createStream();
-		  auto state = std::make_shared<DeviceState>(shared_from_this(), address);
-		  protocols::usb::serve(Device {std::move(state)}, std::move(local_lane));
+		mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+			helix::UniqueLane local_lane, remote_lane;
+			std::tie(local_lane, remote_lane) = helix::createStream();
+			auto state = std::make_shared<DeviceState>(shared_from_this(), address);
+			protocols::usb::serve(Device {std::move(state)}, std::move(local_lane));
 
-		  co_return std::move(remote_lane);
-	  });
+			co_return std::move(remote_lane);
+		});
 
 	co_await root.createObject(name, mbus_desc, std::move(handler));
 }
@@ -882,25 +887,27 @@ async::result<frg::expected<UsbError, std::string>> Controller::configurationDes
 
 	arch::dma_object<ConfigDescriptor> header {&schedulePool};
 	FRG_CO_TRY(co_await transfer(
-	  address,
-	  0,
-	  ControlTransfer {kXferToHost, get_header, header.view_buffer()}
+		address,
+		0,
+		ControlTransfer {kXferToHost, get_header, header.view_buffer()}
 	));
 	assert(header->length == sizeof(ConfigDescriptor));
 
 	// Read the whole descriptor hierachy.
 	arch::dma_object<SetupPacket> get_descriptor {&schedulePool};
 	get_descriptor->type =
-	  setup_type::targetDevice | setup_type::byStandard | setup_type::toHost;
+		setup_type::targetDevice | setup_type::byStandard | setup_type::toHost;
 	get_descriptor->request = request_type::getDescriptor;
 	get_descriptor->value = descriptor_type::configuration << 8;
 	get_descriptor->index = 0;
 	get_descriptor->length = header->totalLength;
 
 	arch::dma_buffer descriptor {&schedulePool, header->totalLength};
-	FRG_CO_TRY(
-	  co_await transfer(address, 0, ControlTransfer {kXferToHost, get_descriptor, descriptor})
-	);
+	FRG_CO_TRY(co_await transfer(
+		address,
+		0,
+		ControlTransfer {kXferToHost, get_descriptor, descriptor}
+	));
 
 	// TODO: This function should return a arch::dma_buffer!
 	std::string copy((char *) descriptor.data(), header->totalLength);
@@ -917,9 +924,9 @@ Controller::useConfiguration(int address, int configuration) {
 	set_config->length = 0;
 
 	FRG_CO_TRY(co_await transfer(
-	  address,
-	  0,
-	  ControlTransfer {kXferToDevice, set_config, arch::dma_buffer_view {}}
+		address,
+		0,
+		ControlTransfer {kXferToDevice, set_config, arch::dma_buffer_view {}}
 	));
 	co_return {};
 }
@@ -969,13 +976,13 @@ Controller::transfer(int address, int pipe, ControlTransfer info) {
 	auto endpoint = &device->controlStates[pipe];
 
 	auto transaction = _buildControl(
-	  address,
-	  pipe,
-	  info.flags,
-	  info.setup,
-	  info.buffer,
-	  device->lowSpeed,
-	  endpoint->maxPacketSize
+		address,
+		pipe,
+		info.flags,
+		info.setup,
+		info.buffer,
+		device->lowSpeed,
+		endpoint->maxPacketSize
 	);
 	auto future = transaction->voidPromise.get_future();
 	_linkTransaction(endpoint->queueEntity, transaction);
@@ -996,13 +1003,13 @@ Controller::transfer(int address, PipeType type, int pipe, InterruptTransfer inf
 	}
 
 	auto transaction = _buildInterruptOrBulk(
-	  address,
-	  pipe,
-	  info.flags,
-	  info.buffer,
-	  device->lowSpeed,
-	  endpoint->maxPacketSize,
-	  info.allowShortPackets
+		address,
+		pipe,
+		info.flags,
+		info.buffer,
+		device->lowSpeed,
+		endpoint->maxPacketSize,
+		info.allowShortPackets
 	);
 	auto future = transaction->promise.get_future();
 	_linkTransaction(endpoint->queueEntity, transaction);
@@ -1025,13 +1032,13 @@ Controller::transfer(int address, PipeType type, int pipe, BulkTransfer info) {
 	}
 
 	auto transaction = _buildInterruptOrBulk(
-	  address,
-	  pipe,
-	  info.flags,
-	  info.buffer,
-	  device->lowSpeed,
-	  endpoint->maxPacketSize,
-	  info.allowShortPackets
+		address,
+		pipe,
+		info.flags,
+		info.buffer,
+		device->lowSpeed,
+		endpoint->maxPacketSize,
+		info.allowShortPackets
 	);
 	auto future = transaction->promise.get_future();
 	_linkTransaction(endpoint->queueEntity, transaction);
@@ -1039,13 +1046,13 @@ Controller::transfer(int address, PipeType type, int pipe, BulkTransfer info) {
 }
 
 auto Controller::_buildControl(
-  int address,
-  int pipe,
-  XferFlags dir,
-  arch::dma_object_view<SetupPacket> setup,
-  arch::dma_buffer_view buffer,
-  bool low_speed,
-  size_t max_packet_size
+	int address,
+	int pipe,
+	XferFlags dir,
+	arch::dma_object_view<SetupPacket> setup,
+	arch::dma_buffer_view buffer,
+	bool low_speed,
+	size_t max_packet_size
 ) -> Transaction * {
 	assert((dir == kXferToDevice) || (dir == kXferToHost));
 
@@ -1053,11 +1060,12 @@ auto Controller::_buildControl(
 	arch::dma_array<TransferDescriptor> transfers {&schedulePool, num_data + 2};
 
 	transfers[0].status.store(
-	  td_status::active(true) | td_status::detectShort(true) | td_status::lowSpeed(low_speed)
+		td_status::active(true) | td_status::detectShort(true)
+		| td_status::lowSpeed(low_speed)
 	);
 	transfers[0].token.store(
-	  td_token::pid(Packet::setup) | td_token::address(address) | td_token::pipe(pipe)
-	  | td_token::length(sizeof(SetupPacket) - 1)
+		td_token::pid(Packet::setup) | td_token::address(address) | td_token::pipe(pipe)
+		| td_token::length(sizeof(SetupPacket) - 1)
 	);
 	transfers[0]._bufferPointer = TransferBufferPointer::from(setup.data());
 	transfers[0]._linkPointer = TransferDescriptor::LinkPointer::from(&transfers[1]);
@@ -1067,40 +1075,42 @@ auto Controller::_buildControl(
 		size_t chunk = std::min(max_packet_size, buffer.size() - progress);
 		assert(chunk);
 		transfers[i + 1].status.store(
-		  td_status::active(true) | td_status::detectShort(true)
-		  | td_status::lowSpeed(low_speed)
+			td_status::active(true) | td_status::detectShort(true)
+			| td_status::lowSpeed(low_speed)
 		);
 		transfers[i + 1].token.store(
-		  td_token::pid(dir == kXferToDevice ? Packet::out : Packet::in)
-		  | td_token::toggle(i % 2 == 0) | td_token::address(address) | td_token::pipe(pipe)
-		  | td_token::length(chunk - 1)
+			td_token::pid(dir == kXferToDevice ? Packet::out : Packet::in)
+			| td_token::toggle(i % 2 == 0) | td_token::address(address)
+			| td_token::pipe(pipe) | td_token::length(chunk - 1)
 		);
 		transfers[i + 1]._bufferPointer =
-		  TransferBufferPointer::from((char *) buffer.data() + progress);
+			TransferBufferPointer::from((char *) buffer.data() + progress);
 		transfers[i + 1]._linkPointer =
-		  TransferDescriptor::LinkPointer::from(&transfers[i + 2]);
+			TransferDescriptor::LinkPointer::from(&transfers[i + 2]);
 		progress += chunk;
 	}
 
 	transfers[num_data + 1].status.store(
-	  td_status::active(true) | td_status::completionIrq(true) | td_status::lowSpeed(low_speed)
+		td_status::active(true) | td_status::completionIrq(true)
+		| td_status::lowSpeed(low_speed)
 	);
 	transfers[num_data + 1].token.store(
-	  td_token::pid(dir == kXferToDevice ? Packet::in : Packet::out) | td_token::toggle(true)
-	  | td_token::address(address) | td_token::pipe(pipe) | td_token::length(0x7FF)
+		td_token::pid(dir == kXferToDevice ? Packet::in : Packet::out)
+		| td_token::toggle(true) | td_token::address(address) | td_token::pipe(pipe)
+		| td_token::length(0x7FF)
 	);
 
 	return new Transaction {std::move(transfers)};
 }
 
 auto Controller::_buildInterruptOrBulk(
-  int address,
-  int pipe,
-  XferFlags dir,
-  arch::dma_buffer_view buffer,
-  bool low_speed,
-  size_t max_packet_size,
-  bool allow_short_packet
+	int address,
+	int pipe,
+	XferFlags dir,
+	arch::dma_buffer_view buffer,
+	bool low_speed,
+	size_t max_packet_size,
+	bool allow_short_packet
 ) -> Transaction * {
 	assert((dir == kXferToDevice) || (dir == kXferToHost));
 	//	std::cout << "_buildInterruptOrBulk. Address: " << address
@@ -1117,19 +1127,20 @@ auto Controller::_buildInterruptOrBulk(
 		assert(chunk);
 		// TODO: Only set detectShort bit if allow_short_packet is true?
 		transfers[i].status.store(
-		  td_status::active(true) | td_status::completionIrq(i + 1 == num_data)
-		  | td_status::detectShort(true) | td_status::lowSpeed(low_speed)
+			td_status::active(true) | td_status::completionIrq(i + 1 == num_data)
+			| td_status::detectShort(true) | td_status::lowSpeed(low_speed)
 		);
 		transfers[i].token.store(
-		  td_token::pid(dir == kXferToDevice ? Packet::out : Packet::in)
-		  | td_token::address(address) | td_token::pipe(pipe) | td_token::length(chunk - 1)
+			td_token::pid(dir == kXferToDevice ? Packet::out : Packet::in)
+			| td_token::address(address) | td_token::pipe(pipe)
+			| td_token::length(chunk - 1)
 		);
 		transfers[i]._bufferPointer =
-		  TransferBufferPointer::from((char *) buffer.data() + progress);
+			TransferBufferPointer::from((char *) buffer.data() + progress);
 
 		if (i + 1 < num_data)
 			transfers[i]._linkPointer =
-			  TransferDescriptor::LinkPointer::from(&transfers[i + 1]);
+				TransferDescriptor::LinkPointer::from(&transfers[i + 1]);
 		progress += chunk;
 	}
 
@@ -1139,21 +1150,21 @@ auto Controller::_buildInterruptOrBulk(
 }
 
 async::result<frg::expected<UsbError>> Controller::_directTransfer(
-  int address,
-  int pipe,
-  ControlTransfer info,
-  QueueEntity *queue,
-  bool low_speed,
-  size_t max_packet_size
+	int address,
+	int pipe,
+	ControlTransfer info,
+	QueueEntity *queue,
+	bool low_speed,
+	size_t max_packet_size
 ) {
 	auto transaction = _buildControl(
-	  address,
-	  pipe,
-	  info.flags,
-	  info.setup,
-	  info.buffer,
-	  low_speed,
-	  max_packet_size
+		address,
+		pipe,
+		info.flags,
+		info.setup,
+		info.buffer,
+		low_speed,
+		max_packet_size
 	);
 	auto future = transaction->voidPromise.get_future();
 	_linkTransaction(queue, transaction);
@@ -1173,9 +1184,9 @@ void Controller::_linkInterrupt(QueueEntity *entity, int order, int index) {
 	while (so) {
 		/*auto n = (so - 1) + (index & (so - 1));
 		if(!_interruptSchedule[n].empty()) {
-		        std::cout << "Linking to a lower order. This is untested" << std::endl;
-		        auto successor = &_interruptSchedule[n].front();
-		        entity->head->_linkPointer =
+			std::cout << "Linking to a lower order. This is untested" << std::endl;
+			auto successor = &_interruptSchedule[n].front();
+			entity->head->_linkPointer =
 		QueueHead::LinkPointer::from(successor->head.data()); break;
 		}*/
 		so >>= 1;
@@ -1194,7 +1205,7 @@ void Controller::_linkInterrupt(QueueEntity *entity, int order, int index) {
 		// Link the front of the schedule to the new entity.
 		if (order == 1024) {
 			_frameList->entries[index].store(
-			  FrameListPointer::from(entity->head.data())._bits
+				FrameListPointer::from(entity->head.data())._bits
 			);
 		} else {
 			_linkIntoScheduleTree(order << 1, index, entity);
@@ -1215,7 +1226,7 @@ void Controller::_linkAsync(QueueEntity *entity) {
 		_linkIntoScheduleTree(1, 0, entity);
 	} else {
 		_asyncSchedule.back().head->_linkPointer =
-		  QueueHead::LinkPointer::from(entity->head.data());
+			QueueHead::LinkPointer::from(entity->head.data());
 	}
 	_asyncSchedule.push_back(*entity);
 	_activeEntities.push_back(entity);
@@ -1229,7 +1240,7 @@ void Controller::_linkIntoScheduleTree(int order, int index, QueueEntity *entity
 	if (_interruptSchedule[n].empty()) {
 		if (order == 1024) {
 			_frameList->entries[index].store(
-			  FrameListPointer::from(entity->head.data())._bits
+				FrameListPointer::from(entity->head.data())._bits
 			);
 		} else {
 			_linkIntoScheduleTree(order << 1, index, entity);
@@ -1248,14 +1259,15 @@ void Controller::_linkTransaction(QueueEntity *queue, Transaction *transaction) 
 			bool state = queue->toggleState;
 			for (size_t i = 0; i < transaction->transfers.size(); i++) {
 				transaction->transfers[i].token.store(
-				  transaction->transfers[i].token.load() | td_token::toggle(state)
+					transaction->transfers[i].token.load()
+					| td_token::toggle(state)
 				);
 				state = !state;
 			}
 		}
 
 		queue->head->_elementPointer =
-		  QueueHead::LinkPointer::from(&transaction->transfers[0]);
+			QueueHead::LinkPointer::from(&transaction->transfers[0]);
 	}
 
 	queue->transactions.push_back(*transaction);
@@ -1319,8 +1331,8 @@ void Controller::_progressQueue(QueueEntity *entity) {
 		if (n != (transfer.token.load() & td_token::length)) {
 			if (!front->allowShortPackets) {
 				std::cout << "uhci: Actual length is " << n << ", while we expect "
-				          << (transfer.token.load() & td_token::length)
-				          << ", auto toggle is " << front->autoToggle << std::endl;
+					  << (transfer.token.load() & td_token::length)
+					  << ", auto toggle is " << front->autoToggle << std::endl;
 				throw std::runtime_error("uhci: Short packet not allowed");
 			}
 			break;
@@ -1384,10 +1396,10 @@ async::detached bindController(mbus::Entity entity) {
 
 	arch::io_space base = arch::global_io.subspace(info.barInfo[4].address);
 	auto controller = std::make_shared<Controller>(
-	  std::move(device),
-	  info.barInfo[4].address,
-	  base,
-	  std::move(irq)
+		std::move(device),
+		info.barInfo[4].address,
+		base,
+		std::move(irq)
 	);
 	controller->initialize();
 
@@ -1398,16 +1410,16 @@ async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	auto filter = mbus::Conjunction(
-	  {mbus::EqualsFilter("pci-class", "0c"),
-	   mbus::EqualsFilter("pci-subclass", "03"),
-	   mbus::EqualsFilter("pci-interface", "00")}
+		{mbus::EqualsFilter("pci-class", "0c"),
+		 mbus::EqualsFilter("pci-subclass", "03"),
+		 mbus::EqualsFilter("pci-interface", "00")}
 	);
 
 	auto handler =
-	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		  std::cout << "uhci: Detected controller" << std::endl;
-		  bindController(std::move(entity));
-	  });
+		mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+			std::cout << "uhci: Detected controller" << std::endl;
+			bindController(std::move(entity));
+		});
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

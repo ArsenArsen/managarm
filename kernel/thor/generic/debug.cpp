@@ -18,9 +18,9 @@ constinit LogMessage logQueue[1024] {};
 constinit size_t logHead = 0;
 
 frg::manual_box<frg::intrusive_list<
-  LogHandler,
-  frg::locate_member<LogHandler, frg::default_list_hook<LogHandler>, &LogHandler::hook>>>
-  globalLogList;
+	LogHandler,
+	frg::locate_member<LogHandler, frg::default_list_hook<LogHandler>, &LogHandler::hook>>>
+	globalLogList;
 }  // anonymous namespace
 
 size_t currentLogSequence() {
@@ -191,8 +191,8 @@ void PanicSink::operator()(const char *msg) {
 extern "C" void
 __assert_fail(const char *assertion, const char *file, unsigned int line, const char *function) {
 	thor::panicLogger() << "Assertion failed: " << assertion << "\n"
-	                    << "In function " << function << " at " << file << ":" << line
-	                    << frg::endlog;
+			    << "In function " << function << " at " << file << ":" << line
+			    << frg::endlog;
 }
 
 extern "C" void __cxa_pure_virtual() {

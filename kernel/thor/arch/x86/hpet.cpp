@@ -118,9 +118,9 @@ public:
 			//       - Adjust this code one we count the number of overflows.
 			if (ticks & ~uint64_t {0xFFFFFFFF})
 				infoLogger() << "\e[31m"
-				                "thor: HPET comparator overflow"
-				                "\e[39m"
-				             << frg::endlog;
+						"thor: HPET comparator overflow"
+						"\e[39m"
+					     << frg::endlog;
 			ticks &= ~uint64_t(0xFFFFFFFF);
 		}
 		hpetBase.store(timerComparator0, ticks);
@@ -146,8 +146,12 @@ void setupHpet(PhysicalAddr address) {
 
 	// TODO: We really only need a single page.
 	auto register_ptr = KernelVirtualMemory::global().allocate(0x10000);
-	KernelPageSpace::global()
-	  .mapSingle4k(VirtualAddr(register_ptr), address, page_access::write, CachingMode::null);
+	KernelPageSpace::global().mapSingle4k(
+		VirtualAddr(register_ptr),
+		address,
+		page_access::write,
+		CachingMode::null
+	);
 	hpetBase = arch::mem_space(register_ptr);
 
 	auto global_caps = hpetBase.load(genCapsAndId);
@@ -164,7 +168,7 @@ void setupHpet(PhysicalAddr address) {
 
 	auto timer_caps = hpetBase.load(timerConfig0);
 	infoLogger() << "    Possible IRQ mask: " << (timer_caps & timer_bits::possibleIrqs)
-	             << frg::endlog;
+		     << frg::endlog;
 	if (timer_caps & timer_bits::fsbCapable)
 		infoLogger() << "    Timer 0 is capable of FSB interrupts." << frg::endlog;
 
@@ -185,23 +189,23 @@ void setupHpet(PhysicalAddr address) {
 	// Program HPET timer 0 in one-shot mode.
 	if (global_caps & supportsLegacyIrqs) {
 		hpetBase.store(
-		  timerConfig0,
-		  timer_bits::forceTo32Bit(!hpetDevice->_comparatorIs64Bit)
-		    | timer_bits::enableInt(false)
+			timerConfig0,
+			timer_bits::forceTo32Bit(!hpetDevice->_comparatorIs64Bit)
+				| timer_bits::enableInt(false)
 		);
 		hpetBase.store(timerComparator0, 0);
 		hpetBase.store(timerConfig0, timer_bits::enableInt(true));
 	} else {
 		assert((timer_caps & timer_bits::possibleIrqs) & (1 << 2));
 		hpetBase.store(
-		  timerConfig0,
-		  timer_bits::forceTo32Bit(!hpetDevice->_comparatorIs64Bit)
-		    | timer_bits::enableInt(false) | timer_bits::activeIrq(2)
+			timerConfig0,
+			timer_bits::forceTo32Bit(!hpetDevice->_comparatorIs64Bit)
+				| timer_bits::enableInt(false) | timer_bits::activeIrq(2)
 		);
 		hpetBase.store(timerComparator0, 0);
 		hpetBase.store(
-		  timerConfig0,
-		  timer_bits::enableInt(true) | timer_bits::activeIrq(2)
+			timerConfig0,
+			timer_bits::enableInt(true) | timer_bits::activeIrq(2)
 		);
 	}
 
@@ -238,34 +242,34 @@ initgraph::Stage *getHpetInitializedStage() {
 }
 
 static initgraph::Task initHpetTask {
-  &globalInitEngine,
-  "x86.init-hpet",
-  initgraph::Requires {
-    getApicDiscoveryStage(),  // For APIC calibration.
-    acpi::getTablesDiscoveredStage()},
-  initgraph::Entails {getHpetInitializedStage()},
-  // Initialize the HPET.
-  [] {
-	  void *hpetWindow = laihost_scan("HPET", 0);
-	  if (!hpetWindow) {
-		  infoLogger() << "\e[31m"
-		                  "thor: No HPET table!"
-		                  "\e[39m"
-		               << frg::endlog;
-		  return;
-	  }
-	  auto hpet = reinterpret_cast<acpi_header_t *>(hpetWindow);
-	  if (hpet->length < sizeof(acpi_header_t) + sizeof(HpetEntry)) {
-		  infoLogger() << "\e[31m"
-		                  "thor: HPET table has no entries!"
-		                  "\e[39m"
-		               << frg::endlog;
-		  return;
-	  }
-	  auto hpetEntry = (HpetEntry *) ((uintptr_t) hpetWindow + sizeof(acpi_header_t));
-	  infoLogger() << "thor: Setting up HPET" << frg::endlog;
-	  assert(hpetEntry->address.address_space == ACPI_GAS_MMIO);
-	  setupHpet(hpetEntry->address.base);
-  }};
+	&globalInitEngine,
+	"x86.init-hpet",
+	initgraph::Requires {
+		getApicDiscoveryStage(),  // For APIC calibration.
+		acpi::getTablesDiscoveredStage()},
+	initgraph::Entails {getHpetInitializedStage()},
+	// Initialize the HPET.
+	[] {
+		void *hpetWindow = laihost_scan("HPET", 0);
+		if (!hpetWindow) {
+			infoLogger() << "\e[31m"
+					"thor: No HPET table!"
+					"\e[39m"
+				     << frg::endlog;
+			return;
+		}
+		auto hpet = reinterpret_cast<acpi_header_t *>(hpetWindow);
+		if (hpet->length < sizeof(acpi_header_t) + sizeof(HpetEntry)) {
+			infoLogger() << "\e[31m"
+					"thor: HPET table has no entries!"
+					"\e[39m"
+				     << frg::endlog;
+			return;
+		}
+		auto hpetEntry = (HpetEntry *) ((uintptr_t) hpetWindow + sizeof(acpi_header_t));
+		infoLogger() << "thor: Setting up HPET" << frg::endlog;
+		assert(hpetEntry->address.address_space == ACPI_GAS_MMIO);
+		setupHpet(hpetEntry->address.base);
+	}};
 
 }  // namespace thor

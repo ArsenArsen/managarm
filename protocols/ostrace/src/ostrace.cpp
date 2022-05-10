@@ -18,11 +18,11 @@ async::result<EventId> Context::announceEvent(std::string_view name) {
 	req.set_name(std::string {name});
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	  lane_,
-	  helix_ng::offer(
-	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	    helix_ng::recvInline()
-	  )
+		lane_,
+		helix_ng::offer(
+			helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+			helix_ng::recvInline()
+		)
 	);
 
 	HEL_CHECK(offer.error());
@@ -43,11 +43,11 @@ async::result<ItemId> Context::announceItem(std::string_view name) {
 	req.set_name(std::string {name});
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	  lane_,
-	  helix_ng::offer(
-	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	    helix_ng::recvInline()
-	  )
+		lane_,
+		helix_ng::offer(
+			helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+			helix_ng::recvInline()
+		)
 	);
 
 	HEL_CHECK(offer.error());
@@ -83,11 +83,11 @@ async::result<void> Event::emit() {
 		co_return;
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	  ctx_->getLane(),
-	  helix_ng::offer(
-	    helix_ng::sendBragiHeadOnly(req_, frg::stl_allocator {}),
-	    helix_ng::recvInline()
-	  )
+		ctx_->getLane(),
+		helix_ng::offer(
+			helix_ng::sendBragiHeadOnly(req_, frg::stl_allocator {}),
+			helix_ng::recvInline()
+		)
 	);
 
 	HEL_CHECK(offer.error());
@@ -112,13 +112,13 @@ async::result<Context> createContext() {
 	async::oneshot_event foundObject;
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	  [&lane,
-	   &foundObject](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  std::cout << "ostrace: Found ostrace" << std::endl;
+		[&lane, &foundObject](mbus::Entity entity, mbus::Properties properties)
+			-> async::detached {
+			std::cout << "ostrace: Found ostrace" << std::endl;
 
-		  lane = helix::UniqueLane(co_await entity.bind());
-		  foundObject.raise();
-	  }
+			lane = helix::UniqueLane(co_await entity.bind());
+			foundObject.raise();
+		}
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
@@ -129,11 +129,11 @@ async::result<Context> createContext() {
 	managarm::ostrace::AnnounceItemReq req;
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	  lane,
-	  helix_ng::offer(
-	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	    helix_ng::recvInline()
-	  )
+		lane,
+		helix_ng::offer(
+			helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+			helix_ng::recvInline()
+		)
 	);
 
 	HEL_CHECK(offer.error());

@@ -38,7 +38,7 @@ private:
 	std::map<uint64_t, std::weak_ptr<DirectoryNode>> _activeStructural;
 	std::map<uint64_t, std::weak_ptr<Node>> _activePeripheralNodes;
 	std::map<std::tuple<uint64_t, std::string, uint64_t>, std::weak_ptr<FsLink>>
-	  _activePeripheralLinks;
+		_activePeripheralLinks;
 };
 
 struct Node : FsNode {
@@ -52,11 +52,11 @@ struct Node : FsNode {
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -91,11 +91,11 @@ struct Node : FsNode {
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  getLane(),
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline()
-		  )
+			getLane(),
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -110,7 +110,7 @@ struct Node : FsNode {
 
 	async::result<Error>
 	utimensat(uint64_t atime_sec, uint64_t atime_nsec, uint64_t mtime_sec, uint64_t mtime_nsec)
-	  override {
+		override {
 		managarm::fs::CntRequest req;
 		req.set_req_type(managarm::fs::CntReqType::NODE_UTIMENSAT);
 		req.set_atime_sec(atime_sec);
@@ -120,11 +120,11 @@ struct Node : FsNode {
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  getLane(),
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline()
-		  )
+			getLane(),
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -178,7 +178,7 @@ private:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		(void) mask;
 
 		if (sequence > 1)
@@ -202,10 +202,10 @@ private:
 
 public:
 	OpenFile(
-	  helix::UniqueLane control,
-	  helix::UniqueLane lane,
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link
+		helix::UniqueLane control,
+		helix::UniqueLane lane,
+		std::shared_ptr<MountView> mount,
+		std::shared_ptr<FsLink> link
 	)
 	: File {StructName::get("externfs.file"), std::move(mount), std::move(link)}
 	, _control {std::move(control)}
@@ -227,11 +227,11 @@ public:
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  getPassthroughLane(),
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline()
-		  )
+			getPassthroughLane(),
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -252,20 +252,19 @@ struct RegularNode final : Node {
 private:
 	VfsType getType() override { return VfsType::regular; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		// Regular files do not support O_NONBLOCK.
 		semantic_flags &= ~semanticNonBlock;
 
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
-			             "allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
+				     "allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 		helix::Offer offer;
@@ -279,13 +278,13 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&pull_ctrl, kHelItemChain),
-		  helix::action(&pull_passthrough)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&pull_ctrl, kHelItemChain),
+			helix::action(&pull_passthrough)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -299,10 +298,10 @@ private:
 		assert(resp.error() == managarm::fs::Errors::SUCCESS);
 
 		auto file = smarter::make_shared<OpenFile>(
-		  pull_ctrl.descriptor(),
-		  pull_passthrough.descriptor(),
-		  std::move(mount),
-		  std::move(link)
+			pull_ctrl.descriptor(),
+			pull_passthrough.descriptor(),
+			std::move(mount),
+			std::move(link)
 		);
 		file->setupWeakFile(file);
 		co_return File::constructHandle(std::move(file));
@@ -328,12 +327,12 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&recv_target)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&recv_target)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -346,8 +345,8 @@ private:
 		assert(resp.error() == managarm::fs::Errors::SUCCESS);
 
 		co_return std::string {
-		  static_cast<char *>(recv_target.data()),
-		  recv_target.length()};
+			static_cast<char *>(recv_target.data()),
+			recv_target.length()};
 	}
 
 public:
@@ -368,11 +367,11 @@ public:
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  lane,
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline()
-		  )
+			lane,
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -414,9 +413,9 @@ private:
 
 public:
 	PeripheralLink(
-	  std::shared_ptr<FsNode> owner,
-	  std::string name,
-	  std::shared_ptr<FsNode> target
+		std::shared_ptr<FsNode> owner,
+		std::string name,
+		std::shared_ptr<FsNode> target
 	)
 	: Link {std::move(owner), std::move(name)}
 	, _target {std::move(target)} {}
@@ -464,12 +463,12 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp, pull_desc] = co_await helix_ng::exchangeMsgs(
-		  getLane(),
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline(),
-		    helix_ng::pullDescriptor()
-		  )
+			getLane(),
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline(),
+				helix_ng::pullDescriptor()
+			)
 		);
 
 		HEL_CHECK(offer.error());
@@ -497,17 +496,20 @@ private:
 
 		std::shared_ptr<Node> parentNode {weakNode()};
 		for (size_t i = 0; i < resp.ids().size(); i++) {
-			auto [pull_node] =
-			  co_await helix_ng::exchangeMsgs(pull_lane, helix_ng::pullDescriptor());
+			auto [pull_node] = co_await helix_ng::exchangeMsgs(
+				pull_lane,
+				helix_ng::pullDescriptor()
+			);
 
 			HEL_CHECK(pull_node.error());
 
-			if (i != resp.ids().size() - 1 || resp.file_type() == managarm::fs::FileType::DIRECTORY) {
+			if (i != resp.ids().size() - 1
+			    || resp.file_type() == managarm::fs::FileType::DIRECTORY) {
 				auto child = _sb->internalizeStructural(
-				  parentNode.get(),
-				  path[i],
-				  resp.ids()[i],
-				  pull_node.descriptor()
+					parentNode.get(),
+					path[i],
+					resp.ids()[i],
+					pull_node.descriptor()
 				);
 				if (i != resp.ids().size() - 1)
 					parentNode = child;
@@ -515,14 +517,14 @@ private:
 					link = child->treeLink();
 			} else {
 				auto child = _sb->internalizePeripheralNode(
-				  resp.file_type(),
-				  resp.ids()[i],
-				  pull_node.descriptor()
+					resp.file_type(),
+					resp.ids()[i],
+					pull_node.descriptor()
 				);
 				link = _sb->internalizePeripheralLink(
-				  parentNode.get(),
-				  path[i],
-				  std::move(child)
+					parentNode.get(),
+					path[i],
+					std::move(child)
 				);
 			}
 		}
@@ -538,12 +540,12 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto [offer, sendReq, recvResp, pullNode] = co_await helix_ng::exchangeMsgs(
-		  getLane(),
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline(),
-		    helix_ng::pullDescriptor()
-		  )
+			getLane(),
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline(),
+				helix_ng::pullDescriptor()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(sendReq.error());
@@ -554,8 +556,12 @@ private:
 		if (resp.error() == managarm::fs::Errors::SUCCESS) {
 			HEL_CHECK(pullNode.error());
 
-			auto child =
-			  _sb->internalizeStructural(this, name, resp.id(), pullNode.descriptor());
+			auto child = _sb->internalizeStructural(
+				this,
+				name,
+				resp.id(),
+				pullNode.descriptor()
+			);
 			co_return child->treeLink();
 		} else {
 			co_return Error::illegalOperationTarget;  // TODO
@@ -571,16 +577,16 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto [offer, sendReq, sendName, sendTarget, recvResp, pullNode] =
-		  co_await helix_ng::exchangeMsgs(
-		    getLane(),
-		    helix_ng::offer(
-		      helix_ng::sendBuffer(ser.data(), ser.size()),
-		      helix_ng::sendBuffer(name.data(), name.size()),
-		      helix_ng::sendBuffer(path.data(), path.size()),
-		      helix_ng::recvInline(),
-		      helix_ng::pullDescriptor()
-		    )
-		  );
+			co_await helix_ng::exchangeMsgs(
+				getLane(),
+				helix_ng::offer(
+					helix_ng::sendBuffer(ser.data(), ser.size()),
+					helix_ng::sendBuffer(name.data(), name.size()),
+					helix_ng::sendBuffer(path.data(), path.size()),
+					helix_ng::recvInline(),
+					helix_ng::pullDescriptor()
+				)
+			);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(sendReq.error());
 		HEL_CHECK(sendName.error());
@@ -592,8 +598,12 @@ private:
 		if (resp.error() == managarm::fs::Errors::SUCCESS) {
 			HEL_CHECK(pullNode.error());
 
-			auto child =
-			  _sb->internalizeStructural(this, name, resp.id(), pullNode.descriptor());
+			auto child = _sb->internalizeStructural(
+				this,
+				name,
+				resp.id(),
+				pullNode.descriptor()
+			);
 			co_return child->treeLink();
 		} else {
 			co_return Error::illegalOperationTarget;  // TODO
@@ -622,12 +632,12 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&pull_node)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&pull_node)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -641,20 +651,20 @@ private:
 
 			if (resp.file_type() == managarm::fs::FileType::DIRECTORY) {
 				auto child = _sb->internalizeStructural(
-				  this,
-				  name,
-				  resp.id(),
-				  pull_node.descriptor()
+					this,
+					name,
+					resp.id(),
+					pull_node.descriptor()
 				);
 				co_return child->treeLink();
 			} else {
 				auto child = _sb->internalizePeripheralNode(
-				  resp.file_type(),
-				  resp.id(),
-				  pull_node.descriptor()
+					resp.file_type(),
+					resp.id(),
+					pull_node.descriptor()
 				);
 				co_return _sb
-				  ->internalizePeripheralLink(this, name, std::move(child));
+					->internalizePeripheralLink(this, name, std::move(child));
 			}
 		} else if (resp.error() == managarm::fs::Errors::FILE_NOT_FOUND) {
 			co_return nullptr;
@@ -678,12 +688,12 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&pull_node)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&pull_node)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -697,20 +707,20 @@ private:
 
 			if (resp.file_type() == managarm::fs::FileType::DIRECTORY) {
 				auto child = _sb->internalizeStructural(
-				  this,
-				  name,
-				  resp.id(),
-				  pull_node.descriptor()
+					this,
+					name,
+					resp.id(),
+					pull_node.descriptor()
 				);
 				co_return child->treeLink();
 			} else {
 				auto child = _sb->internalizePeripheralNode(
-				  resp.file_type(),
-				  resp.id(),
-				  pull_node.descriptor()
+					resp.file_type(),
+					resp.id(),
+					pull_node.descriptor()
 				);
 				co_return _sb
-				  ->internalizePeripheralLink(this, name, std::move(child));
+					->internalizePeripheralLink(this, name, std::move(child));
 			}
 		} else {
 			co_return nullptr;
@@ -728,11 +738,11 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -754,11 +764,11 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  getLane(),
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline()
-		  )
+			getLane(),
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -771,20 +781,19 @@ private:
 		co_return {};
 	}
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		// Regular files do not support O_NONBLOCK.
 		semantic_flags &= ~semanticNonBlock;
 
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
-			             "allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
+				     "allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 		helix::Offer offer;
@@ -798,13 +807,13 @@ private:
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  getLane(),
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&pull_ctrl, kHelItemChain),
-		  helix::action(&pull_passthrough)
+			getLane(),
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&pull_ctrl, kHelItemChain),
+			helix::action(&pull_passthrough)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -818,10 +827,10 @@ private:
 		assert(resp.error() == managarm::fs::Errors::SUCCESS);
 
 		auto file = smarter::make_shared<OpenFile>(
-		  pull_ctrl.descriptor(),
-		  pull_passthrough.descriptor(),
-		  std::move(mount),
-		  std::move(link)
+			pull_ctrl.descriptor(),
+			pull_passthrough.descriptor(),
+			std::move(mount),
+			std::move(link)
 		);
 		file->setupWeakFile(file);
 		co_return File::constructHandle(std::move(file));
@@ -834,11 +843,11 @@ public:
 	, _treeLink {this} {}
 
 	DirectoryNode(
-	  Superblock *sb,
-	  std::shared_ptr<Node> owner,
-	  std::string name,
-	  uint64_t inode,
-	  helix::UniqueLane lane
+		Superblock *sb,
+		std::shared_ptr<Node> owner,
+		std::string name,
+		uint64_t inode,
+		helix::UniqueLane lane
 	)
 	: Node {inode, std::move(lane), sb}
 	, _sb {sb}
@@ -866,12 +875,12 @@ FutureMaybe<std::shared_ptr<FsNode>> Superblock::createRegular() {
 
 	auto ser = req.SerializeAsString();
 	auto &&transmit = helix::submitAsync(
-	  _lane,
-	  helix::Dispatcher::global(),
-	  helix::action(&offer, kHelItemAncillary),
-	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	  helix::action(&recv_resp, kHelItemChain),
-	  helix::action(&pull_node)
+		_lane,
+		helix::Dispatcher::global(),
+		helix::action(&offer, kHelItemAncillary),
+		helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		helix::action(&recv_resp, kHelItemChain),
+		helix::action(&pull_node)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -884,9 +893,9 @@ FutureMaybe<std::shared_ptr<FsNode>> Superblock::createRegular() {
 		HEL_CHECK(pull_node.error());
 
 		co_return internalizePeripheralNode(
-		  resp.file_type(),
-		  resp.id(),
-		  pull_node.descriptor()
+			resp.file_type(),
+			resp.id(),
+			pull_node.descriptor()
 		);
 	} else {
 		co_return nullptr;
@@ -910,11 +919,11 @@ Superblock::rename(FsLink *source, FsNode *directory, std::string name) {
 	req.set_new_name(name);
 
 	auto [offer, send_head, send_tail, recv_resp] = co_await helix_ng::exchangeMsgs(
-	  _lane,
-	  helix_ng::offer(
-	    helix_ng::sendBragiHeadTail(req, frg::stl_allocator {}),
-	    helix_ng::recvInline()
-	  )
+		_lane,
+		helix_ng::offer(
+			helix_ng::sendBragiHeadTail(req, frg::stl_allocator {}),
+			helix_ng::recvInline()
+		)
 	);
 
 	HEL_CHECK(offer.error());
@@ -944,10 +953,10 @@ std::shared_ptr<Node> Superblock::internalizeStructural(uint64_t id, helix::Uniq
 }
 
 std::shared_ptr<Node> Superblock::internalizeStructural(
-  Node *parent,
-  std::string name,
-  uint64_t id,
-  helix::UniqueLane lane
+	Node *parent,
+	std::string name,
+	uint64_t id,
+	helix::UniqueLane lane
 ) {
 	auto entry = &_activeStructural[id];
 	auto intern = entry->lock();
@@ -956,7 +965,7 @@ std::shared_ptr<Node> Superblock::internalizeStructural(
 
 	auto owner = std::shared_ptr<Node> {parent->weakNode()};
 	auto node =
-	  std::make_shared<DirectoryNode>(this, owner, std::move(name), id, std::move(lane));
+		std::make_shared<DirectoryNode>(this, owner, std::move(name), id, std::move(lane));
 	node->setupWeakNode(node);
 	*entry = node;
 	return node;
@@ -986,9 +995,9 @@ Superblock::internalizePeripheralNode(int64_t type, int id, helix::UniqueLane la
 }
 
 std::shared_ptr<FsLink> Superblock::internalizePeripheralLink(
-  Node *parent,
-  std::string name,
-  std::shared_ptr<Node> target
+	Node *parent,
+	std::string name,
+	std::shared_ptr<Node> target
 ) {
 	auto entry = &_activePeripheralLinks[{parent->getInode(), name, target->getInode()}];
 	auto intern = entry->lock();
@@ -996,8 +1005,11 @@ std::shared_ptr<FsLink> Superblock::internalizePeripheralLink(
 		return intern;
 
 	auto owner = std::shared_ptr<Node> {parent->weakNode()};
-	auto link =
-	  std::make_shared<PeripheralLink>(std::move(owner), std::move(name), std::move(target));
+	auto link = std::make_shared<PeripheralLink>(
+		std::move(owner),
+		std::move(name),
+		std::move(target)
+	);
 	*entry = link;
 	return link;
 }
@@ -1014,10 +1026,10 @@ std::shared_ptr<FsLink> createRoot(helix::UniqueLane sb_lane, helix::UniqueLane 
 smarter::shared_ptr<File, FileHandle>
 createFile(helix::UniqueLane lane, std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link) {
 	auto file = smarter::make_shared<OpenFile>(
-	  helix::UniqueLane {},
-	  std::move(lane),
-	  std::move(mount),
-	  std::move(link)
+		helix::UniqueLane {},
+		std::move(lane),
+		std::move(mount),
+		std::move(link)
 	);
 	file->setupWeakFile(file);
 	return File::constructHandle(std::move(file));

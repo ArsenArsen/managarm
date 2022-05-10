@@ -43,10 +43,10 @@ void setupPaging() {
 }
 
 void mapSingle4kPage(
-  address_t address,
-  address_t physical,
-  uint32_t flags,
-  CachingMode caching_mode
+	address_t address,
+	address_t physical,
+	uint32_t flags,
+	CachingMode caching_mode
 ) {
 	assert(address % pageSize == 0);
 	assert(physical % pageSize == 0);
@@ -92,8 +92,8 @@ void mapSingle4kPage(
 
 	// setup the new pt entry
 	if (pt_entry & kPagePresent)
-		eir::panicLogger()
-		  << "eir: Trying to map 0x" << frg::hex_fmt {address} << " twice!" << frg::endlog;
+		eir::panicLogger() << "eir: Trying to map 0x" << frg::hex_fmt {address} << " twice!"
+				   << frg::endlog;
 
 	uint64_t new_entry = physical | kPagePresent;
 	if (flags & PageFlags::write)
@@ -188,9 +188,9 @@ void initProcessorEarly() {
 void initProcessorPaging(void *kernel_start, uint64_t &kernel_entry) {
 	setupPaging();
 	eir::infoLogger() << "eir: Allocated " << (allocatedMemory >> 10)
-	                  << " KiB"
-	                     " after setting up paging"
-	                  << frg::endlog;
+			  << " KiB"
+			     " after setting up paging"
+			  << frg::endlog;
 
 	// Identically map the first 128 MiB so that we can activate paging
 	// without causing a page fault.
@@ -205,9 +205,9 @@ void initProcessorPaging(void *kernel_start, uint64_t &kernel_entry) {
 	// Setup the kernel image.
 	kernel_entry = loadKernelImage(kernel_start);
 	eir::infoLogger() << "eir: Allocated " << (allocatedMemory >> 10)
-	                  << " KiB"
-	                     " after loading the kernel"
-	                  << frg::endlog;
+			  << " KiB"
+			     " after loading the kernel"
+			  << frg::endlog;
 
 	// Setup the kernel stack.
 	for (address_t page = 0; page < 0x10000; page += pageSize)

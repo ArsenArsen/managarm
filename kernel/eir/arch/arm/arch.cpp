@@ -32,10 +32,10 @@ constexpr inline static uint64_t kPageGRE = (1 << 2);
 constexpr inline static uint64_t kPagenGnRnE = (2 << 2);
 
 void mapSingle4kPage(
-  address_t address,
-  address_t physical,
-  uint32_t flags,
-  CachingMode caching_mode
+	address_t address,
+	address_t physical,
+	uint32_t flags,
+	CachingMode caching_mode
 ) {
 	auto ttbr = (address >> 63) & 1;
 	auto l0 = (address >> 39) & 0x1FF;
@@ -85,8 +85,8 @@ void mapSingle4kPage(
 	auto l3_ent = ((uint64_t *) l3_ptr)[l3];
 
 	if (l3_ent & kPageValid)
-		eir::panicLogger()
-		  << "eir: Trying to map 0x" << frg::hex_fmt {address} << " twice!" << frg::endlog;
+		eir::panicLogger() << "eir: Trying to map 0x" << frg::hex_fmt {address} << " twice!"
+				   << frg::endlog;
 
 	uint64_t new_entry = physical | kPageValid | kPageL3Page | kPageAccess;
 
@@ -108,11 +108,11 @@ void mapSingle4kPage(
 
 	if (new_entry & (0b111ULL << 48)) {
 		eir::infoLogger() << "Oops, reserved bits set when mapping 0x"
-		                  << frg::hex_fmt {physical} << " to 0x" << frg::hex_fmt {address}
-		                  << frg::endlog;
+				  << frg::hex_fmt {physical} << " to 0x" << frg::hex_fmt {address}
+				  << frg::endlog;
 
 		eir::panicLogger()
-		  << "New entry value: 0x" << frg::hex_fmt {new_entry} << frg::endlog;
+			<< "New entry value: 0x" << frg::hex_fmt {new_entry} << frg::endlog;
 	}
 
 	((uint64_t *) l3_ptr)[l3] = new_entry;
@@ -156,34 +156,34 @@ void initProcessorEarly() {
 
 	if (aa64mmfr0 & (0xF << 28))
 		eir::panicLogger()
-		  << "PANIC! This CPU doesn't support 4K memory translation granules"
-		  << frg::endlog;
+			<< "PANIC! This CPU doesn't support 4K memory translation granules"
+			<< frg::endlog;
 
 	if ((aa64mmfr0 & 0xF) < 1)
-		eir::panicLogger()
-		  << "PANIC! This CPU doesn't support at least 48 bit physical addresses (max "
+		eir::panicLogger(
+		) << "PANIC! This CPU doesn't support at least 48 bit physical addresses (max "
 		  << (aa64mmfr0 & 0xF) << ")" << frg::endlog;
 
 	auto pa = frg::min(uint64_t(5), aa64mmfr0 & 0xF);
 
 	uint64_t mair = 0b11111111 |  // Normal, Write-back RW-Allocate non-transient
-	                (0b00001100 << 8) |  // Device, GRE
-	                (0b00000000 << 16) |  // Device, nGnRnE
-	                (0b00000100 << 24) |  // Device, nGnRE
-	                (0b01000100UL << 32);  // Normal Non-cacheable
+			(0b00001100 << 8) |  // Device, GRE
+			(0b00000000 << 16) |  // Device, nGnRnE
+			(0b00000100 << 24) |  // Device, nGnRE
+			(0b01000100UL << 32);  // Normal Non-cacheable
 
 	asm volatile("msr mair_el1, %0" ::"r"(mair));
 
 	uint64_t tcr = (16 << 0) |  // T0SZ=16
-	               (16 << 16) |  // T1SZ=16
-	               (1 << 8) |  // TTBR0 Inner WB RW-Allocate
-	               (1 << 10) |  // TTBR0 Outer WB RW-Allocate
-	               (1 << 24) |  // TTBR1 Inner WB RW-Allocate
-	               (1 << 26) |  // TTBR1 Outer WB RW-Allocate
-	               (2 << 12) |  // TTBR0 Inner shareable
-	               (2 << 28) |  // TTBR1 Inner shareable
-	               (uint64_t(pa) << 32) |  // 48-bit intermediate address
-	               (2 << 30);  // TTBR1 4K granule
+		       (16 << 16) |  // T1SZ=16
+		       (1 << 8) |  // TTBR0 Inner WB RW-Allocate
+		       (1 << 10) |  // TTBR0 Outer WB RW-Allocate
+		       (1 << 24) |  // TTBR1 Inner WB RW-Allocate
+		       (1 << 26) |  // TTBR1 Outer WB RW-Allocate
+		       (2 << 12) |  // TTBR0 Inner shareable
+		       (2 << 28) |  // TTBR1 Inner shareable
+		       (uint64_t(pa) << 32) |  // 48-bit intermediate address
+		       (2 << 30);  // TTBR1 4K granule
 
 	asm volatile("msr tcr_el1, %0" ::"r"(tcr));
 }
@@ -192,9 +192,9 @@ void initProcessorEarly() {
 void initProcessorPaging(void *kernel_start, uint64_t &kernel_entry) {
 	setupPaging();
 	eir::infoLogger() << "eir: Allocated " << (allocatedMemory >> 10)
-	                  << " KiB"
-	                     " after setting up paging"
-	                  << frg::endlog;
+			  << " KiB"
+			     " after setting up paging"
+			  << frg::endlog;
 
 	// Identically map the first 128 MiB so that we can activate paging
 	// without causing a page fault.
@@ -211,9 +211,9 @@ void initProcessorPaging(void *kernel_start, uint64_t &kernel_entry) {
 	// Setup the kernel image.
 	kernel_entry = loadKernelImage(kernel_start);
 	eir::infoLogger() << "eir: Allocated " << (allocatedMemory >> 10)
-	                  << " KiB"
-	                     " after loading the kernel"
-	                  << frg::endlog;
+			  << " KiB"
+			     " after loading the kernel"
+			  << frg::endlog;
 
 	// Setup the kernel stack.
 	for (address_t page = 0; page < 0x10000; page += pageSize)

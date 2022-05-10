@@ -57,8 +57,12 @@ arch::field<uint32_t, uint8_t> targetListFilter {24, 2};
 
 GicDistributor::GicDistributor(uintptr_t addr) : base_ {addr}, space_ {}, irqPins_ {*kernelAlloc} {
 	auto register_ptr = KernelVirtualMemory::global().allocate(0x1000);
-	KernelPageSpace::global()
-	  .mapSingle4k(VirtualAddr(register_ptr), addr, page_access::write, CachingMode::mmio);
+	KernelPageSpace::global().mapSingle4k(
+		VirtualAddr(register_ptr),
+		addr,
+		page_access::write,
+		CachingMode::mmio
+	);
 	space_ = arch::mem_space {register_ptr};
 }
 
@@ -69,9 +73,9 @@ void GicDistributor::init() {
 	bool securityExtensions = type & dist_type::securityExtensions;
 
 	infoLogger() << "GIC Distributor has " << noLines << " IRQs, " << noCpuIface
-	             << " CPU interfaces and "
-	             << (securityExtensions ? "supports" : "doesn't support")
-	             << " security extensions" << frg::endlog;
+		     << " CPU interfaces and "
+		     << (securityExtensions ? "supports" : "doesn't support")
+		     << " security extensions" << frg::endlog;
 
 	space_.store_relaxed(dist_reg::control, dist_control::enable(false));
 
@@ -103,9 +107,9 @@ void GicDistributor::initOnThisCpu() {
 
 void GicDistributor::sendIpi(uint8_t ifaceNo, uint8_t id) {
 	space_.store_relaxed(
-	  dist_reg::sgi,
-	  dist_sgi::sgiNo(id) | dist_sgi::cpuTargetList(1 << ifaceNo)
-	    | dist_sgi::targetListFilter(0)
+		dist_reg::sgi,
+		dist_sgi::sgiNo(id) | dist_sgi::cpuTargetList(1 << ifaceNo)
+			| dist_sgi::targetListFilter(0)
 	);
 }
 
@@ -160,9 +164,9 @@ void GicDistributor::Pin::mask() {
 	size_t bitOff = irq_ & 31;
 
 	arch::scalar_store_relaxed<uint32_t>(
-	  parent_->space_,
-	  dist_reg::irqClearEnableBase + regOff,
-	  (1 << bitOff)
+		parent_->space_,
+		dist_reg::irqClearEnableBase + regOff,
+		(1 << bitOff)
 	);
 }
 
@@ -171,9 +175,9 @@ void GicDistributor::Pin::unmask() {
 	size_t bitOff = irq_ & 31;
 
 	arch::scalar_store_relaxed<uint32_t>(
-	  parent_->space_,
-	  dist_reg::irqSetEnableBase + regOff,
-	  (1 << bitOff)
+		parent_->space_,
+		dist_reg::irqSetEnableBase + regOff,
+		(1 << bitOff)
 	);
 }
 
@@ -185,8 +189,10 @@ void GicDistributor::Pin::setAffinity_(uint8_t ifaceNo) {
 	size_t regOff = (irq_ / 4) * 4;
 	size_t bitOff = (irq_ & 3) * 8;
 
-	auto v =
-	  arch::scalar_load_relaxed<uint32_t>(parent_->space_, dist_reg::irqTargetBase + regOff);
+	auto v = arch::scalar_load_relaxed<uint32_t>(
+		parent_->space_,
+		dist_reg::irqTargetBase + regOff
+	);
 
 	v &= ~(0xFF << bitOff);
 	v |= (1 << ifaceNo) << bitOff;
@@ -198,16 +204,18 @@ void GicDistributor::Pin::setPriority_(uint8_t prio) {
 	size_t regOff = (irq_ / 4) * 4;
 	size_t bitOff = (irq_ & 3) * 8;
 
-	auto v =
-	  arch::scalar_load_relaxed<uint32_t>(parent_->space_, dist_reg::irqPriorityBase + regOff);
+	auto v = arch::scalar_load_relaxed<uint32_t>(
+		parent_->space_,
+		dist_reg::irqPriorityBase + regOff
+	);
 
 	v &= ~(0xFF << bitOff);
 	v |= uint32_t(prio) << bitOff;
 
 	arch::scalar_store_relaxed<uint32_t>(
-	  parent_->space_,
-	  dist_reg::irqPriorityBase + regOff,
-	  v
+		parent_->space_,
+		dist_reg::irqPriorityBase + regOff,
+		v
 	);
 }
 
@@ -221,8 +229,10 @@ bool GicDistributor::Pin::setMode(TriggerMode trigger, Polarity polarity) {
 	if (polarity == Polarity::low)
 		return false;
 
-	auto v =
-	  arch::scalar_load_relaxed<uint32_t>(parent_->space_, dist_reg::irqConfigBase + i * 4);
+	auto v = arch::scalar_load_relaxed<uint32_t>(
+		parent_->space_,
+		dist_reg::irqConfigBase + i * 4
+	);
 
 	v &= ~(3 << j);
 	v |= (trigger == TriggerMode::edge ? 2 : 0) << j;
@@ -238,8 +248,8 @@ void GicDistributor::dumpPendingSgis() {
 		int reg = (i / 4);
 
 		auto regv = arch::scalar_load_relaxed<uint32_t>(
-		  space_,
-		  dist_reg::sgiSetPendingBase + reg * 4
+			space_,
+			dist_reg::sgiSetPendingBase + reg * 4
 		);
 
 		auto sgiv = (regv >> off) & 0xFF;
@@ -247,8 +257,8 @@ void GicDistributor::dumpPendingSgis() {
 		for (int j = 0; j < 8; j++) {
 			if (sgiv & (1 << j)) {
 				infoLogger()
-				  << "thor: on CPU " << getCpuData()->cpuIndex << ", SGI " << i
-				  << " pending from CPU " << j << frg::endlog;
+					<< "thor: on CPU " << getCpuData()->cpuIndex << ", SGI "
+					<< i << " pending from CPU " << j << frg::endlog;
 			}
 		}
 	}
@@ -256,14 +266,16 @@ void GicDistributor::dumpPendingSgis() {
 
 uint8_t GicDistributor::getCurrentCpuIfaceNo_() {
 	for (size_t i = 0; i < 8; i++) {
-		auto v =
-		  arch::scalar_load_relaxed<uint32_t>(space_, dist_reg::irqTargetBase + i * 4);
+		auto v = arch::scalar_load_relaxed<uint32_t>(
+			space_,
+			dist_reg::irqTargetBase + i * 4
+		);
 
 		if (!v)
 			continue;
 
 		auto mask =
-		  ((v >> 24) & 0xFF) | ((v >> 16) & 0xFF) | ((v >> 8) & 0xFF) | (v & 0xFF);
+			((v >> 24) & 0xFF) | ((v >> 16) & 0xFF) | ((v >> 8) & 0xFF) | (v & 0xFF);
 
 		assert(__builtin_popcount(mask) == 1);
 
@@ -315,10 +327,10 @@ GicCpuInterface::GicCpuInterface(GicDistributor *dist, uintptr_t addr, size_t si
 
 	for (size_t i = 0; i < size; i += kPageSize) {
 		KernelPageSpace::global().mapSingle4k(
-		  VirtualAddr(ptr) + i,
-		  addr + i,
-		  page_access::write,
-		  CachingMode::mmio
+			VirtualAddr(ptr) + i,
+			addr + i,
+			page_access::write,
+			CachingMode::mmio
 		);
 	}
 	space_ = arch::mem_space {ptr};
@@ -331,9 +343,9 @@ void GicCpuInterface::init() {
 
 	for (int i = 0; i < 4; i++)
 		arch::scalar_store_relaxed<uint32_t>(
-		  space_,
-		  cpu_reg::activePriorityBase + i * 4,
-		  0
+			space_,
+			cpu_reg::activePriorityBase + i * 4,
+			0
 		);
 
 	ifaceNo_ = dist_->getCurrentCpuIfaceNo_();
@@ -341,9 +353,9 @@ void GicCpuInterface::init() {
 	auto bypass = space_.load_relaxed(cpu_reg::control) & cpu_control::bypass;
 
 	space_.store_relaxed(
-	  cpu_reg::control,
-	  cpu_control::enable(true) | cpu_control::bypass(bypass)
-	    | cpu_control::eoiModeNs(useSplitEoiDeact_)
+		cpu_reg::control,
+		cpu_control::enable(true) | cpu_control::bypass(bypass)
+			| cpu_control::eoiModeNs(useSplitEoiDeact_)
 	);
 }
 
@@ -359,13 +371,13 @@ frg::tuple<uint8_t, uint32_t> GicCpuInterface::get() {
 void GicCpuInterface::eoi(uint8_t cpuId, uint32_t irqId) {
 	if (useSplitEoiDeact_) {
 		space_.store_relaxed(
-		  cpu_reg::deact,
-		  cpu_ack_eoi::cpuId(cpuId) | cpu_ack_eoi::irqId(irqId)
+			cpu_reg::deact,
+			cpu_ack_eoi::cpuId(cpuId) | cpu_ack_eoi::irqId(irqId)
 		);
 	} else {
 		space_.store_relaxed(
-		  cpu_reg::eoi,
-		  cpu_ack_eoi::cpuId(cpuId) | cpu_ack_eoi::irqId(irqId)
+			cpu_reg::eoi,
+			cpu_ack_eoi::cpuId(cpuId) | cpu_ack_eoi::irqId(irqId)
 		);
 	}
 }
@@ -384,35 +396,35 @@ static uintptr_t cpuInterfaceAddr;
 static uintptr_t cpuInterfaceSize;
 
 static initgraph::Task initGic {
-  &globalInitEngine,
-  "arm.init-gic",
-  initgraph::Requires {getDeviceTreeParsedStage(), getBootProcessorReadyStage()},
-  initgraph::Entails {getIrqControllerReadyStage()},
-  // Initialize the GIC.
-  [] {
-	  DeviceTreeNode *gicNode = nullptr;
-	  getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
-		  if (node->isCompatible(dtGicCompatible)) {
-			  gicNode = node;
-			  return true;
-		  }
+	&globalInitEngine,
+	"arm.init-gic",
+	initgraph::Requires {getDeviceTreeParsedStage(), getBootProcessorReadyStage()},
+	initgraph::Entails {getIrqControllerReadyStage()},
+	// Initialize the GIC.
+	[] {
+		DeviceTreeNode *gicNode = nullptr;
+		getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
+			if (node->isCompatible(dtGicCompatible)) {
+				gicNode = node;
+				return true;
+			}
 
-		  return false;
-	  });
+			return false;
+		});
 
-	  assert(gicNode && "Failed to find GIC");
-	  infoLogger() << "thor: found the GIC at node \"" << gicNode->path() << "\""
-	               << frg::endlog;
-	  assert(gicNode->reg().size() >= 2);
+		assert(gicNode && "Failed to find GIC");
+		infoLogger() << "thor: found the GIC at node \"" << gicNode->path() << "\""
+			     << frg::endlog;
+		assert(gicNode->reg().size() >= 2);
 
-	  dist.initialize(gicNode->reg()[0].addr);
-	  dist->init();
+		dist.initialize(gicNode->reg()[0].addr);
+		dist->init();
 
-	  cpuInterfaceAddr = gicNode->reg()[1].addr;
-	  cpuInterfaceSize = gicNode->reg()[1].size;
+		cpuInterfaceAddr = gicNode->reg()[1].addr;
+		cpuInterfaceSize = gicNode->reg()[1].size;
 
-	  initGicOnThisCpu();
-  }};
+		initGicOnThisCpu();
+	}};
 
 initgraph::Stage *getIrqControllerReadyStage() {
 	static initgraph::Stage s {&globalInitEngine, "arm.irq-controller-ready"};
@@ -423,10 +435,10 @@ void initGicOnThisCpu() {
 	auto cpuData = getCpuData();
 
 	cpuData->gicCpuInterface = frg::construct<GicCpuInterface>(
-	  *kernelAlloc,
-	  dist.get(),
-	  cpuInterfaceAddr,
-	  cpuInterfaceSize
+		*kernelAlloc,
+		dist.get(),
+		cpuInterfaceAddr,
+		cpuInterfaceSize
 	);
 	cpuData->gicCpuInterface->init();
 }

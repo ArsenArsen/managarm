@@ -203,16 +203,15 @@ struct Udp4Socket {
 		co_return protocols::fs::Error::none;
 	}
 
-	static async::result<RecvResult> recvmsg(
-	  void *obj,
-	  const char *creds,
-	  uint32_t flags,
-	  void *data,
-	  size_t len,
-	  void *addr_buf,
-	  size_t addr_size,
-	  size_t max_ctrl_len
-	) {
+	static async::result<RecvResult>
+	recvmsg(void *obj,
+		const char *creds,
+		uint32_t flags,
+		void *data,
+		size_t len,
+		void *addr_buf,
+		size_t addr_size,
+		size_t max_ctrl_len) {
 		using arch::convert_endian;
 		using arch::endian;
 		auto self = static_cast<Udp4Socket *>(obj);
@@ -221,24 +220,23 @@ struct Udp4Socket {
 		auto copy_size = std::min(packet.size(), len);
 		std::memcpy(data, packet.data(), copy_size);
 		sockaddr_in addr {
-		  .sin_family = AF_INET,
-		  .sin_port = convert_endian<endian::big>(element->header.src),
-		  .sin_addr = {convert_endian<endian::big>(element->packet->header.source)}};
+			.sin_family = AF_INET,
+			.sin_port = convert_endian<endian::big>(element->header.src),
+			.sin_addr = {convert_endian<endian::big>(element->packet->header.source)}};
 		std::memset(addr_buf, 0, addr_size);
 		std::memcpy(addr_buf, &addr, std::min(addr_size, sizeof(addr)));
 		co_return RecvData {copy_size, sizeof(addr), {}};
 	}
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>> sendmsg(
-	  void *obj,
-	  const char *creds,
-	  uint32_t flags,
-	  void *data,
-	  size_t len,
-	  void *addr_ptr,
-	  size_t addr_size,
-	  std::vector<uint32_t> fds
-	) {
+	static async::result<frg::expected<protocols::fs::Error, size_t>>
+	sendmsg(void *obj,
+		const char *creds,
+		uint32_t flags,
+		void *data,
+		size_t len,
+		void *addr_ptr,
+		size_t addr_size,
+		std::vector<uint32_t> fds) {
 		using arch::convert_endian;
 		using arch::endian;
 		auto self = static_cast<Udp4Socket *>(obj);
@@ -274,10 +272,10 @@ struct Udp4Socket {
 		std::vector<char> buf;
 		buf.resize(sizeof(Udp::Header) + len);
 		Udp::Header header {
-		  .src = source.port,
-		  .dst = target.port,
-		  .len = static_cast<uint16_t>(len + sizeof(Udp::Header)),
-		  .chk = 0,
+			.src = source.port,
+			.dst = target.port,
+			.len = static_cast<uint16_t>(len + sizeof(Udp::Header)),
+			.chk = 0,
 		};
 		header.ensureEndian();
 
@@ -293,24 +291,24 @@ struct Udp4Socket {
 
 		Checksum chk;
 		PseudoHeader psh {
-		  .src = convert_endian<endian::big>(ti->source),
-		  .dst = target.addr,
-		  .len = header.len};
+			.src = convert_endian<endian::big>(ti->source),
+			.dst = target.addr,
+			.len = header.len};
 		chk.update(&psh, sizeof(psh));
 		chk.update(&header, sizeof(header));
 		chk.update(data, len);
 		header.chk = convert_endian<endian::big>(chk.finalize());
 
 		std::cout << "netserver:" << std::endl
-		          << std::hex << std::setw(8) << psh.src << std::endl
-		          << std::setw(8) << psh.dst << std::endl
-		          << std::setw(8) << psh.len << std::endl
+			  << std::hex << std::setw(8) << psh.src << std::endl
+			  << std::setw(8) << psh.dst << std::endl
+			  << std::setw(8) << psh.len << std::endl
 
-		          << std::setw(8) << header.src << std::endl
-		          << std::setw(8) << header.dst << std::endl
-		          << std::setw(8) << header.len << std::endl
-		          << std::setw(8) << header.chk << std::endl
-		          << std::dec;
+			  << std::setw(8) << header.src << std::endl
+			  << std::setw(8) << header.dst << std::endl
+			  << std::setw(8) << header.len << std::endl
+			  << std::setw(8) << header.chk << std::endl
+			  << std::dec;
 
 		if (header.chk == 0) {
 			header.chk = ~header.chk;
@@ -320,10 +318,10 @@ struct Udp4Socket {
 		std::memcpy(buf.data() + sizeof(header), data, len);
 
 		auto error = co_await ip4().sendFrame(
-		  std::move(*ti),
-		  buf.data(),
-		  buf.size(),
-		  static_cast<uint16_t>(IpProto::udp)
+			std::move(*ti),
+			buf.data(),
+			buf.size(),
+			static_cast<uint16_t>(IpProto::udp)
 		);
 		if (error != protocols::fs::Error::none) {
 			co_return error;
@@ -332,10 +330,10 @@ struct Udp4Socket {
 	}
 
 	constexpr static FileOperations ops {
-	  .bind = &bind,
-	  .connect = &connect,
-	  .recvMsg = &recvmsg,
-	  .sendMsg = &sendmsg,
+		.bind = &bind,
+		.connect = &connect,
+		.recvMsg = &recvmsg,
+		.sendMsg = &sendmsg,
 	};
 
 	bool bindAvailable(uint32_t addr = INADDR_ANY) {

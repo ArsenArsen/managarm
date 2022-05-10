@@ -76,7 +76,8 @@ CompactNamespaces: false
 
 # same level as class name
 ConstructorInitializerIndentWidth: 0
-ContinuationIndentWidth: 2
+# one tab
+ContinuationIndentWidth: 8
 # we treat braced lists like function calls, rather than blocks
 Cpp11BracedListStyle: true
 
@@ -123,8 +124,8 @@ IndentGotoLabels: false
 IndentPPDirectives: AfterHash
 # IndentRequiresClause: false
 
-# indent by a tab character
-UseTab: ForIndentation
+# indent by a tab character, and also use tabs for ContinuationIndentWidth
+UseTab: ForContinuationAndIndentation
 IndentWidth: 8
 
 # if there's a need to break a function declaration after a type, don't indent

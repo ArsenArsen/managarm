@@ -5,10 +5,10 @@
 namespace thor::pci {
 
 EcamPcieConfigIo::EcamPcieConfigIo(
-  uintptr_t mmioBase,
-  uint16_t seg,
-  uint8_t busStart,
-  uint8_t busEnd
+	uintptr_t mmioBase,
+	uint16_t seg,
+	uint8_t busStart,
+	uint8_t busEnd
 )
 : mmioBase_ {mmioBase}
 , busMappings_ {frg::hash<uint32_t> {}, *kernelAlloc}
@@ -30,10 +30,10 @@ arch::mem_space EcamPcieConfigIo::spaceForBus_(uint32_t bus) {
 
 	for (size_t i = 0; i < size; i += 0x1000) {
 		KernelPageSpace::global().mapSingle4k(
-		  VirtualAddr(ptr) + i,
-		  mmioBase_ + i + offset,
-		  page_access::write,
-		  CachingMode::mmio
+			VirtualAddr(ptr) + i,
+			mmioBase_ + i + offset,
+			page_access::write,
+			CachingMode::mmio
 		);
 	}
 
@@ -48,11 +48,11 @@ uintptr_t EcamPcieConfigIo::calculateOffset_(uint32_t slot, uint32_t function, u
 }
 
 uint8_t EcamPcieConfigIo::readConfigByte(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset
 ) {
 	assert(seg == seg_);
 	auto space = spaceForBus_(bus);
@@ -61,11 +61,11 @@ uint8_t EcamPcieConfigIo::readConfigByte(
 }
 
 uint16_t EcamPcieConfigIo::readConfigHalf(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset
 ) {
 	assert(seg == seg_);
 	auto space = spaceForBus_(bus);
@@ -74,11 +74,11 @@ uint16_t EcamPcieConfigIo::readConfigHalf(
 }
 
 uint32_t EcamPcieConfigIo::readConfigWord(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset
 ) {
 	assert(seg == seg_);
 	auto space = spaceForBus_(bus);
@@ -87,12 +87,12 @@ uint32_t EcamPcieConfigIo::readConfigWord(
 }
 
 void EcamPcieConfigIo::writeConfigByte(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset,
-  uint8_t value
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset,
+	uint8_t value
 ) {
 	assert(seg == seg_);
 	auto space = spaceForBus_(bus);
@@ -101,12 +101,12 @@ void EcamPcieConfigIo::writeConfigByte(
 }
 
 void EcamPcieConfigIo::writeConfigHalf(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset,
-  uint16_t value
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset,
+	uint16_t value
 ) {
 	assert(seg == seg_);
 	auto space = spaceForBus_(bus);
@@ -115,12 +115,12 @@ void EcamPcieConfigIo::writeConfigHalf(
 }
 
 void EcamPcieConfigIo::writeConfigWord(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset,
-  uint32_t value
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset,
+	uint32_t value
 ) {
 	assert(seg == seg_);
 	auto space = spaceForBus_(bus);

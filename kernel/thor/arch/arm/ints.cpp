@@ -72,7 +72,7 @@ bool updatePageAccess(FaultImageAccessor image, Word error) {
 		// Check if it's just a writable page that's not dirty yet
 		smarter::borrowed_ptr<Thread> this_thread = getCurrentThread();
 		return this_thread->getAddressSpace()->updatePageAccess(
-		  *image.faultAddr() & ~(kPageSize - 1)
+			*image.faultAddr() & ~(kPageSize - 1)
 		);
 	}
 
@@ -104,9 +104,9 @@ extern "C" void onPlatformSyncFault(FaultImageAccessor image) {
 		if (updatePageAccess(image, error)) {
 			if constexpr (logUpdatePageAccess) {
 				infoLogger() << "thor: updated page "
-				             << (void *) (*image.faultAddr() & ~(kPageSize - 1))
-				             << " status on access from " << (void *) *image.ip()
-				             << frg::endlog;
+					     << (void *) (*image.faultAddr() & ~(kPageSize - 1))
+					     << " status on access from " << (void *) *image.ip()
+					     << frg::endlog;
 			}
 
 			break;
@@ -132,10 +132,10 @@ extern "C" void onPlatformSyncFault(FaultImageAccessor image) {
 		break;
 	default:
 		panicLogger() << "Unexpected fault " << ec << " from ip: " << (void *) *image.ip()
-		              << "\n"
-		              << "sp: " << (void *) *image.sp() << " "
-		              << "syndrome: 0x" << frg::hex_fmt(*image.code()) << " "
-		              << "saved state: 0x" << frg::hex_fmt(*image.rflags()) << frg::endlog;
+			      << "\n"
+			      << "sp: " << (void *) *image.sp() << " "
+			      << "syndrome: 0x" << frg::hex_fmt(*image.code()) << " "
+			      << "saved state: 0x" << frg::hex_fmt(*image.rflags()) << frg::endlog;
 	}
 
 	disableInts();
@@ -158,19 +158,19 @@ extern "C" void onPlatformAsyncFault(FaultImageAccessor image) {
 		uint8_t dfsc = code & 0x3F;
 
 		constexpr const char *aet_str[] = {
-		  "Uncontainable",
-		  "Unrecoverable state",
-		  "Restartable state",
-		  "Recoverable state",
-		  "Reserved",
-		  "Reserved",
-		  "Corrected",
-		  "Reserved"};
+			"Uncontainable",
+			"Unrecoverable state",
+			"Restartable state",
+			"Recoverable state",
+			"Reserved",
+			"Reserved",
+			"Corrected",
+			"Reserved"};
 
 		if (ids) {
 			urgentLogger()
-			  << "thor: SError with implementation defined information: ESR = 0x"
-			  << frg::hex_fmt {code} << frg::endlog;
+				<< "thor: SError with implementation defined information: ESR = 0x"
+				<< frg::hex_fmt {code} << frg::endlog;
 		} else {
 			auto log = urgentLogger();
 			log << "thor: ";
@@ -193,11 +193,11 @@ extern "C" void onPlatformAsyncFault(FaultImageAccessor image) {
 		}
 	} else {
 		urgentLogger() << "thor: unexpectec EC " << ec << " (ESR = 0x"
-		               << frg::hex_fmt {code} << ")" << frg::endlog;
+			       << frg::hex_fmt {code} << ")" << frg::endlog;
 	}
 
 	urgentLogger() << "thor: IP = 0x" << frg::hex_fmt {*image.ip()} << ", SP = 0x"
-	               << frg::hex_fmt {*image.sp()} << frg::endlog;
+		       << frg::hex_fmt {*image.sp()} << frg::endlog;
 
 	if (!recoverable)
 		panicLogger() << "thor: Panic due to unrecoverable error" << frg::endlog;
@@ -219,8 +219,8 @@ extern "C" void onPlatformIrq(IrqImageAccessor image) {
 	if (irq < 16) {
 		if constexpr (logSGIs)
 			infoLogger() << "thor: onPlatformIrq: on CPU " << getCpuData()->cpuIndex
-			             << ", got a SGI (no. " << irq << ") that originated from CPU "
-			             << cpu << frg::endlog;
+				     << ", got a SGI (no. " << irq << ") that originated from CPU "
+				     << cpu << frg::endlog;
 
 		cpuInterface->eoi(cpu, irq);
 
@@ -239,7 +239,7 @@ extern "C" void onPlatformIrq(IrqImageAccessor image) {
 	} else if (irq >= 1020) {
 		if constexpr (logSpurious)
 			infoLogger() << "thor: on CPU " << getCpuData()->cpuIndex
-			             << ", spurious IRQ " << irq << " occured" << frg::endlog;
+				     << ", spurious IRQ " << irq << " occured" << frg::endlog;
 		// no need to EOI spurious irqs
 	} else {
 		handleIrq(image, irq);

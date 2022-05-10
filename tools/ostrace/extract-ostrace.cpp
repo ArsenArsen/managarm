@@ -18,8 +18,8 @@ enum class ExtractMode {
 };
 
 std::unordered_map<std::string, ExtractMode> stringToExtractMode {
-  {"event-only", ExtractMode::eventOnly},
-  {"specific-item", ExtractMode::specificItem},
+	{"event-only", ExtractMode::eventOnly},
+	{"specific-item", ExtractMode::specificItem},
 };
 
 int main(int argc, char **argv) {
@@ -31,8 +31,8 @@ int main(int argc, char **argv) {
 	CLI::App app {"extract-ostrace: extract records from ostrace logs"};
 	app.add_option("path", path, "Path to the input file");
 	app.add_option("-m,--mode", mode, "Operational mode")
-	  ->required()
-	  ->transform(CLI::CheckedTransformer(stringToExtractMode));
+		->required()
+		->transform(CLI::CheckedTransformer(stringToExtractMode));
 	app.add_option("-e,--event", eventName, "Match only specific events");
 	app.add_option("-i,--item", itemName, "Extract a specific item");
 	CLI11_PARSE(app, argc, argv);
@@ -57,8 +57,8 @@ int main(int argc, char **argv) {
 	close(fd);
 
 	frg::span<const char> buffer {
-	  reinterpret_cast<const char *>(ptr),
-	  static_cast<size_t>(st.st_size)};
+		reinterpret_cast<const char *>(ptr),
+		static_cast<size_t>(st.st_size)};
 
 	uint64_t filteredEventId = 0;
 	uint64_t desiredItemId = 0;
@@ -80,8 +80,8 @@ int main(int argc, char **argv) {
 		switch (preamble.id()) {
 		case bragi::message_id<managarm::ostrace::EventRecord>: {
 			auto maybeRecord = bragi::parse_head_tail<managarm::ostrace::EventRecord>(
-			  head_span,
-			  tail_span
+				head_span,
+				tail_span
 			);
 			if (!maybeRecord) {
 				warnx("halting due to broken record");
@@ -104,10 +104,10 @@ int main(int argc, char **argv) {
 		} break;
 		case bragi::message_id<managarm::ostrace::AnnounceEventRecord>: {
 			auto maybeRecord =
-			  bragi::parse_head_tail<managarm::ostrace::AnnounceEventRecord>(
-			    head_span,
-			    tail_span
-			  );
+				bragi::parse_head_tail<managarm::ostrace::AnnounceEventRecord>(
+					head_span,
+					tail_span
+				);
 			assert(maybeRecord);
 			auto &record = maybeRecord.value();
 
@@ -116,10 +116,10 @@ int main(int argc, char **argv) {
 		} break;
 		case bragi::message_id<managarm::ostrace::AnnounceItemRecord>: {
 			auto maybeRecord =
-			  bragi::parse_head_tail<managarm::ostrace::AnnounceItemRecord>(
-			    head_span,
-			    tail_span
-			  );
+				bragi::parse_head_tail<managarm::ostrace::AnnounceItemRecord>(
+					head_span,
+					tail_span
+				);
 			assert(maybeRecord);
 			auto &record = maybeRecord.value();
 
@@ -157,6 +157,6 @@ int main(int argc, char **argv) {
 	std::cout << "}" << std::endl;
 
 	std::cerr << "extracted " << nRecords << " records"
-	          << " (" << buffer.size() << " bytes remain)" << std::endl;
+		  << " (" << buffer.size() << " bytes remain)" << std::endl;
 	std::cerr << "found " << ts.size() << " matches" << std::endl;
 }

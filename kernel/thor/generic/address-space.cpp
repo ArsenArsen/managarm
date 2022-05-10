@@ -27,10 +27,10 @@ constexpr bool logUsage = false;
 	if (rss & ((1 << (b - 1)) - 1))
 		return;
 	infoLogger() << "thor: RSS of " << space << " increases above " << (rss / 1024) << " KiB"
-	             << frg::endlog;
+		     << frg::endlog;
 	infoLogger() << "thor:     Physical usage: " << (physicalAllocator->numUsedPages() * 4)
-	             << " KiB, kernel usage: " << (kernelMemoryUsage / 1024) << " KiB"
-	             << frg::endlog;
+		     << " KiB, kernel usage: " << (kernelMemoryUsage / 1024) << " KiB"
+		     << frg::endlog;
 }
 }  // namespace
 
@@ -39,11 +39,11 @@ constexpr bool logUsage = false;
 // --------------------------------------------------------
 
 frg::expected<Error> VirtualOperations::mapPresentPages(
-  VirtualAddr va,
-  MemoryView *view,
-  uintptr_t offset,
-  size_t size,
-  PageFlags flags
+	VirtualAddr va,
+	MemoryView *view,
+	uintptr_t offset,
+	size_t size,
+	PageFlags flags
 ) {
 	assert(!(va & (kPageSize - 1)));
 	assert(!(offset & (kPageSize - 1)));
@@ -66,11 +66,11 @@ frg::expected<Error> VirtualOperations::mapPresentPages(
 }
 
 frg::expected<Error> VirtualOperations::remapPresentPages(
-  VirtualAddr va,
-  MemoryView *view,
-  uintptr_t offset,
-  size_t size,
-  PageFlags flags
+	VirtualAddr va,
+	MemoryView *view,
+	uintptr_t offset,
+	size_t size,
+	PageFlags flags
 ) {
 	assert(!(va & (kPageSize - 1)));
 	assert(!(offset & (kPageSize - 1)));
@@ -86,10 +86,10 @@ frg::expected<Error> VirtualOperations::remapPresentPages(
 		if (physicalRange.get<0>() != PhysicalAddr(-1)) {
 			assert(!(physicalRange.get<0>() & (kPageSize - 1)));
 			mapSingle4k(
-			  va + progress,
-			  physicalRange.get<0>(),
-			  flags,
-			  physicalRange.get<1>()
+				va + progress,
+				physicalRange.get<0>(),
+				flags,
+				physicalRange.get<1>()
 			);
 		}
 
@@ -110,10 +110,10 @@ VirtualOperations::faultPage(VirtualAddr va, MemoryView *view, uintptr_t offset,
 	// TODO: detect spurious page faults.
 	PageStatus status = unmapSingle4k(va & ~(kPageSize - 1));
 	mapSingle4k(
-	  va & ~(kPageSize - 1),
-	  physicalRange.get<0>() & ~(kPageSize - 1),
-	  flags,
-	  physicalRange.get<1>()
+		va & ~(kPageSize - 1),
+		physicalRange.get<0>() & ~(kPageSize - 1),
+		flags,
+		physicalRange.get<1>()
 	);
 
 	if (status & page_status::present) {
@@ -166,9 +166,9 @@ size_t VirtualOperations::getRss() {
 // --------------------------------------------------------
 
 MemorySlice::MemorySlice(
-  smarter::shared_ptr<MemoryView> view,
-  ptrdiff_t view_offset,
-  size_t view_size
+	smarter::shared_ptr<MemoryView> view,
+	ptrdiff_t view_offset,
+	size_t view_size
 )
 : _view {std::move(view)}
 , _viewOffset {view_offset}
@@ -207,8 +207,8 @@ bool HoleAggregator::check_invariant(HoleTree &tree, Hole *hole) {
 
 	if (hole->largestHole != size) {
 		infoLogger() << "largestHole violation: "
-		             << "Expected " << size << ", got " << hole->largestHole << "."
-		             << frg::endlog;
+			     << "Expected " << size << ", got " << hole->largestHole << "."
+			     << frg::endlog;
 		return false;
 	}
 
@@ -230,10 +230,10 @@ bool HoleAggregator::check_invariant(HoleTree &tree, Hole *hole) {
 // --------------------------------------------------------
 
 Mapping::Mapping(
-  size_t length,
-  MappingFlags flags,
-  smarter::shared_ptr<MemorySlice> slice_,
-  uintptr_t viewOffset
+	size_t length,
+	MappingFlags flags,
+	smarter::shared_ptr<MemorySlice> slice_,
+	uintptr_t viewOffset
 )
 : length {length}
 , flags {flags}
@@ -275,10 +275,10 @@ uint32_t Mapping::compilePageFlags() {
 }
 
 void Mapping::lockVirtualRange(
-  uintptr_t offset,
-  size_t size,
-  smarter::shared_ptr<WorkQueue> wq,
-  LockVirtualRangeNode *node
+	uintptr_t offset,
+	size_t size,
+	smarter::shared_ptr<WorkQueue> wq,
+	LockVirtualRangeNode *node
 ) {
 	// This can be removed if we change the return type of asyncLockRange to frg::expected.
 	auto transformError = [node](Error e) {
@@ -290,11 +290,11 @@ void Mapping::lockVirtualRange(
 		node->resume();
 	};
 	async::detach_with_allocator(
-	  *kernelAlloc,
-	  async::transform(
-	    view->asyncLockRange(viewOffset + offset, size, std::move(wq)),
-	    transformError
-	  )
+		*kernelAlloc,
+		async::transform(
+			view->asyncLockRange(viewOffset + offset, size, std::move(wq)),
+			transformError
+		)
 	);
 }
 
@@ -316,7 +316,8 @@ coroutine<void> Mapping::runEvictionLoop() {
 		auto eviction = co_await view->pollEviction(&observer, cancelEviction);
 		if (!eviction)
 			break;
-		if (eviction.offset() + eviction.size() <= viewOffset || eviction.offset() >= viewOffset + length) {
+		if (eviction.offset() + eviction.size() <= viewOffset
+		    || eviction.offset() >= viewOffset + length) {
 			eviction.done();
 			continue;
 		}
@@ -336,10 +337,10 @@ coroutine<void> Mapping::runEvictionLoop() {
 
 		// Unmap the memory range.
 		auto unmapOutcome = owner->_ops->unmapPages(
-		  address + shootOffset,
-		  view.get(),
-		  viewOffset + shootOffset,
-		  shootSize
+			address + shootOffset,
+			view.get(),
+			viewOffset + shootOffset,
+			shootSize
 		);
 		assert(unmapOutcome);
 
@@ -405,10 +406,10 @@ void VirtualSpace::retire() {
 		mapping->state = MappingState::zombie;
 
 		auto unmapOutcome = _ops->unmapPages(
-		  mapping->address,
-		  mapping->view.get(),
-		  mapping->viewOffset,
-		  mapping->length
+			mapping->address,
+			mapping->view.get(),
+			mapping->viewOffset,
+			mapping->length
 		);
 		assert(unmapOutcome);
 
@@ -417,34 +418,34 @@ void VirtualSpace::retire() {
 
 	// TODO: It would be less ugly to run this in a non-detached way.
 	async::detach_with_allocator(
-	  *kernelAlloc,
-	  [](smarter::shared_ptr<VirtualSpace> self) -> coroutine<void> {
-		  co_await self->_ops->retire();
+		*kernelAlloc,
+		[](smarter::shared_ptr<VirtualSpace> self) -> coroutine<void> {
+			co_await self->_ops->retire();
 
-		  while (self->_mappings.get_root()) {
-			  auto mapping = self->_mappings.get_root();
-			  self->_mappings.remove(mapping);
+			while (self->_mappings.get_root()) {
+				auto mapping = self->_mappings.get_root();
+				self->_mappings.remove(mapping);
 
-			  assert(mapping->state == MappingState::zombie);
-			  mapping->state = MappingState::retired;
+				assert(mapping->state == MappingState::zombie);
+				mapping->state = MappingState::retired;
 
-			  if (mapping->view->canEvictMemory()) {
-				  mapping->cancelEviction.cancel();
-				  co_await mapping->evictionDoneEvent.wait();
-			  }
-			  mapping->view->removeObserver(&mapping->observer);
-			  mapping->selfPtr.ctr()->decrement();
-		  }
-	  }(selfPtr.lock())
+				if (mapping->view->canEvictMemory()) {
+					mapping->cancelEviction.cancel();
+					co_await mapping->evictionDoneEvent.wait();
+				}
+				mapping->view->removeObserver(&mapping->observer);
+				mapping->selfPtr.ctr()->decrement();
+			}
+		}(selfPtr.lock())
 	);
 }
 
 coroutine<frg::expected<Error, VirtualAddr>> VirtualSpace::map(
-  smarter::borrowed_ptr<MemorySlice> slice,
-  VirtualAddr address,
-  size_t offset,
-  size_t length,
-  uint32_t flags
+	smarter::borrowed_ptr<MemorySlice> slice,
+	VirtualAddr address,
+	size_t offset,
+	size_t length,
+	uint32_t flags
 ) {
 	assert(length);
 	assert(!(length % kPageSize));
@@ -488,10 +489,11 @@ coroutine<frg::expected<Error, VirtualAddr>> VirtualSpace::map(
 		// TODO: The upgrading mechanism needs to be arch-specific:
 		// Some archs might only support RX, while other support X.
 		auto mask = kMapProtRead | kMapProtWrite | kMapProtExecute;
-		if ((flags & mask) == (kMapProtRead | kMapProtWrite | kMapProtExecute) || (flags & mask) == (kMapProtWrite | kMapProtExecute)) {
+		if ((flags & mask) == (kMapProtRead | kMapProtWrite | kMapProtExecute)
+		    || (flags & mask) == (kMapProtWrite | kMapProtExecute)) {
 			// WX is upgraded to RWX.
 			mappingFlags |= MappingFlags::protRead | MappingFlags::protWrite
-			              | MappingFlags::protExecute;
+				      | MappingFlags::protExecute;
 		} else if ((flags & mask) == (kMapProtRead | kMapProtExecute) || (flags & mask) == kMapProtExecute) {
 			// X is upgraded to RX.
 			mappingFlags |= MappingFlags::protRead | MappingFlags::protExecute;
@@ -508,11 +510,11 @@ coroutine<frg::expected<Error, VirtualAddr>> VirtualSpace::map(
 			mappingFlags |= MappingFlags::dontRequireBacking;
 
 		mapping = smarter::allocate_shared<Mapping>(
-		  Allocator {},
-		  length,
-		  static_cast<MappingFlags>(mappingFlags),
-		  slice.lock(),
-		  slice->offset() + offset
+			Allocator {},
+			length,
+			static_cast<MappingFlags>(mappingFlags),
+			slice.lock(),
+			slice->offset() + offset
 		);
 		mapping->selfPtr = mapping;
 
@@ -538,11 +540,11 @@ coroutine<frg::expected<Error, VirtualAddr>> VirtualSpace::map(
 			pageFlags |= page_access::read;
 
 		auto mapOutcome = _ops->mapPresentPages(
-		  mapping->address,
-		  mapping->view.get(),
-		  mapping->viewOffset,
-		  mapping->length,
-		  pageFlags
+			mapping->address,
+			mapping->view.get(),
+			mapping->viewOffset,
+			mapping->length,
+			pageFlags
 		);
 		assert(mapOutcome);
 	}
@@ -566,10 +568,11 @@ VirtualSpace::protect(VirtualAddr address, size_t length, uint32_t flags) {
 	// TODO: The upgrading mechanism needs to be arch-specific:
 	// Some archs might only support RX, while other support X.
 	auto mask = kMapProtRead | kMapProtWrite | kMapProtExecute;
-	if ((flags & mask) == (kMapProtRead | kMapProtWrite | kMapProtExecute) || (flags & mask) == (kMapProtWrite | kMapProtExecute)) {
+	if ((flags & mask) == (kMapProtRead | kMapProtWrite | kMapProtExecute)
+	    || (flags & mask) == (kMapProtWrite | kMapProtExecute)) {
 		// WX is upgraded to RWX.
-		mappingFlags |=
-		  MappingFlags::protRead | MappingFlags::protWrite | MappingFlags::protExecute;
+		mappingFlags |= MappingFlags::protRead | MappingFlags::protWrite
+			      | MappingFlags::protExecute;
 	} else if ((flags & mask) == (kMapProtRead | kMapProtExecute) || (flags & mask) == kMapProtExecute) {
 		// X is upgraded to RX.
 		mappingFlags |= MappingFlags::protRead | MappingFlags::protExecute;
@@ -591,28 +594,32 @@ VirtualSpace::protect(VirtualAddr address, size_t length, uint32_t flags) {
 		auto mapping = it->selfPtr.lock();
 		it = MappingTree::successor(it);
 
-		if (address >= mapping->address && (address + length) <= (mapping->address + mapping->length)) {
+		if (address >= mapping->address
+		    && (address + length) <= (mapping->address + mapping->length)) {
 			mapping->protect(static_cast<MappingFlags>(mappingFlags));
 
 			assert(mapping->state == MappingState::active);
 
 			uint32_t pageFlags = 0;
-			if ((mapping->flags & MappingFlags::permissionMask) & MappingFlags::protWrite)
+			if ((mapping->flags & MappingFlags::permissionMask)
+			    & MappingFlags::protWrite)
 				pageFlags |= page_access::write;
-			if ((mapping->flags & MappingFlags::permissionMask) & MappingFlags::protExecute)
+			if ((mapping->flags & MappingFlags::permissionMask)
+			    & MappingFlags::protExecute)
 				pageFlags |= page_access::execute;
-			if ((mapping->flags & MappingFlags::permissionMask) & MappingFlags::protRead)
+			if ((mapping->flags & MappingFlags::permissionMask)
+			    & MappingFlags::protRead)
 				pageFlags |= page_access::read;
 
 			co_await mapping->evictionMutex.async_lock();
 			frg::unique_lock evictionLock {frg::adopt_lock, mapping->evictionMutex};
 
 			auto remapOutcome = _ops->remapPresentPages(
-			  mapping->address,
-			  mapping->view.get(),
-			  mapping->viewOffset,
-			  mapping->length,
-			  pageFlags
+				mapping->address,
+				mapping->view.get(),
+				mapping->viewOffset,
+				mapping->length,
+				pageFlags
 			);
 			assert(remapOutcome);
 		}
@@ -657,15 +664,15 @@ coroutine<frg::expected<Error>> VirtualSpace::synchronize(VirtualAddr address, s
 
 		auto mappingOffset = alignedAddress + overallProgress - mapping->address;
 		auto mappingChunk =
-		  frg::min(alignedSize - overallProgress, mapping->length - mappingOffset);
+			frg::min(alignedSize - overallProgress, mapping->length - mappingOffset);
 		assert(mapping->state == MappingState::active);
 		assert(mappingOffset + mappingChunk <= mapping->length);
 
 		auto cleanOutcome = _ops->cleanPages(
-		  mapping->address + mappingOffset,
-		  mapping->view.get(),
-		  mapping->viewOffset + mappingOffset,
-		  mappingChunk
+			mapping->address + mappingOffset,
+			mapping->view.get(),
+			mapping->viewOffset + mappingOffset,
+			mappingChunk
 		);
 		assert(cleanOutcome);
 
@@ -677,9 +684,9 @@ coroutine<frg::expected<Error>> VirtualSpace::synchronize(VirtualAddr address, s
 }
 
 coroutine<frg::expected<Error>> VirtualSpace::handleFault(
-  VirtualAddr address,
-  uint32_t faultFlags,
-  smarter::shared_ptr<WorkQueue> wq
+	VirtualAddr address,
+	uint32_t faultFlags,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	co_await _consistencyMutex.async_lock_shared();
 	frg::shared_lock consistencyLock {frg::adopt_lock, _consistencyMutex};
@@ -695,9 +702,11 @@ coroutine<frg::expected<Error>> VirtualSpace::handleFault(
 		co_return Error::fault;
 
 	// Check access attributes.
-	if ((faultFlags & VirtualSpace::kFaultWrite) && !((mapping->flags & MappingFlags::protWrite)))
+	if ((faultFlags & VirtualSpace::kFaultWrite)
+	    && !((mapping->flags & MappingFlags::protWrite)))
 		co_return Error::fault;
-	if ((faultFlags & VirtualSpace::kFaultExecute) && !((mapping->flags & MappingFlags::protExecute)))
+	if ((faultFlags & VirtualSpace::kFaultExecute)
+	    && !((mapping->flags & MappingFlags::protExecute)))
 		co_return Error::fault;
 
 	// TODO: Aligning should not be necessary here.
@@ -708,18 +717,17 @@ coroutine<frg::expected<Error>> VirtualSpace::handleFault(
 		if (mapping->flags & MappingFlags::dontRequireBacking)
 			fetchFlags |= fetchDisallowBacking;
 
-		FRG_CO_TRY(
-		  co_await mapping->view->fetchRange(mapping->viewOffset + offset, fetchFlags, wq)
-		);
+		FRG_CO_TRY(co_await mapping->view
+				   ->fetchRange(mapping->viewOffset + offset, fetchFlags, wq));
 
 		co_await mapping->evictionMutex.async_lock();
 		frg::unique_lock evictionLock {frg::adopt_lock, mapping->evictionMutex};
 
 		auto remapOutcome = _ops->faultPage(
-		  address & ~(kPageSize - 1),
-		  mapping->view.get(),
-		  mapping->viewOffset + offset,
-		  mapping->compilePageFlags()
+			address & ~(kPageSize - 1),
+			mapping->view.get(),
+			mapping->viewOffset + offset,
+			mapping->compilePageFlags()
 		);
 		if (!remapOutcome) {
 			if (remapOutcome.error() == Error::spuriousOperation) {
@@ -727,16 +735,16 @@ coroutine<frg::expected<Error>> VirtualSpace::handleFault(
 				// They should be rare. If they happen too often, something is
 				// probably wrong!
 				infoLogger() << "\e[33m"
-				                "thor: Spurious page fault"
-				                "\e[39m"
-				             << frg::endlog;
+						"thor: Spurious page fault"
+						"\e[39m"
+					     << frg::endlog;
 			} else {
 				assert(remapOutcome.error() == Error::fault);
 				infoLogger() << "\e[33m"
-				                "thor: Page still not available after"
-				                " fetchRange()"
-				                "\e[39m"
-				             << frg::endlog;
+						"thor: Page still not available after"
+						" fetchRange()"
+						"\e[39m"
+					     << frg::endlog;
 				continue;
 			}
 		}
@@ -767,17 +775,16 @@ VirtualSpace::retrievePhysical(VirtualAddr address, smarter::shared_ptr<WorkQueu
 		if (mapping->flags & MappingFlags::dontRequireBacking)
 			fetchFlags |= fetchDisallowBacking;
 
-		FRG_CO_TRY(
-		  co_await mapping->view->fetchRange(mapping->viewOffset + offset, fetchFlags, wq)
-		);
+		FRG_CO_TRY(co_await mapping->view
+				   ->fetchRange(mapping->viewOffset + offset, fetchFlags, wq));
 
 		auto physicalRange = mapping->view->peekRange(mapping->viewOffset + offset);
 		if (physicalRange.get<0>() == PhysicalAddr(-1)) {
 			infoLogger() << "\e[33m"
-			                "thor: Page still not available after"
-			                " fetchRange()"
-			                "\e[39m"
-			             << frg::endlog;
+					"thor: Page still not available after"
+					" fetchRange()"
+					"\e[39m"
+				     << frg::endlog;
 			continue;
 		}
 
@@ -793,10 +800,8 @@ smarter::shared_ptr<Mapping> VirtualSpace::_findMapping(VirtualAddr address) {
 		} else if (address >= current->address + current->length) {
 			current = MappingTree::get_right(current);
 		} else {
-			assert(
-			  address >= current->address
-			  && address < current->address + current->length
-			);
+			assert(address >= current->address
+			       && address < current->address + current->length);
 			return current->selfPtr.lock();
 		}
 	}
@@ -817,7 +822,8 @@ VirtualAddr VirtualSpace::_allocate(size_t length, MapFlags flags) {
 	while (true) {
 		if (flags & kMapPreferBottom) {
 			// Try to allocate memory at the bottom of the range.
-			if (HoleTree::get_left(current) && HoleTree::get_left(current)->largestHole >= length) {
+			if (HoleTree::get_left(current)
+			    && HoleTree::get_left(current)->largestHole >= length) {
 				current = HoleTree::get_left(current);
 				continue;
 			}
@@ -836,7 +842,8 @@ VirtualAddr VirtualSpace::_allocate(size_t length, MapFlags flags) {
 			// Try to allocate memory at the top of the range.
 			assert(flags & kMapPreferTop);
 
-			if (HoleTree::get_right(current) && HoleTree::get_right(current)->largestHole >= length) {
+			if (HoleTree::get_right(current)
+			    && HoleTree::get_right(current)->largestHole >= length) {
 				current = HoleTree::get_right(current);
 				continue;
 			}
@@ -870,10 +877,8 @@ VirtualAddr VirtualSpace::_allocateAt(VirtualAddr address, size_t length) {
 		} else if (address >= current->address() + current->length()) {
 			current = HoleTree::get_right(current);
 		} else {
-			assert(
-			  address >= current->address()
-			  && address < current->address() + current->length()
-			);
+			assert(address >= current->address()
+			       && address < current->address() + current->length());
 			break;
 		}
 	}
@@ -895,9 +900,9 @@ void VirtualSpace::_splitHole(Hole *hole, VirtualAddr offset, size_t length) {
 
 	if (offset + length < hole->length()) {
 		auto successor = frg::construct<Hole>(
-		  *kernelAlloc,
-		  hole->address() + offset + length,
-		  hole->length() - (offset + length)
+			*kernelAlloc,
+			hole->address() + offset + length,
+			hole->length() - (offset + length)
 		);
 		_holes.insert(successor);
 	}
@@ -954,11 +959,11 @@ VirtualSpace::_splitMappings(uintptr_t address, size_t size) {
 			{
 				auto leftSize = at - mapping->address;
 				leftMapping = smarter::allocate_shared<Mapping>(
-				  Allocator {},
-				  leftSize,
-				  mapping->flags,
-				  mapping->slice,
-				  mapping->viewOffset
+					Allocator {},
+					leftSize,
+					mapping->flags,
+					mapping->slice,
+					mapping->viewOffset
 				);
 				leftMapping->selfPtr = leftMapping;
 
@@ -968,11 +973,11 @@ VirtualSpace::_splitMappings(uintptr_t address, size_t size) {
 			{
 				auto rightOffset = at - mapping->address;
 				rightMapping = smarter::allocate_shared<Mapping>(
-				  Allocator {},
-				  mapping->length - rightOffset,
-				  mapping->flags,
-				  mapping->slice,
-				  mapping->viewOffset + rightOffset
+					Allocator {},
+					mapping->length - rightOffset,
+					mapping->flags,
+					mapping->slice,
+					mapping->viewOffset + rightOffset
 				);
 				rightMapping->selfPtr = rightMapping;
 
@@ -1003,8 +1008,8 @@ VirtualSpace::_splitMappings(uintptr_t address, size_t size) {
 			leftMapping->view->addObserver(&leftMapping->observer);
 			if (leftMapping->view->canEvictMemory())
 				async::detach_with_allocator(
-				  *kernelAlloc,
-				  leftMapping->runEvictionLoop()
+					*kernelAlloc,
+					leftMapping->runEvictionLoop()
 				);
 
 			// We keep one reference until the detach the observer.
@@ -1012,8 +1017,8 @@ VirtualSpace::_splitMappings(uintptr_t address, size_t size) {
 			rightMapping->view->addObserver(&rightMapping->observer);
 			if (rightMapping->view->canEvictMemory())
 				async::detach_with_allocator(
-				  *kernelAlloc,
-				  rightMapping->runEvictionLoop()
+					*kernelAlloc,
+					rightMapping->runEvictionLoop()
 				);
 
 			assert(mapping->state == MappingState::zombie);
@@ -1048,7 +1053,8 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 		auto mapping = it->selfPtr.lock();
 		it = MappingTree::successor(it);
 
-		if (mapping->address >= address && (mapping->address + mapping->length) <= (address + length)) {
+		if (mapping->address >= address
+		    && (mapping->address + mapping->length) <= (address + length)) {
 			needsShootdown = true;
 
 			assert(mapping->state == MappingState::active);
@@ -1056,10 +1062,10 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 
 			// Mark pages as dirty and unmap without holding a lock.
 			auto unmapOutcome = _ops->unmapPages(
-			  mapping->address,
-			  mapping->view.get(),
-			  mapping->viewOffset,
-			  mapping->length
+				mapping->address,
+				mapping->view.get(),
+				mapping->viewOffset,
+				mapping->length
 			);
 			assert(unmapOutcome);
 
@@ -1093,9 +1099,8 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 						break;
 					}
 				} else {
-					assert(
-					  mapping->address >= current->address() + current->length()
-					);
+					assert(mapping->address
+					       >= current->address() + current->length());
 					if (HoleTree::get_right(current)) {
 						current = HoleTree::get_right(current);
 					} else {
@@ -1110,9 +1115,9 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 			if (pre && pre->address() + pre->length() == mapping->address && succ
 			    && mapping->address + mapping->length == succ->address()) {
 				auto hole = frg::construct<Hole>(
-				  *kernelAlloc,
-				  pre->address(),
-				  pre->length() + mapping->length + succ->length()
+					*kernelAlloc,
+					pre->address(),
+					pre->length() + mapping->length + succ->length()
 				);
 
 				_holes.remove(pre);
@@ -1122,9 +1127,9 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 				frg::destruct(*kernelAlloc, succ);
 			} else if (pre && pre->address() + pre->length() == mapping->address) {
 				auto hole = frg::construct<Hole>(
-				  *kernelAlloc,
-				  pre->address(),
-				  pre->length() + mapping->length
+					*kernelAlloc,
+					pre->address(),
+					pre->length() + mapping->length
 				);
 
 				_holes.remove(pre);
@@ -1132,9 +1137,9 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 				frg::destruct(*kernelAlloc, pre);
 			} else if (succ && mapping->address + mapping->length == succ->address()) {
 				auto hole = frg::construct<Hole>(
-				  *kernelAlloc,
-				  mapping->address,
-				  mapping->length + succ->length()
+					*kernelAlloc,
+					mapping->address,
+					mapping->length + succ->length()
 				);
 
 				_holes.remove(succ);
@@ -1142,9 +1147,9 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 				frg::destruct(*kernelAlloc, succ);
 			} else {
 				auto hole = frg::construct<Hole>(
-				  *kernelAlloc,
-				  mapping->address,
-				  mapping->length
+					*kernelAlloc,
+					mapping->address,
+					mapping->length
 				);
 
 				_holes.insert(hole);
@@ -1156,10 +1161,10 @@ VirtualSpace::_unmapMappings(VirtualAddr address, size_t length, Mapping *start,
 }
 
 coroutine<size_t> VirtualSpace::readPartialSpace(
-  uintptr_t address,
-  void *buffer,
-  size_t size,
-  smarter::shared_ptr<WorkQueue> wq
+	uintptr_t address,
+	void *buffer,
+	size_t size,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	// We do not take _consistencyMutex here since we are only interested in a snapshot.
 
@@ -1181,7 +1186,7 @@ coroutine<size_t> VirtualSpace::readPartialSpace(
 		assert(limitInMapping);
 
 		auto lockOutcome =
-		  co_await mapping->lockVirtualRange(startInMapping, limitInMapping, wq);
+			co_await mapping->lockVirtualRange(startInMapping, limitInMapping, wq);
 		if (!lockOutcome)
 			co_return progress;
 
@@ -1203,9 +1208,9 @@ coroutine<size_t> VirtualSpace::readPartialSpace(
 			//       fetchRange() code does not handle the unaligned code correctly so
 			//       far.
 			auto touchOutcome = co_await mapping->view->fetchRange(
-			  (mapping->viewOffset + offsetInMapping) & ~(kPageSize - 1),
-			  fetchFlags,
-			  wq
+				(mapping->viewOffset + offsetInMapping) & ~(kPageSize - 1),
+				fetchFlags,
+				wq
 			);
 			if (!touchOutcome) {
 				success = false;
@@ -1213,7 +1218,7 @@ coroutine<size_t> VirtualSpace::readPartialSpace(
 			}
 
 			auto [physical, cacheMode] =
-			  mapping->resolveRange(offsetInMapping & ~(kPageSize - 1));
+				mapping->resolveRange(offsetInMapping & ~(kPageSize - 1));
 			// Since we have locked the MemoryView, the physical address remains valid
 			// here.
 			assert(physical != PhysicalAddr(-1));
@@ -1225,11 +1230,9 @@ coroutine<size_t> VirtualSpace::readPartialSpace(
 			auto misalign = offsetInMapping & (kPageSize - 1);
 			auto chunk = frg::min(size - progress, kPageSize - misalign);
 			assert(chunk);  // Otherwise, we would have finished already.
-			memcpy(
-			  reinterpret_cast<std::byte *>(buffer) + progress,
-			  reinterpret_cast<const std::byte *>(accessor.get()) + misalign,
-			  chunk
-			);
+			memcpy(reinterpret_cast<std::byte *>(buffer) + progress,
+			       reinterpret_cast<const std::byte *>(accessor.get()) + misalign,
+			       chunk);
 			progress += chunk;
 		}
 
@@ -1243,10 +1246,10 @@ coroutine<size_t> VirtualSpace::readPartialSpace(
 }
 
 coroutine<size_t> VirtualSpace::writePartialSpace(
-  uintptr_t address,
-  const void *buffer,
-  size_t size,
-  smarter::shared_ptr<WorkQueue> wq
+	uintptr_t address,
+	const void *buffer,
+	size_t size,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	// We do not take _consistencyMutex here since we are only interested in a snapshot.
 
@@ -1268,7 +1271,7 @@ coroutine<size_t> VirtualSpace::writePartialSpace(
 		assert(limitInMapping);
 
 		auto lockOutcome =
-		  co_await mapping->lockVirtualRange(startInMapping, limitInMapping, wq);
+			co_await mapping->lockVirtualRange(startInMapping, limitInMapping, wq);
 		if (!lockOutcome)
 			co_return progress;
 
@@ -1290,9 +1293,9 @@ coroutine<size_t> VirtualSpace::writePartialSpace(
 			//       fetchRange() code does not handle the unaligned code correctly so
 			//       far.
 			auto touchOutcome = co_await mapping->view->fetchRange(
-			  (mapping->viewOffset + offsetInMapping) & ~(kPageSize - 1),
-			  fetchFlags,
-			  wq
+				(mapping->viewOffset + offsetInMapping) & ~(kPageSize - 1),
+				fetchFlags,
+				wq
 			);
 			if (!touchOutcome) {
 				success = false;
@@ -1300,7 +1303,7 @@ coroutine<size_t> VirtualSpace::writePartialSpace(
 			}
 
 			auto [physical, cacheMode] =
-			  mapping->resolveRange(offsetInMapping & ~(kPageSize - 1));
+				mapping->resolveRange(offsetInMapping & ~(kPageSize - 1));
 			// Since we have locked the MemoryView, the physical address remains valid
 			// here.
 			assert(physical != PhysicalAddr(-1));
@@ -1312,11 +1315,9 @@ coroutine<size_t> VirtualSpace::writePartialSpace(
 			auto misalign = offsetInMapping & (kPageSize - 1);
 			auto chunk = frg::min(size - progress, kPageSize - misalign);
 			assert(chunk);  // Otherwise, we would have finished already.
-			memcpy(
-			  reinterpret_cast<std::byte *>(accessor.get()) + misalign,
-			  reinterpret_cast<const std::byte *>(buffer) + progress,
-			  chunk
-			);
+			memcpy(reinterpret_cast<std::byte *>(accessor.get()) + misalign,
+			       reinterpret_cast<const std::byte *>(buffer) + progress,
+			       chunk);
 			progress += chunk;
 		}
 

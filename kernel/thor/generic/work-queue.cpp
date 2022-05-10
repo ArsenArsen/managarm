@@ -79,9 +79,9 @@ void WorkQueue::run() {
 	_inRun.store(true, std::memory_order_relaxed);
 
 	frg::intrusive_list<
-	  Worklet,
-	  frg::locate_member<Worklet, frg::default_list_hook<Worklet>, &Worklet::_hook>>
-	  pending;
+		Worklet,
+		frg::locate_member<Worklet, frg::default_list_hook<Worklet>, &Worklet::_hook>>
+		pending;
 	{
 		auto irqLock = frg::guard(&irqMutex());
 

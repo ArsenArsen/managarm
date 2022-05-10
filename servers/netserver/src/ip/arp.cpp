@@ -45,9 +45,9 @@ sendArp(uint16_t op, uint32_t sender, nic::MacAddress targetHw, uint32_t targetP
 	ensureEndian(targetProto);
 
 	auto buffer = link->allocateFrame(
-	  targetMac,
-	  nic::ETHER_TYPE_ARP,
-	  sizeof(leader) + 2 * sizeof(nic::MacAddress) + 2 * sizeof(uint32_t)
+		targetMac,
+		nic::ETHER_TYPE_ARP,
+		sizeof(leader) + 2 * sizeof(nic::MacAddress) + 2 * sizeof(uint32_t)
 	);
 	arch::dma_buffer_view bufv {buffer.payload};
 	auto appendData = [&bufv](auto data) {
@@ -138,8 +138,8 @@ Neighbours::Entry &Neighbours::getEntry(uint32_t ip) {
 		return f->second;
 	}
 	auto &entry =
-	  table_.emplace(std::piecewise_construct, std::make_tuple(ip), std::make_tuple())
-	    .first->second;
+		table_.emplace(std::piecewise_construct, std::make_tuple(ip), std::make_tuple())
+			.first->second;
 	entry.mtime_ns = time;
 	return entry;
 }

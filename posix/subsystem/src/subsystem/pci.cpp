@@ -117,53 +117,62 @@ async::detached run() {
 
 	auto filter = mbus::Conjunction({mbus::EqualsFilter("unix.subsystem", "pci")});
 
-	auto handler =
-	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties properties) {
-		  std::string sysfs_name =
-		    "0000:" + std::get<mbus::StringItem>(properties["pci-bus"]).value + ":"
-		    + std::get<mbus::StringItem>(properties["pci-slot"]).value + "."
-		    + std::get<mbus::StringItem>(properties["pci-function"]).value;
+	auto handler = mbus::ObserverHandler {}.withAttach([](mbus::Entity entity,
+							      mbus::Properties properties) {
+		std::string sysfs_name =
+			"0000:" + std::get<mbus::StringItem>(properties["pci-bus"]).value + ":"
+			+ std::get<mbus::StringItem>(properties["pci-slot"]).value + "."
+			+ std::get<mbus::StringItem>(properties["pci-function"]).value;
 
-		  // TODO: Add bus/slot/function to this message.
-		  std::cout << "POSIX: Installing PCI device " << sysfs_name
-		            << " (mbus ID: " << entity.getId() << ")" << std::endl;
+		// TODO: Add bus/slot/function to this message.
+		std::cout << "POSIX: Installing PCI device " << sysfs_name
+			  << " (mbus ID: " << entity.getId() << ")" << std::endl;
 
-		  auto device = std::make_shared<Device>(sysfs_name, entity.getId());
-		  device->pciBus =
-		    std::stoi(std::get<mbus::StringItem>(properties["pci-bus"]).value, 0, 16);
-		  device->pciSlot =
-		    std::stoi(std::get<mbus::StringItem>(properties["pci-slot"]).value, 0, 16);
-		  device->pciFunction =
-		    std::stoi(std::get<mbus::StringItem>(properties["pci-function"]).value, 0, 16);
-		  device->vendorId =
-		    std::stoi(std::get<mbus::StringItem>(properties["pci-vendor"]).value, 0, 16);
-		  device->deviceId =
-		    std::stoi(std::get<mbus::StringItem>(properties["pci-device"]).value, 0, 16);
-		  device->subsystemVendorId = std::stoi(
-		    std::get<mbus::StringItem>(properties["pci-subsystem-vendor"]).value,
-		    0,
-		    16
-		  );
-		  device->subsystemDeviceId = std::stoi(
-		    std::get<mbus::StringItem>(properties["pci-subsystem-device"]).value,
-		    0,
-		    16
-		  );
+		auto device = std::make_shared<Device>(sysfs_name, entity.getId());
+		device->pciBus =
+			std::stoi(std::get<mbus::StringItem>(properties["pci-bus"]).value, 0, 16);
+		device->pciSlot =
+			std::stoi(std::get<mbus::StringItem>(properties["pci-slot"]).value, 0, 16);
+		device->pciFunction = std::stoi(
+			std::get<mbus::StringItem>(properties["pci-function"]).value,
+			0,
+			16
+		);
+		device->vendorId = std::stoi(
+			std::get<mbus::StringItem>(properties["pci-vendor"]).value,
+			0,
+			16
+		);
+		device->deviceId = std::stoi(
+			std::get<mbus::StringItem>(properties["pci-device"]).value,
+			0,
+			16
+		);
+		device->subsystemVendorId = std::stoi(
+			std::get<mbus::StringItem>(properties["pci-subsystem-vendor"]).value,
+			0,
+			16
+		);
+		device->subsystemDeviceId = std::stoi(
+			std::get<mbus::StringItem>(properties["pci-subsystem-device"]).value,
+			0,
+			16
+		);
 
-		  if (properties.find("class") != properties.end()
+		if (properties.find("class") != properties.end()
 		    && std::get<mbus::StringItem>(properties["class"]).value == "framebuffer")
-			  device->ownsPlainfb = true;
+			device->ownsPlainfb = true;
 
-		  drvcore::installDevice(device);
-		  // TODO: Call realizeAttribute *before* installing the device.
-		  device->realizeAttribute(&vendorAttr);
-		  device->realizeAttribute(&deviceAttr);
-		  device->realizeAttribute(&plainfbAttr);
-		  device->realizeAttribute(&subsystemVendorAttr);
-		  device->realizeAttribute(&subsystemDeviceAttr);
+		drvcore::installDevice(device);
+		// TODO: Call realizeAttribute *before* installing the device.
+		device->realizeAttribute(&vendorAttr);
+		device->realizeAttribute(&deviceAttr);
+		device->realizeAttribute(&plainfbAttr);
+		device->realizeAttribute(&subsystemVendorAttr);
+		device->realizeAttribute(&subsystemDeviceAttr);
 
-		  mbusMap.insert(std::make_pair(entity.getId(), device));
-	  });
+		mbusMap.insert(std::make_pair(entity.getId(), device));
+	});
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

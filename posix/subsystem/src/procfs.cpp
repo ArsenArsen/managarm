@@ -40,10 +40,10 @@ void RegularFile::serve(smarter::shared_ptr<RegularFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	  std::move(lane),
-	  file,
-	  &File::fileOperations,
-	  file->_cancelServe
+		std::move(lane),
+		file,
+		&File::fileOperations,
+		file->_cancelServe
 	));
 }
 
@@ -102,10 +102,10 @@ void DirectoryFile::serve(smarter::shared_ptr<DirectoryFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	  std::move(lane),
-	  file,
-	  &File::fileOperations,
-	  file->_cancelServe
+		std::move(lane),
+		file,
+		&File::fileOperations,
+		file->_cancelServe
 	));
 }
 
@@ -192,16 +192,16 @@ async::result<frg::expected<Error, FileStats>> RegularNode::getStats() {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> RegularNode::open(
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  SemanticFlags semantic_flags
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
-		          << std::bitset<32>(semantic_flags)
-		          << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
-		             "semanticWrite(0x4) are allowed.\e[39m"
-		          << std::endl;
+			  << std::bitset<32>(semantic_flags)
+			  << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
+			     "semanticWrite(0x4) are allowed.\e[39m"
+			  << std::endl;
 		co_return Error::illegalArguments;
 	}
 
@@ -235,9 +235,9 @@ std::shared_ptr<Link> DirectoryNode::createRootDirectory() {
 	the_node->_treeLink = link.get();
 
 	auto self_link = std::make_shared<Link>(
-	  the_node->shared_from_this(),
-	  "self",
-	  std::make_shared<SelfLink>()
+		the_node->shared_from_this(),
+		"self",
+		std::make_shared<SelfLink>()
 	);
 	the_node->_entries.insert(std::move(self_link));
 	return link;
@@ -300,16 +300,16 @@ std::shared_ptr<FsLink> DirectoryNode::treeLink() {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> DirectoryNode::open(
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  SemanticFlags semantic_flags
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
-		          << std::bitset<32>(semantic_flags)
-		          << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
-		             "semanticWrite(0x4) are allowed.\e[39m"
-		          << std::endl;
+			  << std::bitset<32>(semantic_flags)
+			  << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
+			     "semanticWrite(0x4) are allowed.\e[39m"
+			  << std::endl;
 		co_return Error::illegalArguments;
 	}
 
@@ -382,11 +382,12 @@ async::result<std::string> MapNode::show() {
 			stream << " ";
 			auto fsNode = backingFile->associatedLink()->getTarget();
 			ViewPath viewPath = {
-			  backingFile->associatedMount(),
-			  backingFile->associatedLink()};
+				backingFile->associatedMount(),
+				backingFile->associatedLink()};
 			auto fileStats = co_await fsNode->getStats();
 			DeviceId deviceId {};
-			if (fsNode->getType() == VfsType::charDevice || fsNode->getType() == VfsType::blockDevice)
+			if (fsNode->getType() == VfsType::charDevice
+			    || fsNode->getType() == VfsType::blockDevice)
 				deviceId = fsNode->readDevice();
 			assert(fileStats);
 

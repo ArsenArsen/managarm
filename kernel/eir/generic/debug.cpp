@@ -41,16 +41,16 @@ void OutputSink::print(char c) {
 			// TODO: Scroll.
 		} else {
 			renderChars(
-			  displayFb,
-			  displayPitch / sizeof(uint32_t),
-			  outputX,
-			  outputY,
-			  &c,
-			  1,
-			  15,
-			  -1,
-			  std::integral_constant<int, fontWidth> {},
-			  std::integral_constant<int, fontHeight> {}
+				displayFb,
+				displayPitch / sizeof(uint32_t),
+				outputX,
+				outputY,
+				&c,
+				1,
+				15,
+				-1,
+				std::integral_constant<int, fontWidth> {},
+				std::integral_constant<int, fontHeight> {}
 			);
 			outputX++;
 		}
@@ -79,8 +79,8 @@ void PanicSink::operator()(const char *c) {
 extern "C" void
 __assert_fail(const char *assertion, const char *file, unsigned int line, const char *function) {
 	eir::panicLogger() << "Assertion failed: " << assertion << "\n"
-	                   << "In function " << function << " at " << file << ":" << line
-	                   << frg::endlog;
+			   << "In function " << function << " at " << file << ":" << line
+			   << frg::endlog;
 }
 
 extern "C" void __cxa_pure_virtual() {

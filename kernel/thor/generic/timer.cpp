@@ -27,7 +27,7 @@ void PrecisionTimerEngine::installTimer(PrecisionTimerNode *timer) {
 	if (logTimers) {
 		auto current = _clock->currentNanos();
 		infoLogger() << "thor: Setting timer at " << timer->_deadline << " (counter is "
-		             << current << ")" << frg::endlog;
+			     << current << ")" << frg::endlog;
 	}
 
 	//	infoLogger() << "thor: Active timers: " << _activeTimers << frg::endlog;

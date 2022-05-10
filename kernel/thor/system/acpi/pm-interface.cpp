@@ -50,12 +50,14 @@ coroutine<bool> handleReq(LaneHandle lane) {
 	assert(!preamble.error());
 
 	if (preamble.id() == bragi::message_id<managarm::hw::PmResetRequest>) {
-		auto req =
-		  bragi::parse_head_only<managarm::hw::PmResetRequest>(reqBuffer, *kernelAlloc);
+		auto req = bragi::parse_head_only<managarm::hw::PmResetRequest>(
+			reqBuffer,
+			*kernelAlloc
+		);
 
 		if (!req) {
 			infoLogger()
-			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
+				<< "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return true;
 		}
 
@@ -69,7 +71,7 @@ coroutine<bool> handleReq(LaneHandle lane) {
 		panicLogger() << "thor: We do not know how to reset" << frg::endlog;
 	} else {
 		infoLogger() << "thor: Dismissing conversation due to illegal HW request."
-		             << frg::endlog;
+			     << frg::endlog;
 		co_await DismissSender {conversation};
 	}
 
@@ -142,7 +144,7 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 
 	auto stream = createStream();
 	auto descError =
-	  co_await PushDescriptorSender {conversation, LaneDescriptor {stream.get<1>()}};
+		co_await PushDescriptorSender {conversation, LaneDescriptor {stream.get<1>()}};
 	// TODO: improve error handling here.
 	assert(descError == Error::success);
 

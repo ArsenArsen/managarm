@@ -97,7 +97,7 @@ async::detached GfxDevice::initialize() {
 
 		assignments.push_back(drm_core::Assignment::withInt(plane, planeTypeProperty(), 1));
 		assignments.push_back(
-		  drm_core::Assignment::withModeObj(plane, crtcIdProperty(), crtc)
+			drm_core::Assignment::withModeObj(plane, crtcIdProperty(), crtc)
 		);
 		assignments.push_back(drm_core::Assignment::withInt(plane, srcHProperty(), 0));
 		assignments.push_back(drm_core::Assignment::withInt(plane, srcWProperty(), 0));
@@ -108,7 +108,7 @@ async::detached GfxDevice::initialize() {
 		assignments.push_back(drm_core::Assignment::withInt(plane, crtcXProperty(), 0));
 		assignments.push_back(drm_core::Assignment::withInt(plane, crtcYProperty(), 0));
 		assignments.push_back(
-		  drm_core::Assignment::withModeObj(plane, fbIdProperty(), nullptr)
+			drm_core::Assignment::withModeObj(plane, fbIdProperty(), nullptr)
 		);
 
 		setupCrtc(crtc.get());
@@ -129,16 +129,16 @@ async::detached GfxDevice::initialize() {
 
 	virtio_core::Chain chain;
 	co_await virtio_core::scatterGather(
-	  virtio_core::hostToDevice,
-	  chain,
-	  _controlQ,
-	  arch::dma_buffer_view {nullptr, &header, sizeof(spec::Header)}
+		virtio_core::hostToDevice,
+		chain,
+		_controlQ,
+		arch::dma_buffer_view {nullptr, &header, sizeof(spec::Header)}
 	);
 	co_await virtio_core::scatterGather(
-	  virtio_core::deviceToHost,
-	  chain,
-	  _controlQ,
-	  arch::dma_buffer_view {nullptr, &info, sizeof(spec::DisplayInfo)}
+		virtio_core::deviceToHost,
+		chain,
+		_controlQ,
+		arch::dma_buffer_view {nullptr, &info, sizeof(spec::DisplayInfo)}
 	);
 
 	co_await AwaitableRequest {_controlQ, chain.front()};
@@ -157,24 +157,26 @@ async::detached GfxDevice::initialize() {
 			attachConnector(connector.get());
 
 			assignments.push_back(
-			  drm_core::Assignment::withInt(connector, dpmsProperty(), 3)
+				drm_core::Assignment::withInt(connector, dpmsProperty(), 3)
 			);
-			assignments.push_back(
-			  drm_core::Assignment::withModeObj(connector, crtcIdProperty(), nullptr)
-			);
+			assignments.push_back(drm_core::Assignment::withModeObj(
+				connector,
+				crtcIdProperty(),
+				nullptr
+			));
 
 			std::vector<drm_mode_modeinfo> supported_modes;
 			drm_core::addDmtModes(
-			  supported_modes,
-			  info.modes[i].rect.width,
-			  info.modes[i].rect.height
+				supported_modes,
+				info.modes[i].rect.width,
+				info.modes[i].rect.height
 			);
 			std::sort(
-			  supported_modes.begin(),
-			  supported_modes.end(),
-			  [](const drm_mode_modeinfo &u, const drm_mode_modeinfo &v) {
-				  return u.hdisplay * u.vdisplay > v.hdisplay * v.vdisplay;
-			  }
+				supported_modes.begin(),
+				supported_modes.end(),
+				[](const drm_mode_modeinfo &u, const drm_mode_modeinfo &v) {
+					return u.hdisplay * u.vdisplay > v.hdisplay * v.vdisplay;
+				}
 			);
 			connector->setModeList(supported_modes);
 
@@ -194,11 +196,11 @@ std::unique_ptr<drm_core::Configuration> GfxDevice::createConfiguration() {
 }
 
 std::shared_ptr<drm_core::FrameBuffer> GfxDevice::createFrameBuffer(
-  std::shared_ptr<drm_core::BufferObject> base_bo,
-  uint32_t width,
-  uint32_t height,
-  uint32_t,
-  uint32_t pitch
+	std::shared_ptr<drm_core::BufferObject> base_bo,
+	uint32_t width,
+	uint32_t height,
+	uint32_t,
+	uint32_t pitch
 ) {
 	auto bo = std::static_pointer_cast<GfxDevice::BufferObject>(base_bo);
 
@@ -228,12 +230,12 @@ GfxDevice::createDumb(uint32_t width, uint32_t height, uint32_t bpp) {
 	HEL_CHECK(helAllocateMemory(size, 0, nullptr, &handle));
 
 	auto bo = std::make_shared<BufferObject>(
-	  this,
-	  _hwAllocator.allocate(),
-	  size,
-	  helix::UniqueDescriptor(handle),
-	  width,
-	  height
+		this,
+		_hwAllocator.allocate(),
+		size,
+		helix::UniqueDescriptor(handle),
+		width,
+		height
 	);
 	uint32_t pitch = width * bpp / 8;
 
@@ -249,8 +251,8 @@ GfxDevice::createDumb(uint32_t width, uint32_t height, uint32_t bpp) {
 // ----------------------------------------------------------------
 
 bool GfxDevice::Configuration::capture(
-  std::vector<drm_core::Assignment> assignment,
-  std::unique_ptr<drm_core::AtomicState> &state
+	std::vector<drm_core::Assignment> assignment,
+	std::unique_ptr<drm_core::AtomicState> &state
 ) {
 	for (auto &assign : assignment) {
 		assert(assign.property->validate(assign));
@@ -308,16 +310,19 @@ async::detached GfxDevice::Configuration::_dispatch(std::unique_ptr<drm_core::At
 			spec::Header scanout_result;
 			virtio_core::Chain scanout_chain;
 			co_await virtio_core::scatterGather(
-			  virtio_core::hostToDevice,
-			  scanout_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &scanout, sizeof(spec::SetScanout)}
+				virtio_core::hostToDevice,
+				scanout_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {nullptr, &scanout, sizeof(spec::SetScanout)}
 			);
 			co_await virtio_core::scatterGather(
-			  virtio_core::deviceToHost,
-			  scanout_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &scanout_result, sizeof(spec::Header)}
+				virtio_core::deviceToHost,
+				scanout_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {
+					nullptr,
+					&scanout_result,
+					sizeof(spec::Header)}
 			);
 			co_await AwaitableRequest {_device->_controlQ, scanout_chain.front()};
 
@@ -341,16 +346,16 @@ async::detached GfxDevice::Configuration::_dispatch(std::unique_ptr<drm_core::At
 			spec::Header xfer_result;
 			virtio_core::Chain xfer_chain;
 			co_await virtio_core::scatterGather(
-			  virtio_core::hostToDevice,
-			  xfer_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &xfer, sizeof(spec::XferToHost2d)}
+				virtio_core::hostToDevice,
+				xfer_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {nullptr, &xfer, sizeof(spec::XferToHost2d)}
 			);
 			co_await virtio_core::scatterGather(
-			  virtio_core::deviceToHost,
-			  xfer_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &xfer_result, sizeof(spec::Header)}
+				virtio_core::deviceToHost,
+				xfer_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {nullptr, &xfer_result, sizeof(spec::Header)}
 			);
 			co_await AwaitableRequest {_device->_controlQ, xfer_chain.front()};
 			assert(xfer_result.type == spec::resp::noData);
@@ -363,22 +368,25 @@ async::detached GfxDevice::Configuration::_dispatch(std::unique_ptr<drm_core::At
 			scanout.rect.width = pps->src_w;
 			scanout.rect.height = pps->src_h;
 			scanout.scanoutId =
-			  static_pointer_cast<GfxDevice::Plane>(pps->plane)->scanoutId();
+				static_pointer_cast<GfxDevice::Plane>(pps->plane)->scanoutId();
 			scanout.resourceId = fb->getBufferObject()->hardwareId();
 
 			spec::Header scanout_result;
 			virtio_core::Chain scanout_chain;
 			co_await virtio_core::scatterGather(
-			  virtio_core::hostToDevice,
-			  scanout_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &scanout, sizeof(spec::SetScanout)}
+				virtio_core::hostToDevice,
+				scanout_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {nullptr, &scanout, sizeof(spec::SetScanout)}
 			);
 			co_await virtio_core::scatterGather(
-			  virtio_core::deviceToHost,
-			  scanout_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &scanout_result, sizeof(spec::Header)}
+				virtio_core::deviceToHost,
+				scanout_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {
+					nullptr,
+					&scanout_result,
+					sizeof(spec::Header)}
 			);
 			co_await AwaitableRequest {_device->_controlQ, scanout_chain.front()};
 			assert(scanout_result.type == spec::resp::noData);
@@ -395,16 +403,16 @@ async::detached GfxDevice::Configuration::_dispatch(std::unique_ptr<drm_core::At
 			spec::Header flush_result;
 			virtio_core::Chain flush_chain;
 			co_await virtio_core::scatterGather(
-			  virtio_core::hostToDevice,
-			  flush_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &flush, sizeof(spec::ResourceFlush)}
+				virtio_core::hostToDevice,
+				flush_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {nullptr, &flush, sizeof(spec::ResourceFlush)}
 			);
 			co_await virtio_core::scatterGather(
-			  virtio_core::deviceToHost,
-			  flush_chain,
-			  _device->_controlQ,
-			  arch::dma_buffer_view {nullptr, &flush_result, sizeof(spec::Header)}
+				virtio_core::deviceToHost,
+				flush_chain,
+				_device->_controlQ,
+				arch::dma_buffer_view {nullptr, &flush_result, sizeof(spec::Header)}
 			);
 			co_await AwaitableRequest {_device->_controlQ, flush_chain.front()};
 			assert(flush_result.type == spec::resp::noData);
@@ -479,16 +487,16 @@ async::detached GfxDevice::FrameBuffer::_xferAndFlush() {
 	spec::Header xfer_result;
 	virtio_core::Chain xfer_chain;
 	co_await virtio_core::scatterGather(
-	  virtio_core::hostToDevice,
-	  xfer_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &xfer, sizeof(spec::XferToHost2d)}
+		virtio_core::hostToDevice,
+		xfer_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &xfer, sizeof(spec::XferToHost2d)}
 	);
 	co_await virtio_core::scatterGather(
-	  virtio_core::deviceToHost,
-	  xfer_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &xfer_result, sizeof(spec::Header)}
+		virtio_core::deviceToHost,
+		xfer_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &xfer_result, sizeof(spec::Header)}
 	);
 	co_await AwaitableRequest {_device->_controlQ, xfer_chain.front()};
 
@@ -504,16 +512,16 @@ async::detached GfxDevice::FrameBuffer::_xferAndFlush() {
 	spec::Header flush_result;
 	virtio_core::Chain flush_chain;
 	co_await virtio_core::scatterGather(
-	  virtio_core::hostToDevice,
-	  flush_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &flush, sizeof(spec::ResourceFlush)}
+		virtio_core::hostToDevice,
+		flush_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &flush, sizeof(spec::ResourceFlush)}
 	);
 	co_await virtio_core::scatterGather(
-	  virtio_core::deviceToHost,
-	  flush_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &flush_result, sizeof(spec::Header)}
+		virtio_core::deviceToHost,
+		flush_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &flush_result, sizeof(spec::Header)}
 	);
 	co_await AwaitableRequest {_device->_controlQ, flush_chain.front()};
 }
@@ -566,13 +574,13 @@ std::pair<helix::BorrowedDescriptor, uint64_t> GfxDevice::BufferObject::getMemor
 async::detached GfxDevice::BufferObject::_initHw() {
 	void *ptr;
 	HEL_CHECK(helMapMemory(
-	  _memory.getHandle(),
-	  kHelNullHandle,
-	  nullptr,
-	  0,
-	  getSize(),
-	  kHelMapProtRead,
-	  &ptr
+		_memory.getHandle(),
+		kHelNullHandle,
+		nullptr,
+		0,
+		getSize(),
+		kHelMapProtRead,
+		&ptr
 	));
 
 	spec::Create2d buffer;
@@ -586,16 +594,16 @@ async::detached GfxDevice::BufferObject::_initHw() {
 
 	virtio_core::Chain chain;
 	co_await virtio_core::scatterGather(
-	  virtio_core::hostToDevice,
-	  chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &buffer, sizeof(spec::Create2d)}
+		virtio_core::hostToDevice,
+		chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &buffer, sizeof(spec::Create2d)}
 	);
 	co_await virtio_core::scatterGather(
-	  virtio_core::deviceToHost,
-	  chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &result, sizeof(spec::Header)}
+		virtio_core::deviceToHost,
+		chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &result, sizeof(spec::Header)}
 	);
 	co_await AwaitableRequest {_device->_controlQ, chain.front()};
 
@@ -620,22 +628,25 @@ async::detached GfxDevice::BufferObject::_initHw() {
 	spec::Header attach_result;
 	virtio_core::Chain attach_chain;
 	co_await virtio_core::scatterGather(
-	  virtio_core::hostToDevice,
-	  attach_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &attachment, sizeof(spec::AttachBacking)}
+		virtio_core::hostToDevice,
+		attach_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &attachment, sizeof(spec::AttachBacking)}
 	);
 	co_await virtio_core::scatterGather(
-	  virtio_core::hostToDevice,
-	  attach_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, entries.data(), entries.size() * sizeof(spec::MemEntry)}
+		virtio_core::hostToDevice,
+		attach_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {
+			nullptr,
+			entries.data(),
+			entries.size() * sizeof(spec::MemEntry)}
 	);
 	co_await virtio_core::scatterGather(
-	  virtio_core::deviceToHost,
-	  attach_chain,
-	  _device->_controlQ,
-	  arch::dma_buffer_view {nullptr, &attach_result, sizeof(spec::Header)}
+		virtio_core::deviceToHost,
+		attach_chain,
+		_device->_controlQ,
+		arch::dma_buffer_view {nullptr, &attach_result, sizeof(spec::Header)}
 	);
 	co_await AwaitableRequest {_device->_controlQ, attach_chain.front()};
 	assert(attach_result.type == spec::resp::noData);
@@ -651,8 +662,8 @@ async::result<void> doBind(mbus::Entity base_entity) {
 	protocols::hw::Device hw_device(co_await base_entity.bind());
 	co_await hw_device.enableBusmaster();
 	auto transport = co_await virtio_core::discover(
-	  std::move(hw_device),
-	  virtio_core::DiscoverMode::modernOnly
+		std::move(hw_device),
+		virtio_core::DiscoverMode::modernOnly
 	);
 
 	auto gfx_device = std::make_shared<GfxDevice>(std::move(transport));
@@ -662,18 +673,18 @@ async::result<void> doBind(mbus::Entity base_entity) {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	mbus::Properties descriptor {
-	  {"drvcore.mbus-parent", mbus::StringItem {std::to_string(base_entity.getId())}},
-	  {"unix.subsystem", mbus::StringItem {"drm"}},
-	  {"unix.devname", mbus::StringItem {"dri/card0"}}};
+		{"drvcore.mbus-parent", mbus::StringItem {std::to_string(base_entity.getId())}},
+		{"unix.subsystem", mbus::StringItem {"drm"}},
+		{"unix.devname", mbus::StringItem {"dri/card0"}}};
 
 	auto handler =
-	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		  helix::UniqueLane local_lane, remote_lane;
-		  std::tie(local_lane, remote_lane) = helix::createStream();
-		  drm_core::serveDrmDevice(gfx_device, std::move(local_lane));
+		mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+			helix::UniqueLane local_lane, remote_lane;
+			std::tie(local_lane, remote_lane) = helix::createStream();
+			drm_core::serveDrmDevice(gfx_device, std::move(local_lane));
 
-		  co_return std::move(remote_lane);
-	  });
+			co_return std::move(remote_lane);
+		});
 
 	co_await root.createObject("gfx_virtio", descriptor, std::move(handler));
 	baseDeviceMap.insert({base_entity.getId(), gfx_device});

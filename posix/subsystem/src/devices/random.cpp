@@ -41,10 +41,10 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  file,
-		  &fileOperations,
-		  file->_cancelServe
+			std::move(lane),
+			file,
+			&fileOperations,
+			file->_cancelServe
 		));
 	}
 
@@ -57,17 +57,16 @@ struct RandomDevice final : UnixDevice {
 
 	std::string nodePath() override { return "random"; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
-			             "allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
+				     "allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 

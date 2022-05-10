@@ -122,10 +122,10 @@ BrcmStbPcie::BrcmStbPcie(DeviceTreeNode *node, uint16_t seg, uint8_t busStart, u
 	auto ptr = KernelVirtualMemory::global().allocate(size);
 	for (size_t i = 0; i < size; i += 0x1000) {
 		KernelPageSpace::global().mapSingle4k(
-		  VirtualAddr(ptr) + i,
-		  addr + i,
-		  page_access::write,
-		  CachingMode::mmioNonPosted
+			VirtualAddr(ptr) + i,
+			addr + i,
+			page_access::write,
+			CachingMode::mmioNonPosted
 		);
 	}
 
@@ -143,9 +143,9 @@ void BrcmStbPcie::init_() {
 	// Configure windows
 
 	regSpace_.store(
-	  reg::miscCtl,
-	  regSpace_.load(reg::miscCtl) / miscCtl::accessEnable(true) / miscCtl::readUrMode(true)
-	    / miscCtl::maxBurstSize(/* 128 bytes */ 0)
+		reg::miscCtl,
+		regSpace_.load(reg::miscCtl) / miscCtl::accessEnable(true)
+			/ miscCtl::readUrMode(true) / miscCtl::maxBurstSize(/* 128 bytes */ 0)
 	);
 
 	// TODO: read this out of the DT
@@ -154,8 +154,9 @@ void BrcmStbPcie::init_() {
 	regSpace_.store(reg::rcBar2Hi, 0);
 
 	regSpace_.store(
-	  reg::miscCtl,
-	  regSpace_.load(reg::miscCtl) / miscCtl::scbSize0(63 - __builtin_clzll(0x200000000) - 15)
+		reg::miscCtl,
+		regSpace_.load(reg::miscCtl)
+			/ miscCtl::scbSize0(63 - __builtin_clzll(0x200000000) - 15)
 	);
 
 	regSpace_.store(reg::rcBar1Lo, regSpace_.load(reg::rcBar1Lo) & ~rcBar::sizeMask);
@@ -182,8 +183,8 @@ void BrcmStbPcie::init_() {
 	setOutboundWindow_(0, 0x600000000, 0xC0000000, 0x40000000);
 
 	regSpace_.store(
-	  reg::priv1LinkCap,
-	  regSpace_.load(reg::priv1LinkCap) / priv1::linkCap(0b11)
+		reg::priv1LinkCap,
+		regSpace_.load(reg::priv1LinkCap) / priv1::linkCap(0b11)
 	);  // L1 & L0s
 
 	regSpace_.store(reg::priv1IdVal3, regSpace_.load(reg::priv1IdVal3) / priv1::id(0x060400));
@@ -192,17 +193,17 @@ void BrcmStbPcie::init_() {
 
 	auto ls = regSpace_.load(reg::lnksta);
 	infoLogger() << "thor: Link is up, speed "
-	             << lnksta::linkSpeedString(ls & lnksta::linkSpeed) << ", x"
-	             << (ls & lnksta::negotiatedLinkWidth) << frg::endlog;
+		     << lnksta::linkSpeedString(ls & lnksta::linkSpeed) << ", x"
+		     << (ls & lnksta::negotiatedLinkWidth) << frg::endlog;
 
 	regSpace_.store(
-	  reg::vendorReg1,
-	  regSpace_.load(reg::vendorReg1) / vendorReg1::endianMode(0)
+		reg::vendorReg1,
+		regSpace_.load(reg::vendorReg1) / vendorReg1::endianMode(0)
 	);
 
 	regSpace_.store(
-	  reg::hardDebug,
-	  regSpace_.load(reg::hardDebug) / hardDebug::clkreqEnable(true)
+		reg::hardDebug,
+		regSpace_.load(reg::hardDebug) / hardDebug::clkreqEnable(true)
 	);
 }
 
@@ -216,8 +217,8 @@ void BrcmStbPcie::reset_() {
 	KernelFiber::asyncBlockCurrent(generalTimerEngine()->sleepFor(200'000));
 
 	regSpace_.store(
-	  reg::hardDebug,
-	  regSpace_.load(reg::hardDebug) / hardDebug::serdesDisable(false)
+		reg::hardDebug,
+		regSpace_.load(reg::hardDebug) / hardDebug::serdesDisable(false)
 	);
 
 	KernelFiber::asyncBlockCurrent(generalTimerEngine()->sleepFor(100'000));
@@ -244,8 +245,8 @@ void BrcmStbPcie::setOutboundWindow_(int n, uint64_t cpuAddr, uint64_t pcieAddr,
 	auto limitMB = (cpuAddr + size - 1) / 0x100000;
 
 	regSpace_.store(
-	  baseLimit,
-	  regSpace_.load(baseLimit) / base(cpuAddr / 0x100000) / limit(limitMB)
+		baseLimit,
+		regSpace_.load(baseLimit) / base(cpuAddr / 0x100000) / limit(limitMB)
 	);
 
 	constexpr uint64_t hiShift = 12;
@@ -327,18 +328,18 @@ BrcmStbPcie::configSpaceFor_(uint32_t seg, uint32_t bus, uint32_t slot, uint32_t
 	}
 
 	regSpace_.store(
-	  reg::cfgIndex,
-	  cfgIndex::bus(bus) | cfgIndex::slot(slot) | cfgIndex::function(function)
+		reg::cfgIndex,
+		cfgIndex::bus(bus) | cfgIndex::slot(slot) | cfgIndex::function(function)
 	);
 	return regSpace_.subspace(reg::cfgData);
 }
 
 uint8_t BrcmStbPcie::readConfigByte(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset
 ) {
 	if (bus == busStart_ && (slot || function))
 		return 0xFF;
@@ -348,11 +349,11 @@ uint8_t BrcmStbPcie::readConfigByte(
 }
 
 uint16_t BrcmStbPcie::readConfigHalf(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset
 ) {
 	if (bus == busStart_ && (slot || function))
 		return 0xFFFF;
@@ -362,11 +363,11 @@ uint16_t BrcmStbPcie::readConfigHalf(
 }
 
 uint32_t BrcmStbPcie::readConfigWord(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset
 ) {
 	if (bus == busStart_ && (slot || function))
 		return 0xFFFFFFFF;
@@ -376,12 +377,12 @@ uint32_t BrcmStbPcie::readConfigWord(
 }
 
 void BrcmStbPcie::writeConfigByte(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset,
-  uint8_t value
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset,
+	uint8_t value
 ) {
 	if (bus == busStart_ && (slot || function))
 		return;
@@ -391,12 +392,12 @@ void BrcmStbPcie::writeConfigByte(
 }
 
 void BrcmStbPcie::writeConfigHalf(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset,
-  uint16_t value
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset,
+	uint16_t value
 ) {
 	if (bus == busStart_ && (slot || function))
 		return;
@@ -406,12 +407,12 @@ void BrcmStbPcie::writeConfigHalf(
 }
 
 void BrcmStbPcie::writeConfigWord(
-  uint32_t seg,
-  uint32_t bus,
-  uint32_t slot,
-  uint32_t function,
-  uint16_t offset,
-  uint32_t value
+	uint32_t seg,
+	uint32_t bus,
+	uint32_t slot,
+	uint32_t function,
+	uint16_t offset,
+	uint32_t value
 ) {
 	if (bus == busStart_ && (slot || function))
 		return;

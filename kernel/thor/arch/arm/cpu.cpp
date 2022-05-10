@@ -201,20 +201,20 @@ void doRunOnStack(void (*function)(void *, void *), void *sp, void *argument) {
 	assert(!intsAreEnabled());
 
 	cleanKasanShadow(
-	  reinterpret_cast<std::byte *>(sp) - UniqueKernelStack::kSize,
-	  UniqueKernelStack::kSize
+		reinterpret_cast<std::byte *>(sp) - UniqueKernelStack::kSize,
+		UniqueKernelStack::kSize
 	);
 
 	asm volatile(
-	  "\tmov x28, sp\n"
-	  "\tmov x1, sp\n"
-	  "\tmov x0, %0\n"
-	  "\tmov sp, %2\n"
-	  "\tblr %1\n"
-	  "\tmov sp, x28\n"
-	  :
-	  : "r"(argument), "r"(function), "r"(sp)
-	  : "x30", "x28", "x1", "x0", "memory"
+		"\tmov x28, sp\n"
+		"\tmov x1, sp\n"
+		"\tmov x0, %0\n"
+		"\tmov sp, %2\n"
+		"\tblr %1\n"
+		"\tmov sp, x28\n"
+		:
+		: "r"(argument), "r"(function), "r"(sp)
+		: "x30", "x28", "x1", "x0", "memory"
 	);
 }
 
@@ -247,16 +247,16 @@ void setupBootCpuContext() {
 }
 
 static initgraph::Task initBootProcessorTask {
-  &globalInitEngine,
-  "arm.init-boot-processor",
-  initgraph::Entails {getBootProcessorReadyStage()},
-  [] {
-	  allCpuContexts.initialize(*kernelAlloc);
+	&globalInitEngine,
+	"arm.init-boot-processor",
+	initgraph::Entails {getBootProcessorReadyStage()},
+	[] {
+		allCpuContexts.initialize(*kernelAlloc);
 
-	  infoLogger() << "Booting on CPU #0" << frg::endlog;
+		infoLogger() << "Booting on CPU #0" << frg::endlog;
 
-	  initializeThisProcessor();
-  }};
+		initializeThisProcessor();
+	}};
 
 initgraph::Stage *getBootProcessorReadyStage() {
 	static initgraph::Stage s {&globalInitEngine, "arm.boot-processor-ready"};

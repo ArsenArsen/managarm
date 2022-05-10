@@ -200,10 +200,10 @@ frg::tuple<int, int, void *, size_t> setupFb(int width, int height, int bpp) {
 	}
 
 	return frg::make_tuple(
-	  int(ptr[5]),
-	  int(ptr[6]),
-	  reinterpret_cast<void *>(fbPtr),
-	  size_t(ptr[33])
+		int(ptr[5]),
+		int(ptr[6]),
+		reinterpret_cast<void *>(fbPtr),
+		size_t(ptr[33])
 	);
 }
 
@@ -284,7 +284,7 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 			if (auto equals = token.find_first('='); equals != size_t(-1)) {
 				auto key = token.sub_string(0, equals);
 				auto value =
-				  token.sub_string(equals + 1, token.size() - equals - 1);
+					token.sub_string(equals + 1, token.size() - equals - 1);
 
 				if (key == "bcm2708_fb.fbwidth") {
 					if (auto width = value.to_number<int>(); width)
@@ -306,7 +306,7 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		eir::infoLogger() << "No display attached" << frg::endlog;
 	} else {
 		auto [actualW, actualH, ptr, pitch] =
-		  PropertyMbox::setupFb(fb_width, fb_height, 32);
+			PropertyMbox::setupFb(fb_width, fb_height, 32);
 
 		if (!ptr || !pitch) {
 			eir::infoLogger() << "Mode setting failed..." << frg::endlog;
@@ -339,22 +339,23 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	size_t nMemoryNodes = 0;
 
 	dt.rootNode().discoverSubnodes(
-	  [](DeviceTreeNode &node) {
-		  return !memcmp("memory@", node.name(), 7) || !memcmp("chosen", node.name(), 7);
-	  },
-	  [&](DeviceTreeNode node) {
-		  if (!memcmp("chosen", node.name(), 7)) {
-			  assert(!hasChosenNode);
+		[](DeviceTreeNode &node) {
+			return !memcmp("memory@", node.name(), 7)
+			    || !memcmp("chosen", node.name(), 7);
+		},
+		[&](DeviceTreeNode node) {
+			if (!memcmp("chosen", node.name(), 7)) {
+				assert(!hasChosenNode);
 
-			  chosenNode = node;
-			  hasChosenNode = true;
-		  } else {
-			  assert(nMemoryNodes < 32);
+				chosenNode = node;
+				hasChosenNode = true;
+			} else {
+				assert(nMemoryNodes < 32);
 
-			  memoryNodes[nMemoryNodes++] = node;
-		  }
-		  infoLogger() << "Node \"" << node.name() << "\" discovered" << frg::endlog;
-	  }
+				memoryNodes[nMemoryNodes++] = node;
+			}
+			infoLogger() << "Node \"" << node.name() << "\" discovered" << frg::endlog;
+		}
 	);
 
 	uint32_t addressCells = 2, sizeCells = 1;
@@ -375,8 +376,8 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	eir::infoLogger() << "Memory reservation entries:" << frg::endlog;
 	for (auto ent : dt.memoryReservations()) {
 		eir::infoLogger() << "At 0x" << frg::hex_fmt {ent.address} << ", ends at 0x"
-		                  << frg::hex_fmt {ent.address + ent.size} << " (0x"
-		                  << frg::hex_fmt {ent.size} << " bytes)" << frg::endlog;
+				  << frg::hex_fmt {ent.address + ent.size} << " (0x"
+				  << frg::hex_fmt {ent.size} << " bytes)" << frg::endlog;
 
 		reservedRegions[nReservedRegions++] = {ent.address, ent.size};
 	}
@@ -432,13 +433,13 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		if (regions[i].regionType == RegionType::null)
 			continue;
 		eir::infoLogger() << "    Memory region [" << i << "]."
-		                  << " Base: 0x" << frg::hex_fmt {regions[i].address}
-		                  << ", length: 0x" << frg::hex_fmt {regions[i].size}
-		                  << frg::endlog;
+				  << " Base: 0x" << frg::hex_fmt {regions[i].address}
+				  << ", length: 0x" << frg::hex_fmt {regions[i].size}
+				  << frg::endlog;
 		if (regions[i].regionType == RegionType::allocatable)
 			eir::infoLogger() << "        Buddy tree at 0x"
-			                  << frg::hex_fmt {regions[i].buddyTree} << ", overhead: 0x"
-			                  << frg::hex_fmt {regions[i].buddyOverhead} << frg::endlog;
+					  << frg::hex_fmt {regions[i].buddyTree} << ", overhead: 0x"
+					  << frg::hex_fmt {regions[i].buddyOverhead} << frg::endlog;
 	}
 
 	frg::span<uint8_t> kernel_image {nullptr, 0};
@@ -483,10 +484,10 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		assert(fb_ptr & ~(pageSize - 1));
 		for (address_t pg = 0; pg < fb_pitch * fb_height; pg += 0x1000)
 			mapSingle4kPage(
-			  0xFFFF'FE00'4000'0000 + pg,
-			  fb_ptr + pg,
-			  PageFlags::write,
-			  CachingMode::writeCombine
+				0xFFFF'FE00'4000'0000 + pg,
+				fb_ptr + pg,
+				PageFlags::write,
+				CachingMode::writeCombine
 			);
 		mapKasanShadow(0xFFFF'FE00'4000'0000, fb_pitch * fb_height);
 		unpoisonKasanShadow(0xFFFF'FE00'4000'0000, fb_pitch * fb_height);
@@ -496,10 +497,10 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	info_ptr->debugFlags |= eirDebugSerial;
 
 	mapSingle4kPage(
-	  0xFFFF'0000'0000'0000,
-	  mmioBase + 0x201000,
-	  PageFlags::write,
-	  CachingMode::mmio
+		0xFFFF'0000'0000'0000,
+		mmioBase + 0x201000,
+		PageFlags::write,
+		CachingMode::mmio
 	);
 	mapKasanShadow(0xFFFF'0000'0000'0000, 0x1000);
 	unpoisonKasanShadow(0xFFFF'0000'0000'0000, 0x1000);
@@ -507,11 +508,11 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	eir::infoLogger() << "Leaving Eir and entering the real kernel" << frg::endlog;
 
 	eirEnterKernel(
-	  eirTTBR[0] + 1,
-	  eirTTBR[1] + 1,
-	  kernel_entry,
-	  0xFFFF'FE80'0001'0000,
-	  0xFFFF'FE80'0001'0000
+		eirTTBR[0] + 1,
+		eirTTBR[1] + 1,
+		kernel_entry,
+		0xFFFF'FE80'0001'0000,
+		0xFFFF'FE80'0001'0000
 	);
 
 	while (true)

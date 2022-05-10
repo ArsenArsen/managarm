@@ -117,8 +117,7 @@ void PageBinding::rebind() {
 void PageBinding::rebind(smarter::shared_ptr<PageSpace> space) {
 	assert(!intsAreEnabled());
 	assert(getCpuData()->havePcids || !_pcid);
-	assert(
-	  !_boundSpace || _boundSpace.get() != space.get()
+	assert(!_boundSpace || _boundSpace.get() != space.get()
 	);  // This would be unnecessary work.
 	auto context = &getCpuData()->pageContext;
 
@@ -146,9 +145,12 @@ void PageBinding::rebind(smarter::shared_ptr<PageSpace> space) {
 
 	// Mark every shootdown request in the unbound space as shot-down.
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	if (unbound_space) {
 		auto lock = frg::guard(&unbound_space->_mutex);
@@ -160,9 +162,12 @@ void PageBinding::rebind(smarter::shared_ptr<PageSpace> space) {
 
 				// Signal completion of the shootdown.
 				if (current->_initiatorCpu != getCpuData()) {
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-						auto it =
-						  unbound_space->_shootQueue.iterator_to(current);
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
+						auto it = unbound_space->_shootQueue.iterator_to(
+							current
+						);
 						unbound_space->_shootQueue.erase(it);
 						complete.push_front(current);
 					}
@@ -205,9 +210,12 @@ void PageBinding::unbind() {
 	}
 
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	{
 		auto lock = frg::guard(&_boundSpace->_mutex);
@@ -220,9 +228,12 @@ void PageBinding::unbind() {
 				// The actual shootdown was done above.
 				// Signal completion of the shootdown.
 				if (current->_initiatorCpu != getCpuData()) {
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
 						auto it =
-						  _boundSpace->_shootQueue.iterator_to(current);
+							_boundSpace->_shootQueue.iterator_to(current
+							);
 						_boundSpace->_shootQueue.erase(it);
 						complete.push_front(current);
 					}
@@ -263,9 +274,12 @@ void PageBinding::shootdown() {
 	}
 
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	uint64_t target_seq;
 	{
@@ -283,23 +297,26 @@ void PageBinding::shootdown() {
 						for (size_t pg = 0; pg < current->size;
 						     pg += kPageSize)
 							invalidatePage(reinterpret_cast<void *>(
-							  current->address + pg
+								current->address + pg
 							));
 					} else {
 						for (size_t pg = 0; pg < current->size;
 						     pg += kPageSize)
 							invalidatePage(
-							  _pcid,
-							  reinterpret_cast<void *>(
-							    current->address + pg
-							  )
+								_pcid,
+								reinterpret_cast<void *>(
+									current->address + pg
+								)
 							);
 					}
 
 					// Signal completion of the shootdown.
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
 						auto it =
-						  _boundSpace->_shootQueue.iterator_to(current);
+							_boundSpace->_shootQueue.iterator_to(current
+							);
 						_boundSpace->_shootQueue.erase(it);
 						complete.push_front(current);
 					}
@@ -347,9 +364,12 @@ void GlobalPageBinding::shootdown() {
 	auto space = &KernelPageSpace::global();
 
 	frg::intrusive_list<
-	  ShootNode,
-	  frg::locate_member<ShootNode, frg::default_list_hook<ShootNode>, &ShootNode::_queueNode>>
-	  complete;
+		ShootNode,
+		frg::locate_member<
+			ShootNode,
+			frg::default_list_hook<ShootNode>,
+			&ShootNode::_queueNode>>
+		complete;
 
 	uint64_t targetSeq;
 	{
@@ -363,12 +383,14 @@ void GlobalPageBinding::shootdown() {
 				if (current->_initiatorCpu != getCpuData()) {
 					// Perform the actual shootdown.
 					for (size_t pg = 0; pg < current->size; pg += kPageSize)
-						invalidatePage(
-						  reinterpret_cast<void *>(current->address + pg)
-						);
+						invalidatePage(reinterpret_cast<void *>(
+							current->address + pg
+						));
 
 					// Signal completion of the shootdown.
-					if (current->_bindingsToShoot.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					if (current->_bindingsToShoot
+						    .fetch_sub(1, std::memory_order_acq_rel)
+					    == 1) {
 						auto it = space->_shootQueue.iterator_to(current);
 						space->_shootQueue.erase(it);
 						complete.push_front(current);
@@ -477,8 +499,8 @@ bool PageSpace::submitShootdown(ShootNode *node) {
 
 				for (size_t pg = 0; pg < node->size; pg += kPageSize)
 					invalidatePage(
-					  bindings[i].getPcid(),
-					  reinterpret_cast<void *>(node->address + pg)
+						bindings[i].getPcid(),
+						reinterpret_cast<void *>(node->address + pg)
 					);
 				unshot_bindings--;
 			}
@@ -546,10 +568,10 @@ bool KernelPageSpace::submitShootdown(ShootNode *node) {
 }
 
 void KernelPageSpace::mapSingle4k(
-  VirtualAddr pointer,
-  PhysicalAddr physical,
-  uint32_t flags,
-  CachingMode caching_mode
+	VirtualAddr pointer,
+	PhysicalAddr physical,
+	uint32_t flags,
+	CachingMode caching_mode
 ) {
 	assert((pointer % 0x1000) == 0);
 	assert((physical % 0x1000) == 0);
@@ -737,11 +759,11 @@ ClientPageSpace::~ClientPageSpace() {
 }
 
 void ClientPageSpace::mapSingle4k(
-  VirtualAddr pointer,
-  PhysicalAddr physical,
-  bool user_page,
-  uint32_t flags,
-  CachingMode caching_mode
+	VirtualAddr pointer,
+	PhysicalAddr physical,
+	bool user_page,
+	uint32_t flags,
+	CachingMode caching_mode
 ) {
 	assert((pointer % 0x1000) == 0);
 	assert((physical % 0x1000) == 0);
@@ -782,10 +804,8 @@ void ClientPageSpace::mapSingle4k(
 			new_entry |= kPageUser;
 		tbl4[index4].store(new_entry);
 	}
-	assert(
-	  user_page ? ((tbl4[index4].load() & kPageUser) != 0)
-	            : ((tbl4[index4].load() & kPageUser) == 0)
-	);
+	assert(user_page ? ((tbl4[index4].load() & kPageUser) != 0)
+			 : ((tbl4[index4].load() & kPageUser) == 0));
 
 	// Make sure there is a PD.
 	tbl3 = reinterpret_cast<arch::scalar_variable<uint64_t> *>(accessor3.get());
@@ -802,10 +822,8 @@ void ClientPageSpace::mapSingle4k(
 			new_entry |= kPageUser;
 		tbl3[index3].store(new_entry);
 	}
-	assert(
-	  user_page ? ((tbl3[index3].load() & kPageUser) != 0)
-	            : ((tbl3[index3].load() & kPageUser) == 0)
-	);
+	assert(user_page ? ((tbl3[index3].load() & kPageUser) != 0)
+			 : ((tbl3[index3].load() & kPageUser) == 0));
 
 	// Make sure there is a PT.
 	tbl2 = reinterpret_cast<arch::scalar_variable<uint64_t> *>(accessor2.get());
@@ -822,10 +840,8 @@ void ClientPageSpace::mapSingle4k(
 			new_entry |= kPageUser;
 		tbl2[index2].store(new_entry);
 	}
-	assert(
-	  user_page ? ((tbl2[index2].load() & kPageUser) != 0)
-	            : ((tbl2[index2].load() & kPageUser) == 0)
-	);
+	assert(user_page ? ((tbl2[index2].load() & kPageUser) != 0)
+			 : ((tbl2[index2].load() & kPageUser) == 0));
 
 	// Setup the new PTE.
 	tbl1 = reinterpret_cast<arch::scalar_variable<uint64_t> *>(accessor1.get());

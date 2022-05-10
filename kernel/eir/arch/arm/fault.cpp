@@ -8,11 +8,11 @@ enum class IntrType {
 };
 
 extern "C" void eirExceptionHandler(
-  IntrType i_type,
-  uintptr_t syndrome,
-  uintptr_t link,
-  uintptr_t state,
-  uintptr_t fault_addr
+	IntrType i_type,
+	uintptr_t syndrome,
+	uintptr_t link,
+	uintptr_t state,
+	uintptr_t fault_addr
 ) {
 	eir::infoLogger() << "An unexpected fault has occured:" << frg::endlog;
 
@@ -70,53 +70,53 @@ extern "C" void eirExceptionHandler(
 	}
 
 	eir::infoLogger() << "Exception type: " << exc_type_str << " (" << (void *) exc_type << ")"
-	                  << frg::endlog;
+			  << frg::endlog;
 
 	auto iss = syndrome & ((1 << 25) - 1);
 
 	if (exc_type == 0x25 || exc_type == 0x24) {
 		constexpr const char *sas_values[4] = {"Byte", "Halfword", "Word", "Doubleword"};
 		constexpr const char *set_values[4] =
-		  {"Recoverable", "Uncontainable", "Reserved", "Restartable/Corrected"};
+			{"Recoverable", "Uncontainable", "Reserved", "Restartable/Corrected"};
 		constexpr const char *dfsc_values[4] =
-		  {"Address size", "Translation", "Access flag", "Permission"};
+			{"Address size", "Translation", "Access flag", "Permission"};
 		eir::infoLogger() << "Access size: " << sas_values[(iss >> 22) & 3] << frg::endlog;
 		eir::infoLogger() << "Sign extended? " << (iss & (1 << 21) ? "Yes" : "No")
-		                  << frg::endlog;
+				  << frg::endlog;
 		eir::infoLogger() << "Sixty-Four? " << (iss & (1 << 15) ? "Yes" : "No")
-		                  << frg::endlog;
+				  << frg::endlog;
 		eir::infoLogger() << "Acquire/Release? " << (iss & (1 << 14) ? "Yes" : "No")
-		                  << frg::endlog;
+				  << frg::endlog;
 		eir::infoLogger() << "Synch error type: " << set_values[(iss >> 11) & 3]
-		                  << frg::endlog;
+				  << frg::endlog;
 		eir::infoLogger() << "Fault address valid? " << (iss & (1 << 10) ? "No" : "Yes")
-		                  << frg::endlog;
+				  << frg::endlog;
 		eir::infoLogger() << "Cache maintenance? " << (iss & (1 << 8) ? "Yes" : "No")
-		                  << frg::endlog;
+				  << frg::endlog;
 		eir::infoLogger() << "S1PTW? " << (iss & (1 << 7) ? "Yes" : "No") << frg::endlog;
 		eir::infoLogger() << "Access type: " << (iss & (1 << 6) ? "Write" : "Read")
-		                  << frg::endlog;
+				  << frg::endlog;
 		if ((iss & 0b111111) <= 0b001111)
 			eir::infoLogger()
-			  << "Data fault status code: " << dfsc_values[(iss >> 2) & 4]
-			  << " fault level " << (iss & 3) << frg::endlog;
+				<< "Data fault status code: " << dfsc_values[(iss >> 2) & 4]
+				<< " fault level " << (iss & 3) << frg::endlog;
 		else if ((iss & 0b111111) == 0b10000)
-			eir::infoLogger()
-			  << "Data fault status code: Synchronous external fault" << frg::endlog;
+			eir::infoLogger() << "Data fault status code: Synchronous external fault"
+					  << frg::endlog;
 		else if ((iss & 0b111111) == 0b100001)
 			eir::infoLogger()
-			  << "Data fault status code: Alignment fault" << frg::endlog;
+				<< "Data fault status code: Alignment fault" << frg::endlog;
 		else if ((iss & 0b111111) == 0b110000)
 			eir::infoLogger()
-			  << "Data fault status code: TLB conflict abort" << frg::endlog;
+				<< "Data fault status code: TLB conflict abort" << frg::endlog;
 		else
 			eir::infoLogger() << "Data fault status code: unknown" << frg::endlog;
 	}
 
 	eir::infoLogger() << "IP: " << (void *) link << ", State: " << (void *) state
-	                  << frg::endlog;
+			  << frg::endlog;
 	eir::infoLogger() << "Syndrome: " << (void *) syndrome
-	                  << ", Fault address: " << (void *) fault_addr << frg::endlog;
+			  << ", Fault address: " << (void *) fault_addr << frg::endlog;
 	eir::infoLogger() << "Halting..." << frg::endlog;
 
 	while (1)

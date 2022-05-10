@@ -75,13 +75,14 @@ public:
 
 	async::result<Error>
 	utimensat(uint64_t atime_sec, uint64_t atime_nsec, uint64_t mtime_sec, uint64_t mtime_nsec)
-	  override {
-		if (atime_sec != UTIME_NOW || atime_nsec != UTIME_NOW || mtime_sec != UTIME_NOW || mtime_nsec != UTIME_NOW) {
+		override {
+		if (atime_sec != UTIME_NOW || atime_nsec != UTIME_NOW || mtime_sec != UTIME_NOW
+		    || mtime_nsec != UTIME_NOW) {
 			std::cout << "\e[31m"
-			             "tmp_fs: utimensat() only supports setting atime and mtime to "
-			             "current time"
-			             "\e[39m"
-			          << std::endl;
+				     "tmp_fs: utimensat() only supports setting atime and mtime to "
+				     "current time"
+				     "\e[39m"
+				  << std::endl;
 			co_return Error::success;
 		}
 		struct timespec time;
@@ -124,11 +125,10 @@ private:
 
 	DeviceId readDevice() override { return _id; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		return openDevice(_type, _id, std::move(mount), std::move(link), semantic_flags);
 	}
 
@@ -150,11 +150,10 @@ struct FifoNode final : Node {
 private:
 	VfsType getType() override { return VfsType::fifo; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		co_return co_await fifo::openNamedChannel(mount, link, this, semantic_flags);
 	}
 
@@ -172,9 +171,9 @@ public:
 	explicit Link(std::shared_ptr<FsNode> target) : _target(std::move(target)) {}
 
 	explicit Link(
-	  std::shared_ptr<FsNode> owner,
-	  std::string name,
-	  std::shared_ptr<FsNode> target
+		std::shared_ptr<FsNode> owner,
+		std::string name,
+		std::shared_ptr<FsNode> target
 	)
 	: _owner(std::move(owner))
 	, _name(std::move(name))
@@ -251,17 +250,16 @@ private:
 
 	std::shared_ptr<FsLink> treeLink() override { return _treeLink; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
-			             "allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
+				     "allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 
@@ -283,8 +281,11 @@ private:
 	link(std::string name, std::shared_ptr<FsNode> target) override {
 		if (!(_entries.find(name) == _entries.end()))
 			co_return Error::alreadyExists;
-		auto link =
-		  std::make_shared<Link>(shared_from_this(), std::move(name), std::move(target));
+		auto link = std::make_shared<Link>(
+			shared_from_this(),
+			std::move(name),
+			std::move(target)
+		);
 		_entries.insert(link);
 		co_return link;
 	}
@@ -337,17 +338,16 @@ struct InheritedNode final : Node {
 private:
 	VfsType getType() override { return VfsType::regular; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
-			             "allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
+				     "allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 		auto fd = ::open(_path.c_str(), O_RDONLY);
@@ -355,9 +355,9 @@ private:
 
 		helix::UniqueDescriptor passthrough(__mlibc_getPassthrough(fd));
 		co_return extern_fs::createFile(
-		  std::move(passthrough),
-		  std::move(mount),
-		  std::move(link)
+			std::move(passthrough),
+			std::move(mount),
+			std::move(link)
 		);
 	}
 
@@ -376,10 +376,10 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  file,
-		  &fileOperations,
-		  file->_cancelServe
+			std::move(lane),
+			file,
+			&fileOperations,
+			file->_cancelServe
 		));
 	}
 
@@ -423,17 +423,16 @@ struct MemoryNode final : Node {
 
 	VfsType getType() override { return VfsType::regular; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
-			             "semanticWrite(0x4) are allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticNonBlock (0x1), semanticRead (0x2) and "
+				     "semanticWrite(0x4) are allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 		auto file = smarter::make_shared<MemoryFile>(std::move(mount), std::move(link));
@@ -513,9 +512,9 @@ struct Superblock final : FsSuperblock {
 			dest_dir->_entries.erase(dest_it);
 
 		auto new_link = std::make_shared<Link>(
-		  dest_dir->shared_from_this(),
-		  std::move(dest_name),
-		  src_link->getTarget()
+			dest_dir->shared_from_this(),
+			std::move(dest_name),
+			src_link->getTarget()
 		);
 		src_dir->_entries.erase(it);
 		dest_dir->_entries.insert(new_link);
@@ -629,10 +628,10 @@ void DirectoryFile::serve(smarter::shared_ptr<DirectoryFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	  std::move(lane),
-	  file,
-	  &File::fileOperations,
-	  file->_cancelServe
+		std::move(lane),
+		file,
+		&File::fileOperations,
+		file->_cancelServe
 	));
 }
 
@@ -724,8 +723,10 @@ async::result<std::variant<Error, std::shared_ptr<FsLink>>>
 DirectoryNode::symlink(std::string name, std::string path) {
 	if (!(_entries.find(name) == _entries.end()))
 		co_return Error::alreadyExists;
-	auto node =
-	  std::make_shared<SymlinkNode>(static_cast<Superblock *>(superblock()), std::move(path));
+	auto node = std::make_shared<SymlinkNode>(
+		static_cast<Superblock *>(superblock()),
+		std::move(path)
+	);
 	auto link = std::make_shared<Link>(shared_from_this(), std::move(name), std::move(node));
 	_entries.insert(link);
 	co_return link;

@@ -45,10 +45,10 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  file,
-		  &File::fileOperations,
-		  file->_cancelServe
+			std::move(lane),
+			file,
+			&File::fileOperations,
+			file->_cancelServe
 		));
 	}
 
@@ -101,32 +101,31 @@ public:
 	writeAll(Process *, const void *data, size_t length) override {
 		throw std::runtime_error("posix: Fix netlink send()");
 		/*
-		                if(logSockets)
-		                        std::cout << "posix: Write to socket " << this << std::endl;
+				if(logSockets)
+					std::cout << "posix: Write to socket " << this << std::endl;
 
-		                Packet packet;
-		                packet.buffer.resize(length);
-		                memcpy(packet.buffer.data(), data, length);
+				Packet packet;
+				packet.buffer.resize(length);
+				memcpy(packet.buffer.data(), data, length);
 
-		                _remote->deliver(std::move(packet));
+				_remote->deliver(std::move(packet));
 		*/
 
 		co_return {};
 	}
 
-	async::result<protocols::fs::RecvResult> recvMsg(
-	  Process *process,
-	  uint32_t flags,
-	  void *data,
-	  size_t max_length,
-	  void *addr_ptr,
-	  size_t max_addr_length,
-	  size_t max_ctrl_length
-	) override {
+	async::result<protocols::fs::RecvResult>
+	recvMsg(Process *process,
+		uint32_t flags,
+		void *data,
+		size_t max_length,
+		void *addr_ptr,
+		size_t max_addr_length,
+		size_t max_ctrl_length) override {
 		using namespace protocols::fs;
 		if (logSockets)
 			std::cout << "posix: Recv from socket \e[1;34m" << structName() << "\e[0m"
-			          << std::endl;
+				  << std::endl;
 		assert(!flags);
 		// assert(!(flags & ~(MSG_DONTWAIT | MSG_CMSG_CLOEXEC)));
 		assert(max_addr_length >= sizeof(struct sockaddr_nl));
@@ -170,15 +169,14 @@ public:
 		co_return RecvResult {RecvData {size, sizeof(struct sockaddr_nl), ctrl.buffer()}};
 	}
 
-	async::result<frg::expected<protocols::fs::Error, size_t>> sendMsg(
-	  Process *process,
-	  uint32_t flags,
-	  const void *data,
-	  size_t max_length,
-	  const void *addr_ptr,
-	  size_t addr_length,
-	  std::vector<smarter::shared_ptr<File, FileHandle>> files
-	) override;
+	async::result<frg::expected<protocols::fs::Error, size_t>>
+	sendMsg(Process *process,
+		uint32_t flags,
+		const void *data,
+		size_t max_length,
+		const void *addr_ptr,
+		size_t addr_length,
+		std::vector<smarter::shared_ptr<File, FileHandle>> files) override;
 
 	async::result<void> setOption(int option, int value) override {
 		assert(option == SO_PASSCRED);
@@ -188,7 +186,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t past_seq, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		(void) mask;  // TODO: utilize mask.
 		if (_isClosed)
 			co_return Error::fileClosed;
@@ -230,7 +228,7 @@ public:
 	async::result<void> setFileFlags(int flags) override {
 		if (flags & ~O_NONBLOCK) {
 			std::cout << "posix: setFileFlags on netlink socket \e[1;34m"
-			          << structName() << "\e[0m called with unknown flags" << std::endl;
+				  << structName() << "\e[0m called with unknown flags" << std::endl;
 			co_return;
 		}
 		if (flags & O_NONBLOCK)
@@ -289,17 +287,17 @@ private:
 // ----------------------------------------------------------------------------
 
 async::result<frg::expected<protocols::fs::Error, size_t>> OpenFile::sendMsg(
-  Process *process,
-  uint32_t flags,
-  const void *data,
-  size_t max_length,
-  const void *addr_ptr,
-  size_t addr_length,
-  std::vector<smarter::shared_ptr<File, FileHandle>> files
+	Process *process,
+	uint32_t flags,
+	const void *data,
+	size_t max_length,
+	const void *addr_ptr,
+	size_t addr_length,
+	std::vector<smarter::shared_ptr<File, FileHandle>> files
 ) {
 	if (logSockets)
 		std::cout << "posix: Send to socket \e[1;34m" << structName() << "\e[0m"
-		          << std::endl;
+			  << std::endl;
 	assert(!flags);
 	assert(addr_length == sizeof(struct sockaddr_nl));
 	assert(files.empty());
@@ -361,7 +359,7 @@ OpenFile::bind(Process *, const void *addr_ptr, size_t addr_length) {
 			if (!(sa.nl_groups & (1 << i)))
 				continue;
 			std::cout << "posix: Join netlink group " << _protocol << "." << (i + 1)
-			          << std::endl;
+				  << std::endl;
 
 			auto it = globalGroupMap.find({_protocol, i + 1});
 			assert(it != globalGroupMap.end());

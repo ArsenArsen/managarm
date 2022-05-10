@@ -41,12 +41,12 @@ struct Psci {
 		register uint64_t regAddr asm("x2") = addr;
 		if (usesHvc_) {
 			asm volatile("hvc #0"
-			             : "=r"(regResult)
-			             : "r"(regCmd), "r"(regCpu), "r"(regAddr));
+				     : "=r"(regResult)
+				     : "r"(regCmd), "r"(regCpu), "r"(regAddr));
 		} else {
 			asm volatile("smc #0"
-			             : "=r"(regResult)
-			             : "r"(regCmd), "r"(regCpu), "r"(regAddr));
+				     : "=r"(regResult)
+				     : "r"(regCmd), "r"(regCpu), "r"(regAddr));
 		}
 
 		return regResult;
@@ -121,26 +121,31 @@ bool bootSecondary(DeviceTreeNode *node) {
 	auto codeVirtPtr = KernelVirtualMemory::global().allocate(kPageSize);
 
 	KernelPageSpace::global().mapSingle4k(
-	  VirtualAddr(codeVirtPtr),
-	  codePhysPtr,
-	  page_access::write,
-	  CachingMode::uncached
+		VirtualAddr(codeVirtPtr),
+		codePhysPtr,
+		page_access::write,
+		CachingMode::uncached
 	);
 
 	// We use a ClientPageSpace here to create an identity mapping for the trampoline
 	ClientPageSpace lowMapping;
-	lowMapping
-	  .mapSingle4k(codePhysPtr, codePhysPtr, false, page_access::execute, CachingMode::null);
+	lowMapping.mapSingle4k(
+		codePhysPtr,
+		codePhysPtr,
+		false,
+		page_access::execute,
+		CachingMode::null
+	);
 
 	auto imageSize = (uintptr_t) _binary_kernel_thor_arch_arm_trampoline_bin_end
-	               - (uintptr_t) _binary_kernel_thor_arch_arm_trampoline_bin_start;
+		       - (uintptr_t) _binary_kernel_thor_arch_arm_trampoline_bin_start;
 	assert(imageSize <= kPageSize);
 
 	memcpy(codeVirtPtr, _binary_kernel_thor_arch_arm_trampoline_bin_start, imageSize);
 
 	// Setup a status block to communicate information to the AP.
 	auto statusBlock = reinterpret_cast<StatusBlock *>(
-	  reinterpret_cast<char *>(codeVirtPtr) + (kPageSize - sizeof(StatusBlock))
+		reinterpret_cast<char *>(codeVirtPtr) + (kPageSize - sizeof(StatusBlock))
 	);
 
 	statusBlock->self = statusBlock;
@@ -168,10 +173,10 @@ bool bootSecondary(DeviceTreeNode *node) {
 		auto virtPtr = KernelVirtualMemory::global().allocate(kPageSize);
 
 		KernelPageSpace::global().mapSingle4k(
-		  VirtualAddr(virtPtr),
-		  page,
-		  page_access::write,
-		  CachingMode::uncached
+			VirtualAddr(virtPtr),
+			page,
+			page_access::write,
+			CachingMode::uncached
 		);
 
 		auto space = arch::mem_space {virtPtr};
@@ -197,18 +202,18 @@ bool bootSecondary(DeviceTreeNode *node) {
 		int res = psci_->turnOnCpu(id, codePhysPtr);
 		if (res < 0) {
 			constexpr const char *errors[] = {
-			  "Success",
-			  "Not supported",
-			  "Invalid parameters",
-			  "Denied",
-			  "Already on",
-			  "On pending",
-			  "Internal failure",
-			  "Not present",
-			  "Disabled",
-			  "Invalid address"};
+				"Success",
+				"Not supported",
+				"Invalid parameters",
+				"Denied",
+				"Already on",
+				"On pending",
+				"Internal failure",
+				"Not present",
+				"Disabled",
+				"Invalid address"};
 			infoLogger()
-			  << "thor: Booting AP failed with " << errors[-res] << frg::endlog;
+				<< "thor: Booting AP failed with " << errors[-res] << frg::endlog;
 			dontWait = true;
 		}
 
@@ -228,7 +233,7 @@ bool bootSecondary(DeviceTreeNode *node) {
 	KernelPageSpace::global().unmapSingle4k(VirtualAddr(codeVirtPtr));
 	KernelVirtualMemory::global().deallocate(codeVirtPtr, kPageSize);
 	KernelFiber::asyncBlockCurrent(
-	  KernelPageSpace::global().shootdown(VirtualAddr(codeVirtPtr), kPageSize)
+		KernelPageSpace::global().shootdown(VirtualAddr(codeVirtPtr), kPageSize)
 	);
 	physicalAllocator->free(codePhysPtr, kPageSize);
 
@@ -240,25 +245,26 @@ bool bootSecondary(DeviceTreeNode *node) {
 }
 
 static initgraph::Task initAPs {
-  &globalInitEngine,
-  "arm.init-aps",
-  initgraph::Requires {getDeviceTreeParsedStage(), getTaskingAvailableStage()},
-  [] {
-	  getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
-		  if (node->isCompatible<1>({"arm,psci"})) {
-			  psci_.initialize(node);
-			  return true;
-		  }
+	&globalInitEngine,
+	"arm.init-aps",
+	initgraph::Requires {getDeviceTreeParsedStage(), getTaskingAvailableStage()},
+	[] {
+		getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
+			if (node->isCompatible<1>({"arm,psci"})) {
+				psci_.initialize(node);
+				return true;
+			}
 
-		  return false;
-	  });
+			return false;
+		});
 
-	  getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
-		  if (node->isCompatible<3>({"arm,cortex-a72", "arm,cortex-a53", "arm,arm-v8"})) {
-			  bootSecondary(node);
-		  }
+		getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
+			if (node->isCompatible<3>({"arm,cortex-a72", "arm,cortex-a53", "arm,arm-v8"}
+			    )) {
+				bootSecondary(node);
+			}
 
-		  return false;
-	  });
-  }};
+			return false;
+		});
+	}};
 }  // namespace thor

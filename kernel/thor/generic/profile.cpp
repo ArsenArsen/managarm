@@ -16,22 +16,22 @@ namespace {
 frg::manual_box<LogRingBuffer> globalProfileRing;
 
 initgraph::Task initProfilingSinks {
-  &globalInitEngine,
-  "generic.init-profiling-sinks",
-  initgraph::Requires {getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
-  [] {
-	  if (!wantKernelProfile)
-		  return;
+	&globalInitEngine,
+	"generic.init-profiling-sinks",
+	initgraph::Requires {getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
+	[] {
+		if (!wantKernelProfile)
+			return;
 
-	  auto channel = solicitIoChannel("kernel-profile");
-	  if (channel) {
-		  infoLogger() << "thor: Connecting profiling to I/O channel" << frg::endlog;
-		  async::detach_with_allocator(
-		    *kernelAlloc,
-		    dumpRingToChannel(globalProfileRing.get(), std::move(channel), 2048)
-		  );
-	  }
-  }};
+		auto channel = solicitIoChannel("kernel-profile");
+		if (channel) {
+			infoLogger() << "thor: Connecting profiling to I/O channel" << frg::endlog;
+			async::detach_with_allocator(
+				*kernelAlloc,
+				dumpRingToChannel(globalProfileRing.get(), std::move(channel), 2048)
+			);
+		}
+	}};
 }  // namespace
 
 void initializeProfile() {
@@ -42,10 +42,10 @@ void initializeProfile() {
 	if (!(getGlobalCpuFeatures()->profileFlags & CpuFeatures::profileIntelSupported)
 	    && !(getGlobalCpuFeatures()->profileFlags & CpuFeatures::profileAmdSupported)) {
 		infoLogger() << "\e[31m"
-		                "thor: Kernel profiling was requested but"
-		                " no hardware support is available"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: Kernel profiling was requested but"
+				" no hardware support is available"
+				"\e[39m"
+			     << frg::endlog;
 		return;
 	}
 
@@ -56,22 +56,21 @@ void initializeProfile() {
 	// TODO: Start one such fiber per CPU.
 	KernelFiber::run([=] {
 		getCpuData()->localProfileRing =
-		  frg::construct<SingleContextRecordRing>(*kernelAlloc);
+			frg::construct<SingleContextRecordRing>(*kernelAlloc);
 
 		if (getGlobalCpuFeatures()->profileFlags & CpuFeatures::profileIntelSupported) {
 			initializeIntelPmc();
 			getCpuData()->profileMechanism.store(
-			  ProfileMechanism::intelPmc,
-			  std::memory_order_release
+				ProfileMechanism::intelPmc,
+				std::memory_order_release
 			);
 			setIntelPmc();
 		} else {
-			assert(
-			  getGlobalCpuFeatures()->profileFlags & CpuFeatures::profileAmdSupported
-			);
+			assert(getGlobalCpuFeatures()->profileFlags
+			       & CpuFeatures::profileAmdSupported);
 			getCpuData()->profileMechanism.store(
-			  ProfileMechanism::amdPmc,
-			  std::memory_order_release
+				ProfileMechanism::amdPmc,
+				std::memory_order_release
 			);
 			setAmdPmc();
 		}
@@ -80,11 +79,11 @@ void initializeProfile() {
 		while (true) {
 			char buffer[128];
 			auto [success, recordPtr, newPtr, size] =
-			  getCpuData()->localProfileRing->dequeueAt(deqPtr, buffer, 128);
+				getCpuData()->localProfileRing->dequeueAt(deqPtr, buffer, 128);
 			deqPtr = newPtr;
 			if (!success) {
 				KernelFiber::asyncBlockCurrent(
-				  generalTimerEngine()->sleepFor(1'000'000)
+					generalTimerEngine()->sleepFor(1'000'000)
 				);
 				continue;
 			}

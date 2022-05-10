@@ -257,12 +257,12 @@ bool Stream::decrementPeers(Stream *stream, int lane) {
 	std::atomic_thread_fence(std::memory_order_acquire);
 
 	frg::intrusive_list<
-	  StreamNode,
-	  frg::locate_member<
-	    StreamNode,
-	    frg::default_list_hook<StreamNode>,
-	    &StreamNode::processQueueItem>>
-	  pending;
+		StreamNode,
+		frg::locate_member<
+			StreamNode,
+			frg::default_list_hook<StreamNode>,
+			&StreamNode::processQueueItem>>
+		pending;
 
 	{
 		auto irq_lock = frg::guard(&irqMutex());
@@ -293,12 +293,12 @@ Stream::~Stream() {
 
 void Stream::shutdownLane(int lane) {
 	frg::intrusive_list<
-	  StreamNode,
-	  frg::locate_member<
-	    StreamNode,
-	    frg::default_list_hook<StreamNode>,
-	    &StreamNode::processQueueItem>>
-	  pendingOnThisLane, pendingOnOtherLane;
+		StreamNode,
+		frg::locate_member<
+			StreamNode,
+			frg::default_list_hook<StreamNode>,
+			&StreamNode::processQueueItem>>
+		pendingOnThisLane, pendingOnOtherLane;
 
 	{
 		auto irq_lock = frg::guard(&irqMutex());

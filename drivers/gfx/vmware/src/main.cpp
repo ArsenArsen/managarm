@@ -41,11 +41,11 @@ void GfxDevice::writeRegister(register_index reg, uint32_t val) {
 }
 
 GfxDevice::GfxDevice(
-  protocols::hw::Device hw_dev,
-  helix::Mapping fb_mapping,
-  helix::Mapping fifo_mapping,
-  helix::UniqueDescriptor io_bar,
-  uint16_t io_base
+	protocols::hw::Device hw_dev,
+	helix::Mapping fb_mapping,
+	helix::Mapping fifo_mapping,
+	helix::UniqueDescriptor io_bar,
+	uint16_t io_base
 )
 : _hwDev(std::move(hw_dev))
 , _fifo {this, std::move(fifo_mapping)}
@@ -74,7 +74,7 @@ async::detached GfxDevice::initialize() {
 	assert(_deviceVersion >= versions::id_0 && "failed to negotiate version with device");
 
 	_deviceCaps =
-	  _deviceVersion >= versions::id_1 ? readRegister(register_index::capabilities) : 0;
+		_deviceVersion >= versions::id_1 ? readRegister(register_index::capabilities) : 0;
 
 	// configure fifo
 	_fifo.initialize();
@@ -113,7 +113,7 @@ async::detached GfxDevice::initialize() {
 		_cursorPlane->setupState(_cursorPlane);
 
 		assignments.push_back(
-		  drm_core::Assignment::withInt(_cursorPlane, planeTypeProperty(), 2)
+			drm_core::Assignment::withInt(_cursorPlane, planeTypeProperty(), 2)
 		);
 	}
 
@@ -131,10 +131,10 @@ async::detached GfxDevice::initialize() {
 	}
 
 	assignments.push_back(
-	  drm_core::Assignment::withModeObj(_connector, crtcIdProperty(), nullptr)
+		drm_core::Assignment::withModeObj(_connector, crtcIdProperty(), nullptr)
 	);
 	assignments.push_back(
-	  drm_core::Assignment::withModeObj(_primaryPlane, crtcIdProperty(), _crtc)
+		drm_core::Assignment::withModeObj(_primaryPlane, crtcIdProperty(), _crtc)
 	);
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, crtcWProperty(), 0));
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, crtcHProperty(), 0));
@@ -145,7 +145,7 @@ async::detached GfxDevice::initialize() {
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, crtcXProperty(), 0));
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, crtcYProperty(), 0));
 	assignments.push_back(
-	  drm_core::Assignment::withModeObj(_primaryPlane, fbIdProperty(), nullptr)
+		drm_core::Assignment::withModeObj(_primaryPlane, fbIdProperty(), nullptr)
 	);
 
 	_encoder->setCurrentCrtc(_crtc.get());
@@ -160,10 +160,10 @@ async::detached GfxDevice::initialize() {
 		_cursorPlane->setupPossibleCrtcs({_crtc.get()});
 
 		assignments.push_back(
-		  drm_core::Assignment::withModeObj(_cursorPlane, crtcIdProperty(), _crtc)
+			drm_core::Assignment::withModeObj(_cursorPlane, crtcIdProperty(), _crtc)
 		);
 		assignments.push_back(
-		  drm_core::Assignment::withModeObj(_cursorPlane, fbIdProperty(), nullptr)
+			drm_core::Assignment::withModeObj(_cursorPlane, fbIdProperty(), nullptr)
 		);
 	}
 
@@ -194,11 +194,11 @@ async::detached GfxDevice::initialize() {
 }
 
 std::shared_ptr<drm_core::FrameBuffer> GfxDevice::createFrameBuffer(
-  std::shared_ptr<drm_core::BufferObject> base_bo,
-  uint32_t w,
-  uint32_t,
-  uint32_t,
-  uint32_t
+	std::shared_ptr<drm_core::BufferObject> base_bo,
+	uint32_t w,
+	uint32_t,
+	uint32_t,
+	uint32_t
 ) {
 	auto bo = std::static_pointer_cast<GfxDevice::BufferObject>(base_bo);
 
@@ -227,8 +227,11 @@ GfxDevice::createDumb(uint32_t w, uint32_t h, uint32_t bpp) {
 	HelHandle handle;
 	HEL_CHECK(helAllocateMemory(size, 0, nullptr, &handle));
 
-	auto bo =
-	  std::make_shared<GfxDevice::BufferObject>(this, size, helix::UniqueDescriptor(handle));
+	auto bo = std::make_shared<GfxDevice::BufferObject>(
+		this,
+		size,
+		helix::UniqueDescriptor(handle)
+	);
 
 	auto mapping = installMapping(bo.get());
 	bo->setupMapping(mapping);
@@ -256,16 +259,18 @@ async::result<void> GfxDevice::waitIrq(uint32_t irq_mask) {
 
 			uint32_t irq_flags = _operational.load(ports::irq_status_port);
 			if (!(irq_flags & irq_mask)) {
-				HEL_CHECK(
-				  helAcknowledgeIrq(irq.getHandle(), kHelAckNack, irq_sequence)
-				);
+				HEL_CHECK(helAcknowledgeIrq(
+					irq.getHandle(),
+					kHelAckNack,
+					irq_sequence
+				));
 				continue;
 			}
 
 			_operational.store(ports::irq_status_port, irq_flags);
 
 			HEL_CHECK(
-			  helAcknowledgeIrq(irq.getHandle(), kHelAckAcknowledge, irq_sequence)
+				helAcknowledgeIrq(irq.getHandle(), kHelAckAcknowledge, irq_sequence)
 			);
 			break;
 		}
@@ -424,7 +429,7 @@ GfxDevice::DeviceFifo::defineCursor(int width, int height, GfxDevice::BufferObje
 
 	// size in dwords
 	size_t size = sizeof(commands::define_cursor) / 4 + 1 + SVGA_BITMAP_SIZE(width, height)
-	            + SVGA_PIXMAP_SIZE(width, height, 32);
+		    + SVGA_PIXMAP_SIZE(width, height, 32);
 
 	auto ptr = static_cast<uint32_t *>(co_await reserve(size));
 
@@ -445,11 +450,9 @@ GfxDevice::DeviceFifo::defineCursor(int width, int height, GfxDevice::BufferObje
 		auto pixels = static_cast<uint32_t *>(bitmap.get());
 		auto mask = reinterpret_cast<uint8_t *>(cmd->pixel_data);
 
-		memset(
-		  cmd->pixel_data,
-		  0x00,
-		  (SVGA_BITMAP_SIZE(width, height) + SVGA_PIXMAP_SIZE(width, height, 32)) * 4
-		);
+		memset(cmd->pixel_data,
+		       0x00,
+		       (SVGA_BITMAP_SIZE(width, height) + SVGA_PIXMAP_SIZE(width, height, 32)) * 4);
 
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++) {
@@ -460,11 +463,9 @@ GfxDevice::DeviceFifo::defineCursor(int width, int height, GfxDevice::BufferObje
 			}
 		}
 
-		memcpy(
-		  cmd->pixel_data + SVGA_BITMAP_SIZE(width, height) * 4,
-		  pixels,
-		  width * height * 4
-		);
+		memcpy(cmd->pixel_data + SVGA_BITMAP_SIZE(width, height) * 4,
+		       pixels,
+		       width * height * 4);
 	}
 	commitAll();
 }
@@ -517,18 +518,16 @@ async::result<void> GfxDevice::DeviceFifo::updateRectangle(int x, int y, int w, 
 // ----------------------------------------------------------------
 
 bool GfxDevice::Configuration::capture(
-  std::vector<drm_core::Assignment> assignment,
-  std::unique_ptr<drm_core::AtomicState> &state
+	std::vector<drm_core::Assignment> assignment,
+	std::unique_ptr<drm_core::AtomicState> &state
 ) {
 	drm_mode_modeinfo current_mode;
 	memset(&current_mode, 0, sizeof(drm_mode_modeinfo));
 
 	if (_device->_crtc->drmState()->mode != nullptr) {
-		memcpy(
-		  &current_mode,
-		  _device->_crtc->drmState()->mode->data(),
-		  sizeof(drm_mode_modeinfo)
-		);
+		memcpy(&current_mode,
+		       _device->_crtc->drmState()->mode->data(),
+		       sizeof(drm_mode_modeinfo));
 	}
 
 	auto primary_plane_state = state->plane(_device->_primaryPlane->id());
@@ -540,31 +539,36 @@ bool GfxDevice::Configuration::capture(
 
 		switch (assign.property->id()) {
 		case srcW: {
-			if (assign.object == _device->_cursorPlane && _device->hasCapability(caps::cursor)) {
+			if (assign.object == _device->_cursorPlane
+			    && _device->hasCapability(caps::cursor)) {
 				_cursorUpdate = true;
 			}
 			break;
 		}
 		case srcH: {
-			if (assign.object == _device->_cursorPlane && _device->hasCapability(caps::cursor)) {
+			if (assign.object == _device->_cursorPlane
+			    && _device->hasCapability(caps::cursor)) {
 				_cursorUpdate = true;
 			}
 			break;
 		}
 		case crtcX: {
-			if (assign.object == _device->_cursorPlane && _device->hasCapability(caps::cursor)) {
+			if (assign.object == _device->_cursorPlane
+			    && _device->hasCapability(caps::cursor)) {
 				_cursorMove = true;
 			}
 			break;
 		}
 		case crtcY: {
-			if (assign.object == _device->_cursorPlane && _device->hasCapability(caps::cursor)) {
+			if (assign.object == _device->_cursorPlane
+			    && _device->hasCapability(caps::cursor)) {
 				_cursorMove = true;
 			}
 			break;
 		}
 		case fbId: {
-			if (assign.objectValue && assign.object == _device->_cursorPlane && _device->hasCapability(caps::cursor)) {
+			if (assign.objectValue && assign.object == _device->_cursorPlane
+			    && _device->hasCapability(caps::cursor)) {
 				_cursorUpdate = true;
 			}
 			break;
@@ -572,11 +576,9 @@ bool GfxDevice::Configuration::capture(
 		case modeId: {
 			if (assign.blobValue) {
 				drm_mode_modeinfo new_mode;
-				memcpy(
-				  &new_mode,
-				  assign.blobValue->data(),
-				  sizeof(drm_mode_modeinfo)
-				);
+				memcpy(&new_mode,
+				       assign.blobValue->data(),
+				       sizeof(drm_mode_modeinfo));
 				primary_plane_state->src_w = new_mode.hdisplay;
 				primary_plane_state->src_h = new_mode.vdisplay;
 			}
@@ -620,14 +622,12 @@ GfxDevice::Configuration::commitConfiguration(std::unique_ptr<drm_core::AtomicSt
 	drm_mode_modeinfo last_mode;
 	memset(&last_mode, 0, sizeof(drm_mode_modeinfo));
 	if (_device->_crtc->drmState()->mode != nullptr)
-		memcpy(
-		  &last_mode,
-		  _device->_crtc->drmState()->mode->data(),
-		  sizeof(drm_mode_modeinfo)
-		);
+		memcpy(&last_mode,
+		       _device->_crtc->drmState()->mode->data(),
+		       sizeof(drm_mode_modeinfo));
 
 	auto switch_mode = last_mode.hdisplay != primary_plane_state->src_w
-	                || last_mode.vdisplay != primary_plane_state->src_h;
+			|| last_mode.vdisplay != primary_plane_state->src_h;
 
 	_device->_primaryPlane->setCurrentFrameBuffer(primary_plane_state->fb.get());
 
@@ -640,8 +640,8 @@ GfxDevice::Configuration::commitConfiguration(std::unique_ptr<drm_core::AtomicSt
 
 		if (switch_mode) {
 			_device->writeRegister(
-			  register_index::enable,
-			  0
+				register_index::enable,
+				0
 			);  // prevent weird inbetween modes
 			_device->writeRegister(register_index::width, primary_plane_state->src_w);
 			_device->writeRegister(register_index::height, primary_plane_state->src_h);
@@ -654,11 +654,11 @@ GfxDevice::Configuration::commitConfiguration(std::unique_ptr<drm_core::AtomicSt
 		if (cursor_plane_state->src_w != 0 && cursor_plane_state->src_h != 0) {
 			_device->_fifo.setCursorState(true);
 			auto cursor_fb =
-			  static_pointer_cast<GfxDevice::FrameBuffer>(cursor_plane_state->fb);
+				static_pointer_cast<GfxDevice::FrameBuffer>(cursor_plane_state->fb);
 			co_await _device->_fifo.defineCursor(
-			  cursor_plane_state->src_w,
-			  cursor_plane_state->src_h,
-			  cursor_fb->getBufferObject()
+				cursor_plane_state->src_w,
+				cursor_plane_state->src_h,
+				cursor_fb->getBufferObject()
 			);
 			_device->_fifo.setCursorState(true);
 		} else {
@@ -673,13 +673,13 @@ GfxDevice::Configuration::commitConfiguration(std::unique_ptr<drm_core::AtomicSt
 	if (primary_plane_state->fb != nullptr) {
 		auto fb = static_pointer_cast<GfxDevice::FrameBuffer>(primary_plane_state->fb);
 		helix::Mapping user_fb {
-		  fb->getBufferObject()->getMemory().first,
-		  0,
-		  fb->getBufferObject()->getSize()};
+			fb->getBufferObject()->getMemory().first,
+			0,
+			fb->getBufferObject()->getSize()};
 		drm_core::fastCopy16(
-		  _device->_fbMapping.get(),
-		  user_fb.get(),
-		  fb->getBufferObject()->getSize()
+			_device->_fbMapping.get(),
+			user_fb.get(),
+			fb->getBufferObject()->getSize()
 		);
 		int w = _device->readRegister(register_index::width),
 		    h = _device->readRegister(register_index::height);
@@ -725,9 +725,9 @@ drm_core::Plane *GfxDevice::Crtc::Crtc::cursorPlane() {
 // ----------------------------------------------------------------
 
 GfxDevice::FrameBuffer::FrameBuffer(
-  GfxDevice *dev,
-  std::shared_ptr<GfxDevice::BufferObject> bo,
-  uint32_t pixel_pitch
+	GfxDevice *dev,
+	std::shared_ptr<GfxDevice::BufferObject> bo,
+	uint32_t pixel_pitch
 )
 : drm_core::FrameBuffer {dev->allocator.allocate()} {
 	_bo = bo;
@@ -794,11 +794,11 @@ async::result<void> setupDevice(mbus::Entity entity) {
 	auto fifo_bar_info = info.barInfo[2];
 
 	auto gfx_device = std::make_shared<GfxDevice>(
-	  std::move(pci_device),
-	  helix::Mapping {fb_bar, 0, fb_bar_info.length},
-	  helix::Mapping {fifo_bar, 0, fifo_bar_info.length},
-	  std::move(io_bar),
-	  io_bar_info.address
+		std::move(pci_device),
+		helix::Mapping {fb_bar, 0, fb_bar_info.length},
+		helix::Mapping {fifo_bar, 0, fifo_bar_info.length},
+		std::move(io_bar),
+		io_bar_info.address
 	);
 
 	gfx_device->initialize();
@@ -806,18 +806,18 @@ async::result<void> setupDevice(mbus::Entity entity) {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	mbus::Properties descriptor {
-	  {"drvcore.mbus-parent", mbus::StringItem {std::to_string(entity.getId())}},
-	  {"unix.subsystem", mbus::StringItem {"drm"}},
-	  {"unix.devname", mbus::StringItem {"dri/card0"}}};
+		{"drvcore.mbus-parent", mbus::StringItem {std::to_string(entity.getId())}},
+		{"unix.subsystem", mbus::StringItem {"drm"}},
+		{"unix.devname", mbus::StringItem {"dri/card0"}}};
 
 	auto handler =
-	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		  helix::UniqueLane local_lane, remote_lane;
-		  std::tie(local_lane, remote_lane) = helix::createStream();
-		  drm_core::serveDrmDevice(gfx_device, std::move(local_lane));
+		mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+			helix::UniqueLane local_lane, remote_lane;
+			std::tie(local_lane, remote_lane) = helix::createStream();
+			drm_core::serveDrmDevice(gfx_device, std::move(local_lane));
 
-		  co_return std::move(remote_lane);
-	  });
+			co_return std::move(remote_lane);
+		});
 	co_await root.createObject("gfx_vmware", descriptor, std::move(handler));
 }
 

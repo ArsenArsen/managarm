@@ -74,8 +74,8 @@ Error EptSpace::map(uint64_t guestAddress, uint64_t hostAddress, int flags) {
 	}
 
 	auto alloc = hostAddress >> 12;
-	size_t entry =
-	  (alloc << EPT_PHYSADDR) | pageFlags | (6 << EPT_MEMORY_TYPE) | (1 << EPT_IGNORE_PAT);
+	size_t entry = (alloc << EPT_PHYSADDR) | pageFlags | (6 << EPT_MEMORY_TYPE)
+		     | (1 << EPT_IGNORE_PAT);
 	pte[pteIdx] = entry | flags;
 
 	return Error::success;
@@ -265,35 +265,37 @@ EptSpace::~EptSpace() {
 					for (int k = 0; k < 512; k++) {
 						if (pde[k] & (1 << EPT_READ)) {
 							PageAccessor ptAccessor {
-							  (pde[k] >> EPT_PHYSADDR) << 12};
+								(pde[k] >> EPT_PHYSADDR) << 12};
 							auto pte = reinterpret_cast<size_t *>(
-							  ptAccessor.get()
+								ptAccessor.get()
 							);
 							for (int l = 0; l < 512; l++) {
 								if (pte[l] & (1 << EPT_READ)) {
 									physicalAllocator->free(
-									  (size_t) ((
-									    pte[l] >> EPT_PHYSADDR
-									  )) << 12,
-									  kPageSize
+										(size_t
+										) ((pte[l]
+										    >> EPT_PHYSADDR)
+										) << 12,
+										kPageSize
 									);
 								}
 							}
 							physicalAllocator->free(
-							  (size_t) (pde[k] >> EPT_PHYSADDR) << 12,
-							  kPageSize
+								(size_t) (pde[k] >> EPT_PHYSADDR)
+									<< 12,
+								kPageSize
 							);
 						}
 					}
 					physicalAllocator->free(
-					  (size_t) (pdpte[j] >> EPT_PHYSADDR) << 12,
-					  kPageSize
+						(size_t) (pdpte[j] >> EPT_PHYSADDR) << 12,
+						kPageSize
 					);
 				}
 			}
 			physicalAllocator->free(
-			  (size_t) (pml4e[i] >> EPT_PHYSADDR) << 12,
-			  kPageSize
+				(size_t) (pml4e[i] >> EPT_PHYSADDR) << 12,
+				kPageSize
 			);
 		}
 	}

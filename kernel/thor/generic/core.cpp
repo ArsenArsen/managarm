@@ -53,10 +53,10 @@ KernelVirtualMemory::KernelVirtualMemory() {
 		PhysicalAddr physical = physicalAllocator->allocate(0x1000);
 		assert(physical != static_cast<PhysicalAddr>(-1) && "OOM");
 		KernelPageSpace::global().mapSingle4k(
-		  vmBase + availableSize + pg,
-		  physical,
-		  page_access::write,
-		  CachingMode::null
+			vmBase + availableSize + pg,
+			physical,
+			page_access::write,
+			CachingMode::null
 		);
 	}
 	auto tablePtr = reinterpret_cast<int8_t *>(vmBase + availableSize);
@@ -77,30 +77,30 @@ void *KernelVirtualMemory::allocate(size_t length) {
 
 	if (order > buddy_.tableOrder())
 		panicLogger() << "\e[31m"
-		                 "thor: Kernel virtual memory allocation is too large"
-		                 " to be satisfied (order "
-		              << order << " while buddy order is " << buddy_.tableOrder()
-		              << ")"
-		                 "\e[39m"
-		              << frg::endlog;
+				 "thor: Kernel virtual memory allocation is too large"
+				 " to be satisfied (order "
+			      << order << " while buddy order is " << buddy_.tableOrder()
+			      << ")"
+				 "\e[39m"
+			      << frg::endlog;
 
 	auto address = buddy_.allocate(order, 64);
 	if (address == BuddyAccessor::illegalAddress) {
 		infoLogger() << "thor: Failed to allocate 0x" << frg::hex_fmt(length)
-		             << " bytes of kernel virtual memory" << frg::endlog;
+			     << " bytes of kernel virtual memory" << frg::endlog;
 		infoLogger() << "thor:"
-		                " Physical usage: "
-		             << (physicalAllocator->numUsedPages() * 4)
-		             << " KiB,"
-		                " kernel VM: "
-		             << (kernelVirtualUsage / 1024)
-		             << " KiB"
-		                " kernel RSS: "
-		             << (kernelMemoryUsage / 1024) << " KiB" << frg::endlog;
+				" Physical usage: "
+			     << (physicalAllocator->numUsedPages() * 4)
+			     << " KiB,"
+				" kernel VM: "
+			     << (kernelVirtualUsage / 1024)
+			     << " KiB"
+				" kernel RSS: "
+			     << (kernelMemoryUsage / 1024) << " KiB" << frg::endlog;
 		panicLogger() << "\e[31m"
-		                 "thor: Out of kernel virtual memory"
-		                 "\e[39m"
-		              << frg::endlog;
+				 "thor: Out of kernel virtual memory"
+				 "\e[39m"
+			      << frg::endlog;
 	}
 	kernelVirtualUsage += (size_t {1} << (kPageShift + order));
 
@@ -148,10 +148,10 @@ uintptr_t KernelVirtualAlloc::map(size_t length) {
 		PhysicalAddr physical = physicalAllocator->allocate(kPageSize);
 		assert(physical != static_cast<PhysicalAddr>(-1) && "OOM");
 		KernelPageSpace::global().mapSingle4k(
-		  VirtualAddr(p) + offset,
-		  physical,
-		  page_access::write,
-		  CachingMode::null
+			VirtualAddr(p) + offset,
+			physical,
+			page_access::write,
+			CachingMode::null
 		);
 	}
 	kernelMemoryUsage += length;
@@ -176,8 +176,8 @@ void KernelVirtualAlloc::unmap(uintptr_t address, size_t length) {
 	struct Closure final : ShootNode {
 		void complete() override {
 			KernelVirtualMemory::global().deallocate(
-			  reinterpret_cast<void *>(address),
-			  size
+				reinterpret_cast<void *>(address),
+				size
 			);
 			auto physical = thisPage;
 			Closure::~Closure();
@@ -207,23 +207,24 @@ frg::manual_box<LogRingBuffer> allocLog;
 
 namespace {
 initgraph::Task initAllocTraceSink {
-  &globalInitEngine,
-  "generic.init-alloc-trace-sink",
-  initgraph::Requires {getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
-  [] {
+	&globalInitEngine,
+	"generic.init-alloc-trace-sink",
+	initgraph::Requires {getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
+	[] {
 #ifndef KERNEL_LOG_ALLOCATIONS
-	  return;
+		return;
 #endif  // KERNEL_LOG_ALLOCATIONS
 
-	  auto channel = solicitIoChannel("kernel-alloc-trace");
-	  if (channel) {
-		  infoLogger() << "thor: Connecting alloc-trace to I/O channel" << frg::endlog;
-		  async::detach_with_allocator(
-		    *kernelAlloc,
-		    dumpRingToChannel(allocLog.get(), std::move(channel), 2048)
-		  );
-	  }
-  }};
+		auto channel = solicitIoChannel("kernel-alloc-trace");
+		if (channel) {
+			infoLogger()
+				<< "thor: Connecting alloc-trace to I/O channel" << frg::endlog;
+			async::detach_with_allocator(
+				*kernelAlloc,
+				dumpRingToChannel(allocLog.get(), std::move(channel), 2048)
+			);
+		}
+	}};
 }  // namespace
 
 void KernelVirtualAlloc::unpoison(void *pointer, size_t size) {

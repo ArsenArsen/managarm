@@ -24,13 +24,13 @@ struct IdleTask final : ScheduleEntity {
 
 	[[noreturn]] void invoke() override {
 		runOnStack(
-		  [](Continuation) {
-			  if (logIdle)
-				  infoLogger() << "System is idle" << frg::endlog;
-			  suspendSelf();
-			  __builtin_trap();
-		  },
-		  getCpuData()->idleStack.base()
+			[](Continuation) {
+				if (logIdle)
+					infoLogger() << "System is idle" << frg::endlog;
+				suspendSelf();
+				__builtin_trap();
+			},
+			getCpuData()->idleStack.base()
 		);
 		__builtin_trap();
 	}
@@ -39,12 +39,12 @@ struct IdleTask final : ScheduleEntity {
 		localScheduler()->update();
 		if (localScheduler()->maybeReschedule()) {
 			runOnStack(
-			  [](Continuation cont, IrqImageAccessor image) {
-				  scrubStack(image, cont);
-				  localScheduler()->commitReschedule();
-			  },
-			  getCpuData()->detachedStack.base(),
-			  image
+				[](Continuation cont, IrqImageAccessor image) {
+					scrubStack(image, cont);
+					localScheduler()->commitReschedule();
+				},
+				getCpuData()->detachedStack.base(),
+				image
 			);
 		} else {
 			localScheduler()->renewSchedule();
@@ -216,12 +216,12 @@ void Scheduler::update() {
 
 	// Finally, process all pending entities.
 	frg::intrusive_list<
-	  ScheduleEntity,
-	  frg::locate_member<
-	    ScheduleEntity,
-	    frg::default_list_hook<ScheduleEntity>,
-	    &ScheduleEntity::listHook>>
-	  pendingSnapshot;
+		ScheduleEntity,
+		frg::locate_member<
+			ScheduleEntity,
+			frg::default_list_hook<ScheduleEntity>,
+			&ScheduleEntity::listHook>>
+		pendingSnapshot;
 	{
 		auto irqLock = frg::guard(&irqMutex());
 		auto lock = frg::guard(&_mutex);
@@ -266,7 +266,7 @@ bool Scheduler::maybeReschedule() {
 
 		// Switch based on unfairness.
 		auto diff = _liveUnfairness(_current) + sliceGranularity * 256
-		          - _liveUnfairness(_waitQueue.top());
+			  - _liveUnfairness(_waitQueue.top());
 		return diff < 0;
 	};
 
@@ -350,16 +350,16 @@ void Scheduler::_schedule() {
 		//* 1000)
 		//				<< " ms" << frg::endlog;
 		infoLogger() << "Running entity with priority: " << entity->priority
-		             << ", unfairness: " << (_liveUnfairness(entity) / 256) / (1000 * 1000)
-		             << " ms, runtime: " << _liveRuntime(entity) / (1000 * 1000) << " ms ("
-		             << (_numWaiting + 1) << " active threads)" << frg::endlog;
+			     << ", unfairness: " << (_liveUnfairness(entity) / 256) / (1000 * 1000)
+			     << " ms, runtime: " << _liveRuntime(entity) / (1000 * 1000) << " ms ("
+			     << (_numWaiting + 1) << " active threads)" << frg::endlog;
 	}
 	if (logNextBest && !_waitQueue.empty())
 		infoLogger() << "    Next entity has priority: " << _waitQueue.top()->priority
-		             << ", unfairness: "
-		             << (_liveUnfairness(_waitQueue.top()) / 256) / (1000 * 1000)
-		             << " ms, runtime: " << _liveRuntime(_waitQueue.top()) / (1000 * 1000)
-		             << " ms" << frg::endlog;
+			     << ", unfairness: "
+			     << (_liveUnfairness(_waitQueue.top()) / 256) / (1000 * 1000)
+			     << " ms, runtime: " << _liveRuntime(_waitQueue.top()) / (1000 * 1000)
+			     << " ms" << frg::endlog;
 
 	_scheduled = entity;
 }
@@ -398,8 +398,8 @@ void Scheduler::_updateCurrentEntity() {
 	auto delta_progress = _systemProgress - _current->refProgress;
 	if (logUpdates)
 		infoLogger() << "Running thread unfairness decreases by: "
-		             << ((_numWaiting * delta_progress) / 256) / 1000 << " us ("
-		             << _numWaiting << " waiting threads)" << frg::endlog;
+			     << ((_numWaiting * delta_progress) / 256) / 1000 << " us ("
+			     << _numWaiting << " waiting threads)" << frg::endlog;
 	_current->baseUnfairness -= _numWaiting * delta_progress;
 	_current->refProgress = _systemProgress;
 }
@@ -411,8 +411,8 @@ void Scheduler::_updateWaitingEntity(ScheduleEntity *entity) {
 
 	if (logUpdates)
 		infoLogger() << "Waiting thread unfairness increases by: "
-		             << ((_systemProgress - entity->refProgress) / 256) / 1000 << " us ("
-		             << _numWaiting << " waiting threads)" << frg::endlog;
+			     << ((_systemProgress - entity->refProgress) / 256) / 1000 << " us ("
+			     << _numWaiting << " waiting threads)" << frg::endlog;
 	entity->baseUnfairness += _systemProgress - entity->refProgress;
 	entity->refProgress = _systemProgress;
 }

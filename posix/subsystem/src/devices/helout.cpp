@@ -23,7 +23,7 @@ private:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		(void) mask;
 
 		if (sequence > 1)
@@ -44,11 +44,10 @@ private:
 
 public:
 	HeloutFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-	: File {
-	  StructName::get("helout"),
-	  std::move(mount),
-	  std::move(link),
-	  File::defaultIsTerminal} {}
+	: File {StructName::get("helout"),
+		std::move(mount),
+		std::move(link),
+		File::defaultIsTerminal} {}
 };
 
 struct HeloutDevice final : UnixDevice {
@@ -58,17 +57,16 @@ struct HeloutDevice final : UnixDevice {
 
 	std::string nodePath() override { return "helout"; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  SemanticFlags semantic_flags
-	) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
+	open(std::shared_ptr<MountView> mount,
+	     std::shared_ptr<FsLink> link,
+	     SemanticFlags semantic_flags) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
-			          << std::bitset<32>(semantic_flags)
-			          << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
-			             "allowed.\e[39m"
-			          << std::endl;
+				  << std::bitset<32>(semantic_flags)
+				  << "\nOnly semanticRead (0x2) and semanticWrite(0x4) are "
+				     "allowed.\e[39m"
+				  << std::endl;
 			co_return Error::illegalArguments;
 		}
 

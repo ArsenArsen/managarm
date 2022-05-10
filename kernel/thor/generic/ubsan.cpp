@@ -68,7 +68,7 @@ struct invalid_builtin_data {
 
 void log_location(struct source_location loc) {
 	thor::infoLogger() << "thor: UBSAN failure at " << loc.filename << ":" << loc.line
-	                   << frg::endlog;
+			   << frg::endlog;
 }
 }  // namespace
 
@@ -115,7 +115,7 @@ extern "C" void __ubsan_handle_negate_overflow(struct overflow_data *data, uintp
 extern "C" void
 __ubsan_handle_pointer_overflow(struct overflow_data *data, uintptr_t base, uintptr_t result) {
 	thor::infoLogger() << "thor: UBSAN failure, pointer overflow"
-	                   << " from " << (void *) base << " to " << (void *) result << frg::endlog;
+			   << " from " << (void *) base << " to " << (void *) result << frg::endlog;
 	log_location(data->loc);
 	if (thor::ubsanAbort.load(std::memory_order_relaxed))
 		thor::panic();
@@ -148,10 +148,10 @@ extern "C" void __ubsan_handle_type_mismatch_v1(struct type_mismatch_data_v1 *da
 		thor::infoLogger() << "thor: UBSAN failure, null pointer access" << frg::endlog;
 	} else if (ptr & ((1 << data->log_alignment) - 1)) {
 		thor::infoLogger()
-		  << "thor: UBSAN failure, use of misaligned pointer" << frg::endlog;
+			<< "thor: UBSAN failure, use of misaligned pointer" << frg::endlog;
 	} else {
 		thor::infoLogger()
-		  << "thor: UBSAN failure, insufficient space for object" << frg::endlog;
+			<< "thor: UBSAN failure, insufficient space for object" << frg::endlog;
 	}
 	log_location(data->loc);
 	if (thor::ubsanAbort.load(std::memory_order_relaxed))

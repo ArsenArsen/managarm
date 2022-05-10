@@ -80,8 +80,10 @@ async::result<protocols::svrctl::Error> bindDevice(int64_t base_id) {
 
 async::detached serve(helix::UniqueLane lane) {
 	while (true) {
-		auto [accept, recv_req] =
-		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
+		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
+			lane,
+			helix_ng::accept(helix_ng::recvInline())
+		);
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_req.error());
 
@@ -91,8 +93,8 @@ async::detached serve(helix::UniqueLane lane) {
 			resp.set_error(err);
 			auto buff = resp.SerializeAsString();
 			auto [send] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(buff.data(), buff.size())
+				conversation,
+				helix_ng::sendBuffer(buff.data(), buff.size())
 			);
 			HEL_CHECK(send.error());
 		};
@@ -111,10 +113,10 @@ async::detached serve(helix::UniqueLane lane) {
 			}
 
 			auto err = ip4().serveSocket(
-			  std::move(local_lane),
-			  req.type(),
-			  req.protocol(),
-			  req.flags()
+				std::move(local_lane),
+				req.type(),
+				req.protocol(),
+				req.flags()
 			);
 			if (err != managarm::fs::Errors::SUCCESS) {
 				co_await sendError(err);
@@ -123,17 +125,17 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_socket] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(ser.data(), ser.size()),
-			  helix_ng::pushDescriptor(remote_lane)
+				conversation,
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::pushDescriptor(remote_lane)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_socket.error());
 		} else {
 			std::cout << "netserver: received unknown request type: "
-			          << (int32_t) req.req_type() << std::endl;
+				  << (int32_t) req.req_type() << std::endl;
 			auto [dismiss] =
-			  co_await helix_ng::exchangeMsgs(conversation, helix_ng::dismiss());
+				co_await helix_ng::exchangeMsgs(conversation, helix_ng::dismiss());
 			HEL_CHECK(dismiss.error());
 		}
 	}
@@ -145,12 +147,12 @@ async::detached advertise() {
 	mbus::Properties descriptor {{"class", mbus::StringItem {"netserver"}}};
 
 	auto handler =
-	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		  auto [local_lane, remote_lane] = helix::createStream();
+		mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+			auto [local_lane, remote_lane] = helix::createStream();
 
-		  serve(std::move(local_lane));
-		  co_return std::move(remote_lane);
-	  });
+			serve(std::move(local_lane));
+			co_return std::move(remote_lane);
+		});
 
 	co_await root.createObject("netserver", descriptor, std::move(handler));
 }

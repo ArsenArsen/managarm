@@ -49,7 +49,7 @@ void setupInputTranslation(Element *element) {
 			default:
 				if (logUnknownCodes)
 					std::cout << "usb-hid: Unknown usage " << element->usageId
-					          << " in Generic Desktop Page" << std::endl;
+						  << " in Generic Desktop Page" << std::endl;
 			}
 		} else {
 			switch (element->usageId) {
@@ -65,7 +65,7 @@ void setupInputTranslation(Element *element) {
 			default:
 				if (logUnknownCodes)
 					std::cout << "usb-hid: Unknown usage " << element->usageId
-					          << " in Generic Desktop Page" << std::endl;
+						  << " in Generic Desktop Page" << std::endl;
 			}
 		}
 	} else if (element->usagePage == pages::keyboard) {
@@ -383,7 +383,7 @@ void setupInputTranslation(Element *element) {
 		default:
 			if (logUnknownCodes)
 				std::cout << "usb-hid: Unknown usage " << element->usageId
-				          << " in Keyboard Page" << std::endl;
+					  << " in Keyboard Page" << std::endl;
 		}
 	} else if (element->usagePage == pages::button) {
 		//		assert(element->isAbsolute);
@@ -400,12 +400,12 @@ void setupInputTranslation(Element *element) {
 		default:
 			if (logUnknownCodes)
 				std::cout << "usb-hid: Unknown usage " << element->usageId
-				          << " in Button Page" << std::endl;
+					  << " in Button Page" << std::endl;
 		}
 	} else {
 		if (logUnknownCodes)
 			std::cout << "usb-hid: Unkown usage page " << element->usagePage
-			          << std::endl;
+				  << std::endl;
 	}
 }
 
@@ -416,10 +416,10 @@ int32_t signExtend(uint32_t x, int bits) {
 }
 
 void interpret(
-  const std::vector<Field> &fields,
-  uint8_t *report,
-  size_t size,
-  std::vector<std::pair<bool, int32_t>> &values
+	const std::vector<Field> &fields,
+	uint8_t *report,
+	size_t size,
+	std::vector<std::pair<bool, int32_t>> &values
 ) {
 	int k = 0;  // Offset of the value that we're generating.
 
@@ -564,8 +564,9 @@ void HidDevice::parseReportDescriptor(Device, uint8_t *p, uint8_t *limit) {
 				element.logicalMin = field.dataMin;
 				element.logicalMax = field.dataMax;
 				element.isAbsolute = !relative;
-				element.disabled =
-				  foundElements.count((element.usagePage << 16) | element.usageId);
+				element.disabled = foundElements.count(
+					(element.usagePage << 16) | element.usageId
+				);
 				foundElements.insert((element.usagePage << 16) | element.usageId);
 				elements.push_back(element);
 			}
@@ -576,10 +577,12 @@ void HidDevice::parseReportDescriptor(Device, uint8_t *p, uint8_t *limit) {
 				throw std::runtime_error("logicalMin or logicalMax not set");
 
 			if (global.logicalMin.value().first < 0) {
-				if (global.logicalMin.value().first > global.logicalMax.value().first)
+				if (global.logicalMin.value().first
+				    > global.logicalMax.value().first)
 					throw std::runtime_error("signed: logicalMin > logicalMax");
 			} else {
-				if (global.logicalMin.value().second > global.logicalMax.value().second)
+				if (global.logicalMin.value().second
+				    > global.logicalMax.value().second)
 					throw std::runtime_error("unsigned: logicalMin > logicalMax"
 					);
 			}
@@ -610,8 +613,9 @@ void HidDevice::parseReportDescriptor(Device, uint8_t *p, uint8_t *limit) {
 				element.usagePage = global.usagePage.value();
 				element.logicalMin = 0;
 				element.logicalMax = 1;
-				element.disabled =
-				  foundElements.count((element.usagePage << 16) | element.usageId);
+				element.disabled = foundElements.count(
+					(element.usagePage << 16) | element.usageId
+				);
 				foundElements.insert((element.usagePage << 16) | element.usageId);
 				elements.push_back(element);
 			}
@@ -663,7 +667,7 @@ void HidDevice::parseReportDescriptor(Device, uint8_t *p, uint8_t *limit) {
 
 			if (!local.usageMin != !local.usageMax)
 				throw std::runtime_error(
-				  "Usage Minimum without Usage Maximum or visa versa"
+					"Usage Minimum without Usage Maximum or visa versa"
 				);
 
 			if (!local.usage.empty() && (local.usageMin || local.usageMax))
@@ -702,22 +706,18 @@ void HidDevice::parseReportDescriptor(Device, uint8_t *p, uint8_t *limit) {
 			assert(size > 0);
 			global.logicalMax = std::make_pair(signExtend(data, size * 8), data);
 			if (logDescriptorParser)
-				printf(
-				  "usb-hid:     Logical Maximum: signed: %d, unsigned: %d\n",
-				  global.logicalMax.value().first,
-				  global.logicalMax.value().second
-				);
+				printf("usb-hid:     Logical Maximum: signed: %d, unsigned: %d\n",
+				       global.logicalMax.value().first,
+				       global.logicalMax.value().second);
 			break;
 
 		case 0x14:
 			assert(size > 0);
 			global.logicalMin = std::make_pair(signExtend(data, size * 8), data);
 			if (logDescriptorParser)
-				printf(
-				  "usb-hid:     Logical Minimum: signed: %d, unsigned: %d\n",
-				  global.logicalMin.value().first,
-				  global.logicalMin.value().second
-				);
+				printf("usb-hid:     Logical Minimum: signed: %d, unsigned: %d\n",
+				       global.logicalMin.value().first,
+				       global.logicalMin.value().second);
 			break;
 
 		case 0x04:
@@ -766,22 +766,22 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 	walkConfiguration(descriptor, [&](int type, size_t, void *p, const auto &info) {
 		//		std::cout << "    Descriptor: " << type << std::endl;
 		if (type == descriptor_type::hid) {
-			if (info.configNumber.value() != config_num || info.interfaceNumber.value() != intf_num)
+			if (info.configNumber.value() != config_num
+			    || info.interfaceNumber.value() != intf_num)
 				return;
 
 			auto desc = static_cast<HidDescriptor *>(p);
-			assert(
-			  desc->length
-			  == sizeof(HidDescriptor)
-			       + (desc->numDescriptors * sizeof(HidDescriptor::Entry))
-			);
+			assert(desc->length
+			       == sizeof(HidDescriptor)
+					  + (desc->numDescriptors * sizeof(HidDescriptor::Entry)));
 
 			for (size_t i = 0; i < desc->numDescriptors; i++) {
 				assert(desc->entries[i].descriptorType == descriptor_type::report);
 				report_descs.push_back(desc->entries[i].descriptorLength);
 			}
 		} else if (type == descriptor_type::endpoint) {
-			if (info.configNumber.value() != config_num || info.interfaceNumber.value() != intf_num)
+			if (info.configNumber.value() != config_num
+			    || info.interfaceNumber.value() != intf_num)
 				return;
 
 			auto desc = static_cast<EndpointDescriptor *>(p);
@@ -799,7 +799,7 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 	for (size_t i = 0; i < report_descs.size(); i++) {
 		arch::dma_object<SetupPacket> get_descriptor {device.setupPool()};
 		get_descriptor->type =
-		  setup_type::targetInterface | setup_type::byStandard | setup_type::toHost;
+			setup_type::targetInterface | setup_type::byStandard | setup_type::toHost;
 		get_descriptor->request = request_type::getDescriptor;
 		get_descriptor->value = (descriptor_type::report << 8) | i;
 		get_descriptor->index = intf_num;
@@ -808,7 +808,7 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 		arch::dma_buffer buffer {device.bufferPool(), report_descs[i]};
 
 		(co_await device.transfer(ControlTransfer {kXferToHost, get_descriptor, buffer}))
-		  .unwrap();
+			.unwrap();
 
 		auto p = reinterpret_cast<uint8_t *>(buffer.data());
 		auto limit = reinterpret_cast<uint8_t *>(buffer.data()) + report_descs[i];
@@ -823,9 +823,9 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 			continue;
 		if (element->inputType == EV_ABS)
 			_eventDev->setAbsoluteDetails(
-			  element->inputCode,
-			  element->logicalMin,
-			  element->logicalMax
+				element->inputCode,
+				element->logicalMin,
+				element->logicalMax
 			);
 		_eventDev->enableEvent(element->inputType, element->inputCode);
 	}
@@ -833,8 +833,8 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 	if (logFields)
 		for (size_t i = 0; i < fields.size(); i++) {
 			std::cout << "Field " << i << ": [" << fields[i].arraySize
-			          << "]. Bit size: " << fields[i].bitSize
-			          << ", signed: " << fields[i].isSigned << std::endl;
+				  << "]. Bit size: " << fields[i].bitSize
+				  << ", signed: " << fields[i].isSigned << std::endl;
 		}
 
 	// Create an mbus object for the device.
@@ -843,13 +843,13 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 	mbus::Properties mbus_descriptor {{"unix.subsystem", mbus::StringItem {"input"}}};
 
 	auto handler =
-	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		  helix::UniqueLane local_lane, remote_lane;
-		  std::tie(local_lane, remote_lane) = helix::createStream();
-		  libevbackend::serveDevice(_eventDev, std::move(local_lane));
+		mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+			helix::UniqueLane local_lane, remote_lane;
+			std::tie(local_lane, remote_lane) = helix::createStream();
+			libevbackend::serveDevice(_eventDev, std::move(local_lane));
 
-		  co_return std::move(remote_lane);
-	  });
+			co_return std::move(remote_lane);
+		});
 
 	co_await root.createObject("input_hid", mbus_descriptor, std::move(handler));
 
@@ -875,12 +875,12 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 
 		if (logRawPackets) {
 			std::cout << "usb-hid: Report size: " << length << " (packet size is "
-			          << in_endp_pktsize << ")" << std::endl;
+				  << in_endp_pktsize << ")" << std::endl;
 			std::cout << "usb-hid: Packet:";
 			std::cout << std::hex;
 			for (size_t i = 0; i < 4; i++)
 				std::cout << " "
-				          << (int) reinterpret_cast<uint8_t *>(report.data())[i];
+					  << (int) reinterpret_cast<uint8_t *>(report.data())[i];
 			std::cout << std::dec << std::endl;
 		}
 
@@ -891,9 +891,9 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 			for (size_t i = 0; i < values.size(); i++)
 				if (values[i].first)
 					std::cout << "usagePage: " << elements[i].usagePage
-					          << ", usageId: 0x" << std::hex
-					          << elements[i].usageId << std::dec
-					          << ", value: " << values[i].second << std::endl;
+						  << ", usageId: 0x" << std::hex
+						  << elements[i].usageId << std::dec
+						  << ", value: " << values[i].second << std::endl;
 			std::cout << std::endl;
 		}
 
@@ -909,11 +909,14 @@ async::detached HidDevice::run(Device device, int config_num, int intf_num) {
 				continue;
 			if (logInputCodes)
 				std::cout << "    inputType: " << element->inputType
-				          << ", inputCode: " << element->inputCode
-				          << ", value: " << values[i].second << std::endl;
+					  << ", inputCode: " << element->inputCode
+					  << ", value: " << values[i].second << std::endl;
 
-			_eventDev
-			  ->emitEvent(element->inputType, element->inputCode, values[i].second);
+			_eventDev->emitEvent(
+				element->inputType,
+				element->inputCode,
+				values[i].second
+			);
 		}
 		_eventDev->emitEvent(EV_SYN, SYN_REPORT, 0);
 		_eventDev->notify();
@@ -935,35 +938,36 @@ async::detached bindDevice(mbus::Entity entity) {
 	std::experimental::optional<int> intf_alternative;
 
 	walkConfiguration(
-	  descriptorOrError.value(),
-	  [&](int type, size_t, void *p, const auto &info) {
-		  if (type == descriptor_type::configuration) {
-			  assert(!config_number);
-			  config_number = info.configNumber.value();
-		  } else if (type == descriptor_type::interface) {
-			  auto desc = reinterpret_cast<InterfaceDescriptor *>(p);
-			  if (desc->interfaceClass != 3)
-				  return;
+		descriptorOrError.value(),
+		[&](int type, size_t, void *p, const auto &info) {
+			if (type == descriptor_type::configuration) {
+				assert(!config_number);
+				config_number = info.configNumber.value();
+			} else if (type == descriptor_type::interface) {
+				auto desc = reinterpret_cast<InterfaceDescriptor *>(p);
+				if (desc->interfaceClass != 3)
+					return;
 
-			  if (intf_number) {
-				  std::cout << "usb-hid: Ignoring secondary HID interface: "
-				            << info.interfaceNumber.value() << ", alternative: "
-				            << info.interfaceAlternative.value() << std::endl;
-				  return;
-			  }
+				if (intf_number) {
+					std::cout << "usb-hid: Ignoring secondary HID interface: "
+						  << info.interfaceNumber.value()
+						  << ", alternative: "
+						  << info.interfaceAlternative.value() << std::endl;
+					return;
+				}
 
-			  intf_number = info.interfaceNumber.value();
-			  intf_alternative = info.interfaceAlternative.value();
-		  }
-	  }
+				intf_number = info.interfaceNumber.value();
+				intf_alternative = info.interfaceAlternative.value();
+			}
+		}
 	);
 
 	if (!intf_number)
 		co_return;
 	std::cout << "usb-hid: Detected HID device. "
-	             "Interface: "
-	          << intf_number.value() << ", alternative: " << intf_alternative.value()
-	          << std::endl;
+		     "Interface: "
+		  << intf_number.value() << ", alternative: " << intf_alternative.value()
+		  << std::endl;
 
 	HidDevice *hid_device = new HidDevice();
 	hid_device->run(device, config_number.value(), intf_number.value());
@@ -973,14 +977,14 @@ async::detached observeDevices() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	auto filter = mbus::Conjunction(
-	  {mbus::EqualsFilter("usb.type", "device"), mbus::EqualsFilter("usb.class", "00")}
+		{mbus::EqualsFilter("usb.type", "device"), mbus::EqualsFilter("usb.class", "00")}
 	);
 
 	auto handler =
-	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		  std::cout << "usb-hid: Detected USB device" << std::endl;
-		  bindDevice(std::move(entity));
-	  });
+		mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+			std::cout << "usb-hid: Detected USB device" << std::endl;
+			bindDevice(std::move(entity));
+		});
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

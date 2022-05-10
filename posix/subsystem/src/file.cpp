@@ -91,11 +91,11 @@ File::ptWrite(void *object, const char *credentials, const void *buffer, size_t 
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>> File::ptPwrite(
-  void *object,
-  int64_t offset,
-  const char *credentials,
-  const void *buffer,
-  size_t length
+	void *object,
+	int64_t offset,
+	const char *credentials,
+	const void *buffer,
+	size_t length
 ) {
 	auto self = static_cast<File *>(object);
 	auto process = findProcessWithCredentials(credentials);
@@ -196,14 +196,14 @@ async::result<frg::expected<protocols::fs::Error, int>> File::ptAddSeals(void *o
 }
 
 async::result<protocols::fs::RecvResult> File::ptRecvMsg(
-  void *object,
-  const char *creds,
-  uint32_t flags,
-  void *data,
-  size_t len,
-  void *addr,
-  size_t addr_len,
-  size_t max_ctrl_len
+	void *object,
+	const char *creds,
+	uint32_t flags,
+	void *data,
+	size_t len,
+	void *addr,
+	size_t addr_len,
+	size_t max_ctrl_len
 ) {
 	auto self = static_cast<File *>(object);
 	auto process = findProcessWithCredentials(creds);
@@ -211,21 +211,21 @@ async::result<protocols::fs::RecvResult> File::ptRecvMsg(
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>> File::ptSendMsg(
-  void *object,
-  const char *creds,
-  uint32_t flags,
-  void *data,
-  size_t len,
-  void *addr,
-  size_t addr_len,
-  std::vector<uint32_t> fds
+	void *object,
+	const char *creds,
+	uint32_t flags,
+	void *data,
+	size_t len,
+	void *addr,
+	size_t addr_len,
+	std::vector<uint32_t> fds
 ) {
 	auto self = static_cast<File *>(object);
 	auto process = findProcessWithCredentials(creds);
 
 	if (flags & ~(MSG_DONTWAIT | MSG_CMSG_CLOEXEC | MSG_NOSIGNAL)) {
 		std::cout << "\e[31mposix: Unknown SENDMSG flags: 0x" << std::hex << flags
-		          << std::dec << "\e[39m" << std::endl;
+			  << std::dec << "\e[39m" << std::endl;
 		assert(!"Flags not implemented");
 	}
 	if (flags & MSG_NOSIGNAL) {
@@ -250,7 +250,7 @@ File::~File() {
 	// Nothing to do here.
 	if (logDestruction)
 		std::cout << "\e[37mposix \e[1;34m" << structName()
-		          << "\e[0m\e[37m: File was destructed\e[39m" << std::endl;
+			  << "\e[0m\e[37m: File was destructed\e[39m" << std::endl;
 }
 
 bool File::isTerminal() {
@@ -260,8 +260,9 @@ bool File::isTerminal() {
 async::result<frg::expected<Error>> File::readExactly(Process *process, void *data, size_t length) {
 	size_t offset = 0;
 	while (offset < length) {
-		auto result =
-		  FRG_CO_TRY(co_await readSome(process, (char *) data + offset, length - offset));
+		auto result = FRG_CO_TRY(
+			co_await readSome(process, (char *) data + offset, length - offset)
+		);
 		if (!result)
 			co_return Error::wouldBlock;
 		offset += result;
@@ -272,30 +273,30 @@ async::result<frg::expected<Error>> File::readExactly(Process *process, void *da
 
 async::result<frg::expected<Error, size_t>> File::readSome(Process *, void *, size_t) {
 	std::cout << "\e[35mposix \e[1;34m" << structName()
-	          << "\e[0m\e[35m: File does not support read()\e[39m" << std::endl;
+		  << "\e[0m\e[35m: File does not support read()\e[39m" << std::endl;
 	co_return Error::illegalOperationTarget;
 }
 
 void File::handleClose() {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement handleClose()" << std::endl;
+		  << "\e[0m: Object does not implement handleClose()" << std::endl;
 }
 
 async::result<frg::expected<Error, size_t>> File::writeAll(Process *, const void *, size_t) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement writeAll()" << std::endl;
+		  << "\e[0m: Object does not implement writeAll()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::writeAll()");
 }
 
 async::result<frg::expected<Error, ControllingTerminalState *>> File::getControllingTerminal() {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement getControllingTerminal()\e[39m" << std::endl;
+		  << "\e[0m: Object does not implement getControllingTerminal()\e[39m" << std::endl;
 	co_return Error::notTerminal;
 }
 
 async::result<frg::expected<Error, size_t>> File::pwrite(Process *, int64_t, const void *, size_t) {
 	std::cout << "posix \e[1;34m" << structName() << "\e[0m: Object does not implement pwrite()"
-	          << std::endl;
+		  << std::endl;
 	co_return Error::seekOnPipe;
 }
 
@@ -309,15 +310,21 @@ File::recvMsg(Process *, uint32_t, void *, size_t, void *, size_t, size_t) {
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>> File::
-  sendMsg(Process *, uint32_t, const void *, size_t, const void *, size_t, std::vector<smarter::shared_ptr<File, FileHandle>>) {
+	sendMsg(Process *,
+		uint32_t,
+		const void *,
+		size_t,
+		const void *,
+		size_t,
+		std::vector<smarter::shared_ptr<File, FileHandle>>) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement sendMsg()" << std::endl;
+		  << "\e[0m: Object does not implement sendMsg()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::sendMsg()");
 }
 
 async::result<frg::expected<protocols::fs::Error>> File::truncate(size_t) {
 	std::cout << "\e[35mposix \e[1;34m" << structName()
-	          << "\e[0m\e[35m: File does not support truncate()\e[39m" << std::endl;
+		  << "\e[0m\e[35m: File does not support truncate()\e[39m" << std::endl;
 	co_return protocols::fs::Error::illegalOperationTarget;
 }
 
@@ -330,22 +337,22 @@ async::result<frg::expected<Error, off_t>> File::seek(off_t, VfsSeek) {
 		co_return Error::seekOnPipe;
 	} else {
 		std::cout << "posix \e[1;34m" << structName()
-		          << "\e[0m: Object does not implement seek()" << std::endl;
+			  << "\e[0m: Object does not implement seek()" << std::endl;
 		throw std::runtime_error("posix: Object has no File::seek()");
 	}
 }
 
 expected<PollResult> File::poll(Process *, uint64_t, async::cancellation_token) {
 	std::cout << "posix \e[1;34m" << structName() << "\e[0m: Object does not implement poll()"
-	          << std::endl;
+		  << std::endl;
 	throw std::runtime_error("posix: Object has no File::poll()");
 }
 
 async::result<frg::expected<Error, PollWaitResult>> File::pollWait(
-  Process *process,
-  uint64_t sequence,
-  int mask,
-  async::cancellation_token cancellation
+	Process *process,
+	uint64_t sequence,
+	int mask,
+	async::cancellation_token cancellation
 ) {
 	while (true) {
 		auto resultOrError = co_await poll(process, sequence, cancellation);
@@ -374,43 +381,43 @@ async::result<frg::expected<Error, PollStatusResult>> File::pollStatus(Process *
 
 async::result<int> File::getOption(int) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement getOption()" << std::endl;
+		  << "\e[0m: Object does not implement getOption()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::getOption()");
 }
 
 async::result<void> File::setOption(int, int) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement setOption()" << std::endl;
+		  << "\e[0m: Object does not implement setOption()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::setOption()");
 }
 
 async::result<frg::expected<Error, AcceptResult>> File::accept(Process *) {
 	std::cout << "posix \e[1;34m" << structName() << "\e[0m: Object does not implement accept()"
-	          << std::endl;
+		  << std::endl;
 	throw std::runtime_error("posix: Object has no File::accept()");
 }
 
 async::result<protocols::fs::Error> File::bind(Process *, const void *, size_t) {
 	std::cout << "posix \e[1;34m" << structName() << "\e[0m: Object does not implement bind()"
-	          << std::endl;
+		  << std::endl;
 	throw std::runtime_error("posix: Object has no File::bind()");
 }
 
 async::result<protocols::fs::Error> File::connect(Process *, const void *, size_t) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement connect()" << std::endl;
+		  << "\e[0m: Object does not implement connect()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::connect()");
 }
 
 async::result<protocols::fs::Error> File::listen() {
 	std::cout << "posix \e[1;34m" << structName() << "\e[0m: Object does not implement listen()"
-	          << std::endl;
+		  << std::endl;
 	co_return protocols::fs::Error::none;
 }
 
 async::result<size_t> File::sockname(void *, size_t) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement sockname()" << std::endl;
+		  << "\e[0m: Object does not implement sockname()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::sockname()");
 }
 
@@ -422,7 +429,7 @@ FutureMaybe<helix::UniqueDescriptor> File::accessMemory() {
 async::result<void>
 File::ioctl(Process *, managarm::fs::CntRequest, helix::UniqueLane conversation) {
 	std::cout << "posix \e[1;34m" << structName() << "\e[0m: Object does not implement ioctl()"
-	          << std::endl;
+		  << std::endl;
 
 	auto [dismiss] = co_await helix_ng::exchangeMsgs(conversation, helix_ng::dismiss());
 	HEL_CHECK(dismiss.error());
@@ -431,26 +438,26 @@ File::ioctl(Process *, managarm::fs::CntRequest, helix::UniqueLane conversation)
 
 async::result<frg::expected<Error, std::string>> File::ttyname() {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement ttyname()" << std::endl;
+		  << "\e[0m: Object does not implement ttyname()" << std::endl;
 	co_return Error::notTerminal;
 }
 
 async::result<int> File::getFileFlags() {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement getFileFlags()" << std::endl;
+		  << "\e[0m: Object does not implement getFileFlags()" << std::endl;
 	co_return 0;
 }
 
 async::result<void> File::setFileFlags(int flags) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement setFileFlags()" << std::endl;
+		  << "\e[0m: Object does not implement setFileFlags()" << std::endl;
 	co_return;
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>>
 File::peername(void *addr_ptr, size_t max_addr_length) {
 	std::cout << "posix \e[1;34m" << structName()
-	          << "\e[0m: Object does not implement getPeerName()" << std::endl;
+		  << "\e[0m: Object does not implement getPeerName()" << std::endl;
 	co_return protocols::fs::Error::illegalOperationTarget;
 }
 

@@ -20,10 +20,9 @@ namespace {
 //       Print a log message on protocol errors.
 
 coroutine<Error> handleRequest(LaneHandle boundLane) {
-	auto sendResponse = [](
-	                      LaneHandle &conversation,
-	                      managarm::hw::SvrResponse<KernelAlloc> &&resp
-	                    ) -> coroutine<frg::tuple<Error, Error>> {
+	auto sendResponse = [](LaneHandle &conversation,
+			       managarm::hw::SvrResponse<KernelAlloc> &&resp
+			    ) -> coroutine<frg::tuple<Error, Error>> {
 		frg::unique_memory<KernelAlloc> respHeadBuffer {*kernelAlloc, resp.head_size};
 
 		frg::unique_memory<KernelAlloc> respTailBuffer {*kernelAlloc, resp.size_of_tail()};
@@ -31,9 +30,9 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		bragi::write_head_tail(resp, respHeadBuffer, respTailBuffer);
 
 		auto respHeadError =
-		  co_await SendBufferSender {conversation, std::move(respHeadBuffer)};
+			co_await SendBufferSender {conversation, std::move(respHeadBuffer)};
 		auto respTailError =
-		  co_await SendBufferSender {conversation, std::move(respTailBuffer)};
+			co_await SendBufferSender {conversation, std::move(respTailBuffer)};
 
 		co_return {respHeadError, respTailError};
 	};
@@ -50,12 +49,14 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 	assert(!preamble.error());
 
 	if (preamble.id() == bragi::message_id<managarm::hw::GetPciInfoRequest>) {
-		auto req =
-		  bragi::parse_head_only<managarm::hw::GetPciInfoRequest>(reqBuffer, *kernelAlloc);
+		auto req = bragi::parse_head_only<managarm::hw::GetPciInfoRequest>(
+			reqBuffer,
+			*kernelAlloc
+		);
 
 		if (!req) {
 			infoLogger()
-			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
+				<< "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return Error::protocolViolation;
 		}
 
@@ -87,12 +88,14 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		if (tailError != Error::success)
 			co_return tailError;
 	} else if (preamble.id() == bragi::message_id<managarm::hw::AccessBarRequest>) {
-		auto req =
-		  bragi::parse_head_only<managarm::hw::AccessBarRequest>(reqBuffer, *kernelAlloc);
+		auto req = bragi::parse_head_only<managarm::hw::AccessBarRequest>(
+			reqBuffer,
+			*kernelAlloc
+		);
 
 		if (!req) {
 			infoLogger()
-			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
+				<< "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return Error::protocolViolation;
 		}
 
@@ -121,12 +124,14 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		if (ioError != Error::success)
 			co_return ioError;
 	} else if (preamble.id() == bragi::message_id<managarm::hw::AccessIrqRequest>) {
-		auto req =
-		  bragi::parse_head_only<managarm::hw::AccessIrqRequest>(reqBuffer, *kernelAlloc);
+		auto req = bragi::parse_head_only<managarm::hw::AccessIrqRequest>(
+			reqBuffer,
+			*kernelAlloc
+		);
 
 		if (!req) {
 			infoLogger()
-			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
+				<< "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return Error::protocolViolation;
 		}
 
@@ -134,8 +139,8 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		resp.set_error(managarm::hw::Errors::SUCCESS);
 
 		auto object = smarter::allocate_shared<GenericIrqObject>(
-		  *kernelAlloc,
-		  frg::string<KernelAlloc> {*kernelAlloc, "isa-irq.ata"}
+			*kernelAlloc,
+			frg::string<KernelAlloc> {*kernelAlloc, "isa-irq.ata"}
 		);
 #ifdef __x86_64__
 		auto irqOverride = resolveIsaIrq(14);
@@ -154,7 +159,7 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 			co_return irqError;
 	} else {
 		infoLogger() << "thor: Dismissing conversation due to illegal HW request."
-		             << frg::endlog;
+			     << frg::endlog;
 		co_await DismissSender {lane};
 		co_return Error::protocolViolation;
 	}
@@ -193,8 +198,8 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 			break;
 		if (isRemoteIpcError(error))
 			infoLogger() << "thor: Aborting legacy-pc.ata request"
-			                " after remote violated the protocol"
-			             << frg::endlog;
+					" after remote violated the protocol"
+				     << frg::endlog;
 		assert(error == Error::success);
 	}
 }
@@ -236,15 +241,15 @@ coroutine<void> initializeAtaDevice() {
 }
 
 static initgraph::Task initAtaTask {
-  &globalInitEngine,
-  "legacy_pc.init-ata",
-  initgraph::Requires {getFibersAvailableStage()},
-  [] {
-	  // For now, we only need the kernel fiber to make sure mbusClient is already
-	  // initialized.
-	  KernelFiber::run([=] {
-		  async::detach_with_allocator(*kernelAlloc, initializeAtaDevice());
-	  });
-  }};
+	&globalInitEngine,
+	"legacy_pc.init-ata",
+	initgraph::Requires {getFibersAvailableStage()},
+	[] {
+		// For now, we only need the kernel fiber to make sure mbusClient is already
+		// initialized.
+		KernelFiber::run([=] {
+			async::detach_with_allocator(*kernelAlloc, initializeAtaDevice());
+		});
+	}};
 
 }  // namespace thor::legacy_pc

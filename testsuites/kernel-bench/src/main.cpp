@@ -12,7 +12,7 @@ struct IterationsPerSecondBenchmark {
 
 	bool isRepetitionDone() {
 		auto elapsed = duration_cast<std::chrono::nanoseconds>(
-		  std::chrono::high_resolution_clock::now() - ref_
+			std::chrono::high_resolution_clock::now() - ref_
 		);
 		return elapsed.count() > 1'000'000'000;
 	}
@@ -34,7 +34,7 @@ struct IterationsPerSecondBenchmark {
 		var /= results_.size();
 
 		std::cout << "    avg: " << static_cast<uint64_t>(avg)
-		          << ", std: " << static_cast<uint64_t>(sqrt(var)) << std::endl;
+			  << ", std: " << static_cast<uint64_t>(sqrt(var)) << std::endl;
 	}
 
 private:
@@ -128,13 +128,13 @@ void doMapBenchmark(size_t size) {
 			HEL_CHECK(helAllocateMemory(size, 0, nullptr, &handle));
 			void *window;
 			HEL_CHECK(helMapMemory(
-			  handle,
-			  kHelNullHandle,
-			  nullptr,
-			  0,
-			  size,
-			  kHelMapProtRead | kHelMapProtWrite,
-			  &window
+				handle,
+				kHelNullHandle,
+				nullptr,
+				0,
+				size,
+				kHelMapProtRead | kHelMapProtWrite,
+				&window
 			));
 			HEL_CHECK(helUnmapMemory(kHelNullHandle, window, size));
 			HEL_CHECK(helCloseDescriptor(kHelThisUniverse, handle));
@@ -152,13 +152,13 @@ void doMapPopulatedBenchmark(size_t size) {
 	HEL_CHECK(helAllocateMemory(size, 0, nullptr, &handle));
 	void *window;
 	HEL_CHECK(helMapMemory(
-	  handle,
-	  kHelNullHandle,
-	  nullptr,
-	  0,
-	  size,
-	  kHelMapProtRead | kHelMapProtWrite,
-	  &window
+		handle,
+		kHelNullHandle,
+		nullptr,
+		0,
+		size,
+		kHelMapProtRead | kHelMapProtWrite,
+		&window
 	));
 
 	// Touch all mapped pages.
@@ -175,13 +175,13 @@ void doMapPopulatedBenchmark(size_t size) {
 		while (!bench.isRepetitionDone()) {
 			void *window;
 			HEL_CHECK(helMapMemory(
-			  handle,
-			  kHelNullHandle,
-			  nullptr,
-			  0,
-			  size,
-			  kHelMapProtRead | kHelMapProtWrite,
-			  &window
+				handle,
+				kHelNullHandle,
+				nullptr,
+				0,
+				size,
+				kHelMapProtRead | kHelMapProtWrite,
+				&window
 			));
 			HEL_CHECK(helUnmapMemory(kHelNullHandle, window, size));
 			++n;
@@ -195,7 +195,7 @@ void doMapPopulatedBenchmark(size_t size) {
 
 void doPageFaultBenchmark(size_t size) {
 	std::cout << "page faults (mapping size = " << (size / (1024 * 1024)) << " MiB)"
-	          << std::endl;
+		  << std::endl;
 
 	IterationsPerSecondBenchmark bench;
 	for (int k = 0; k < 5; ++k) {
@@ -206,13 +206,13 @@ void doPageFaultBenchmark(size_t size) {
 			HEL_CHECK(helAllocateMemory(size, 0, nullptr, &handle));
 			void *window;
 			HEL_CHECK(helMapMemory(
-			  handle,
-			  kHelNullHandle,
-			  nullptr,
-			  0,
-			  size,
-			  kHelMapProtRead | kHelMapProtWrite,
-			  &window
+				handle,
+				kHelNullHandle,
+				nullptr,
+				0,
+				size,
+				kHelMapProtRead | kHelMapProtWrite,
+				&window
 			));
 
 			// Touch all mapped pages.
@@ -250,27 +250,27 @@ async::result<void> doSendRecvBufferBenchmark(size_t size) {
 		while (!bench.isRepetitionDone()) {
 			for (int i = 0; i < 100; ++i) {
 				co_await async::when_all(
-				  async::transform(
-				    helix_ng::exchangeMsgs(
-				      lane1,
-				      helix_ng::sendBuffer(sBuf.data(), size)
-				    ),
-				    [&](auto result) {
-					    auto [send] = std::move(result);
-					    HEL_CHECK(send.error());
-				    }
-				  ),
-				  async::transform(
-				    helix_ng::exchangeMsgs(
-				      lane2,
-				      helix_ng::recvBuffer(rBuf.data(), size)
-				    ),
-				    [&](auto result) {
-					    auto [recv] = std::move(result);
-					    HEL_CHECK(recv.error());
-					    assert(recv.actualLength() == size);
-				    }
-				  )
+					async::transform(
+						helix_ng::exchangeMsgs(
+							lane1,
+							helix_ng::sendBuffer(sBuf.data(), size)
+						),
+						[&](auto result) {
+							auto [send] = std::move(result);
+							HEL_CHECK(send.error());
+						}
+					),
+					async::transform(
+						helix_ng::exchangeMsgs(
+							lane2,
+							helix_ng::recvBuffer(rBuf.data(), size)
+						),
+						[&](auto result) {
+							auto [recv] = std::move(result);
+							HEL_CHECK(recv.error());
+							assert(recv.actualLength() == size);
+						}
+					)
 				);
 				++n;
 			}

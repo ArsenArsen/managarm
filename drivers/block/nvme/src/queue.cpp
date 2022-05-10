@@ -25,13 +25,13 @@ void Queue::init() {
 	void *window;
 	HEL_CHECK(helAllocateMemory(cqSize, kHelAllocContinuous, nullptr, &memory));
 	HEL_CHECK(helMapMemory(
-	  memory,
-	  kHelNullHandle,
-	  nullptr,
-	  0,
-	  cqSize,
-	  kHelMapProtRead | kHelMapProtWrite,
-	  &window
+		memory,
+		kHelNullHandle,
+		nullptr,
+		0,
+		cqSize,
+		kHelMapProtRead | kHelMapProtWrite,
+		&window
 	));
 	HEL_CHECK(helCloseDescriptor(kHelThisUniverse, memory));
 
@@ -40,13 +40,13 @@ void Queue::init() {
 
 	HEL_CHECK(helAllocateMemory(sqSize, kHelAllocContinuous, nullptr, &memory));
 	HEL_CHECK(helMapMemory(
-	  memory,
-	  kHelNullHandle,
-	  nullptr,
-	  0,
-	  sqSize,
-	  kHelMapProtRead | kHelMapProtWrite,
-	  &window
+		memory,
+		kHelNullHandle,
+		nullptr,
+		0,
+		sqSize,
+		kHelMapProtRead | kHelMapProtWrite,
+		&window
 	));
 	HEL_CHECK(helCloseDescriptor(kHelThisUniverse, memory));
 

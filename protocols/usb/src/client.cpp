@@ -78,12 +78,12 @@ async::result<frg::expected<UsbError, std::string>> DeviceState::configurationDe
 
 	auto ser = req.SerializeAsString();
 	auto &&transmit = helix::submitAsync(
-	  _lane,
-	  helix::Dispatcher::global(),
-	  helix::action(&offer, kHelItemAncillary),
-	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	  helix::action(&recv_resp, kHelItemChain),
-	  helix::action(&recv_data)
+		_lane,
+		helix::Dispatcher::global(),
+		helix::action(&offer, kHelItemAncillary),
+		helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		helix::action(&recv_resp, kHelItemChain),
+		helix::action(&recv_data)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -112,12 +112,12 @@ async::result<frg::expected<UsbError, Configuration>> DeviceState::useConfigurat
 
 	auto ser = req.SerializeAsString();
 	auto &&transmit = helix::submitAsync(
-	  _lane,
-	  helix::Dispatcher::global(),
-	  helix::action(&offer, kHelItemAncillary),
-	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	  helix::action(&recv_resp, kHelItemChain),
-	  helix::action(&pull_lane)
+		_lane,
+		helix::Dispatcher::global(),
+		helix::action(&offer, kHelItemAncillary),
+		helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		helix::action(&recv_resp, kHelItemChain),
+		helix::action(&pull_lane)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -151,13 +151,18 @@ async::result<frg::expected<UsbError>> DeviceState::transfer(ControlTransfer inf
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  _lane,
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&send_setup, info.setup.data(), sizeof(SetupPacket), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&recv_data, info.buffer.data(), info.buffer.size())
+			_lane,
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(
+				&send_setup,
+				info.setup.data(),
+				sizeof(SetupPacket),
+				kHelItemChain
+			),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&recv_data, info.buffer.data(), info.buffer.size())
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -187,12 +192,12 @@ ConfigurationState::useInterface(int number, int alternative) {
 
 	auto ser = req.SerializeAsString();
 	auto &&transmit = helix::submitAsync(
-	  _lane,
-	  helix::Dispatcher::global(),
-	  helix::action(&offer, kHelItemAncillary),
-	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	  helix::action(&recv_resp, kHelItemChain),
-	  helix::action(&pull_lane)
+		_lane,
+		helix::Dispatcher::global(),
+		helix::action(&offer, kHelItemAncillary),
+		helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		helix::action(&recv_resp, kHelItemChain),
+		helix::action(&pull_lane)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -222,12 +227,12 @@ InterfaceState::getEndpoint(PipeType type, int number) {
 
 	auto ser = req.SerializeAsString();
 	auto &&transmit = helix::submitAsync(
-	  _lane,
-	  helix::Dispatcher::global(),
-	  helix::action(&offer, kHelItemAncillary),
-	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	  helix::action(&recv_resp, kHelItemChain),
-	  helix::action(&pull_lane)
+		_lane,
+		helix::Dispatcher::global(),
+		helix::action(&offer, kHelItemAncillary),
+		helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		helix::action(&recv_resp, kHelItemChain),
+		helix::action(&pull_lane)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -266,12 +271,12 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(Interrupt
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  _lane,
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&recv_data, info.buffer.data(), info.buffer.size())
+			_lane,
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&recv_data, info.buffer.data(), info.buffer.size())
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -303,12 +308,17 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTrans
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  _lane,
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&send_data, info.buffer.data(), info.buffer.size(), kHelItemChain),
-		  helix::action(&recv_resp)
+			_lane,
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(
+				&send_data,
+				info.buffer.data(),
+				info.buffer.size(),
+				kHelItemChain
+			),
+			helix::action(&recv_resp)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -336,12 +346,12 @@ async::result<frg::expected<UsbError, size_t>> EndpointState::transfer(BulkTrans
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		  _lane,
-		  helix::Dispatcher::global(),
-		  helix::action(&offer, kHelItemAncillary),
-		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		  helix::action(&recv_resp, kHelItemChain),
-		  helix::action(&recv_data, info.buffer.data(), info.buffer.size())
+			_lane,
+			helix::Dispatcher::global(),
+			helix::action(&offer, kHelItemAncillary),
+			helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+			helix::action(&recv_resp, kHelItemChain),
+			helix::action(&recv_data, info.buffer.data(), info.buffer.size())
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());

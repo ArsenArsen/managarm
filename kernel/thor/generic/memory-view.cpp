@@ -77,9 +77,9 @@ struct MemoryReclaimer {
 
 	auto awaitReclaim(CacheBundle *bundle, async::cancellation_token ct = {}) {
 		return async::sequence(
-		  async::transform(bundle->_reclaimEvent.async_wait(ct), [](auto) {}),
-		  // TODO: Use the reclaim fiber, not WorkQueue::generalQueue().
-		  WorkQueue::generalQueue()->schedule()
+			async::transform(bundle->_reclaimEvent.async_wait(ct), [](auto) {}),
+			// TODO: Use the reclaim fiber, not WorkQueue::generalQueue().
+			WorkQueue::generalQueue()->schedule()
 		);
 	}
 
@@ -120,9 +120,9 @@ struct MemoryReclaimer {
 				} else {
 					if (logUncaching)
 						infoLogger()
-						  << "thor: Uncaching page. " << usedPages
-						  << " pages are in use (watermark: "
-						  << pagesWatermark << ")" << frg::endlog;
+							<< "thor: Uncaching page. " << usedPages
+							<< " pages are in use (watermark: "
+							<< pagesWatermark << ")" << frg::endlog;
 				}
 			}
 
@@ -147,18 +147,18 @@ struct MemoryReclaimer {
 					auto irqLock = frg::guard(&irqMutex());
 					auto lock = frg::guard(&_mutex);
 					infoLogger() << "thor: " << (_cachedSize / 1024)
-					             << " KiB of cached pages" << frg::endlog;
+						     << " KiB of cached pages" << frg::endlog;
 				}
 
 				while (checkReclaim())
 					;
 				if (tortureUncaching) {
 					KernelFiber::asyncBlockCurrent(
-					  generalTimerEngine()->sleepFor(10'000'000)
+						generalTimerEngine()->sleepFor(10'000'000)
 					);
 				} else {
 					KernelFiber::asyncBlockCurrent(
-					  generalTimerEngine()->sleepFor(1'000'000'000)
+						generalTimerEngine()->sleepFor(1'000'000'000)
 					);
 				}
 			}
@@ -169,9 +169,12 @@ private:
 	frg::ticket_spinlock _mutex;
 
 	frg::intrusive_list<
-	  CachePage,
-	  frg::locate_member<CachePage, frg::default_list_hook<CachePage>, &CachePage::listHook>>
-	  _lruList;
+		CachePage,
+		frg::locate_member<
+			CachePage,
+			frg::default_list_hook<CachePage>,
+			&CachePage::listHook>>
+		_lruList;
 
 	size_t _cachedSize = 0;
 };
@@ -179,13 +182,13 @@ private:
 static frg::manual_box<MemoryReclaimer> globalReclaimer;
 
 static initgraph::Task initReclaim {
-  &globalInitEngine,
-  "generic.init-reclaim",
-  initgraph::Requires {getFibersAvailableStage()},
-  [] {
-	  globalReclaimer.initialize();
-	  globalReclaimer->runReclaimFiber();
-  }};
+	&globalInitEngine,
+	"generic.init-reclaim",
+	initgraph::Requires {getFibersAvailableStage()},
+	[] {
+		globalReclaimer.initialize();
+		globalReclaimer->runReclaimFiber();
+	}};
 
 // --------------------------------------------------------
 // MemoryView.
@@ -198,17 +201,17 @@ void MemoryView::resize(size_t newSize, async::any_receiver<void> receiver) {
 }
 
 void MemoryView::fork(
-  async::any_receiver<frg::tuple<Error, smarter::shared_ptr<MemoryView>>> receiver
+	async::any_receiver<frg::tuple<Error, smarter::shared_ptr<MemoryView>>> receiver
 ) {
 	receiver.set_value({Error::illegalObject, nullptr});
 }
 
 // In addition to what copyFrom() does, we also have to mark the memory as dirty.
 coroutine<frg::expected<Error>> MemoryView::copyTo(
-  uintptr_t offset,
-  const void *pointer,
-  size_t size,
-  smarter::shared_ptr<WorkQueue> wq
+	uintptr_t offset,
+	const void *pointer,
+	size_t size,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	struct Node {
 		MemoryView *view;
@@ -222,79 +225,99 @@ coroutine<frg::expected<Error>> MemoryView::copyTo(
 	};
 
 	co_await async::let(
-	  [=] {
-		  return Node {
-		    .view = this,
-		    .offset = offset,
-		    .pointer = pointer,
-		    .size = size,
-		    .wq = std::move(wq)};
-	  },
-	  [](Node &nd) {
-		  return async::sequence(
-		    async::transform(
-		      nd.view->asyncLockRange(nd.offset, nd.size, nd.wq),
-		      [](Error e) {
-			      // TODO: properly propagate the error.
-			      assert(e == Error::success);
-		      }
-		    ),
-		    async::repeat_while(
-		      [&nd] { return nd.progress < nd.size; },
-		      [&nd] {
-			      auto fetchOffset = (nd.offset + nd.progress) & ~(kPageSize - 1);
-			      return async::sequence(
-			        async::transform(
-			          nd.view->fetchRange(fetchOffset, 0, nd.wq),
-			          [&nd](frg::expected<Error, PhysicalRange> resultOrError) {
-				          assert(resultOrError);
-				          auto range = resultOrError.value();
-				          assert(range.get<0>() != PhysicalAddr(-1));
-				          assert(range.get<1>() >= kPageSize);
-				          nd.physical = range.get<0>();
-			          }
-			        ),
-			        // Do heavy copying on the WQ.
-			        // TODO: This could use wq->enter() but we
-			        // want to keep stack depth low.
-			        nd.wq->schedule(),
-			        async::invocable([&nd] {
-				        auto misalign = (nd.offset + nd.progress) & (kPageSize - 1);
-				        size_t chunk =
-				          frg::min(kPageSize - misalign, nd.size - nd.progress);
+		[=] {
+			return Node {
+				.view = this,
+				.offset = offset,
+				.pointer = pointer,
+				.size = size,
+				.wq = std::move(wq)};
+		},
+		[](Node &nd) {
+			return async::sequence(
+				async::transform(
+					nd.view->asyncLockRange(nd.offset, nd.size, nd.wq),
+					[](Error e) {
+						// TODO: properly propagate the error.
+						assert(e == Error::success);
+					}
+				),
+				async::repeat_while(
+					[&nd] { return nd.progress < nd.size; },
+					[&nd] {
+						auto fetchOffset = (nd.offset + nd.progress)
+								 & ~(kPageSize - 1);
+						return async::sequence(
+							async::transform(
+								nd.view->fetchRange(
+									fetchOffset,
+									0,
+									nd.wq
+								),
+								[&nd](frg::expected<
+									Error,
+									PhysicalRange> resultOrError
+								) {
+									assert(resultOrError);
+									auto range =
+										resultOrError.value(
+										);
+									assert(range.get<0>()
+									       != PhysicalAddr(-1));
+									assert(range.get<1>()
+									       >= kPageSize);
+									nd.physical =
+										range.get<0>();
+								}
+							),
+							// Do heavy copying on the WQ.
+							// TODO: This could use wq->enter() but we
+							// want to keep stack depth low.
+							nd.wq->schedule(),
+							async::invocable([&nd] {
+								auto misalign =
+									(nd.offset + nd.progress)
+									& (kPageSize - 1);
+								size_t chunk = frg::min(
+									kPageSize - misalign,
+									nd.size - nd.progress
+								);
 
-				        PageAccessor accessor {nd.physical};
-				        memcpy(
-				          reinterpret_cast<uint8_t *>(accessor.get()) + misalign,
-				          reinterpret_cast<const uint8_t *>(nd.pointer)
-				            + nd.progress,
-				          chunk
-				        );
-				        nd.progress += chunk;
-			        })
-			      );
-		      }
-		    ),
-		    async::invocable([&nd] {
-			    auto misalign = nd.offset & (kPageSize - 1);
-			    nd.view->markDirty(
-			      nd.offset & ~(kPageSize - 1),
-			      (nd.size + misalign + kPageSize - 1) & ~(kPageSize - 1)
-			    );
+								PageAccessor accessor {nd.physical};
+								memcpy(reinterpret_cast<uint8_t *>(
+									       accessor.get()
+								       ) + misalign,
+								       reinterpret_cast<
+									       const uint8_t *>(
+									       nd.pointer
+								       ) + nd.progress,
+								       chunk);
+								nd.progress += chunk;
+							})
+						);
+					}
+				),
+				async::invocable([&nd] {
+					auto misalign = nd.offset & (kPageSize - 1);
+					nd.view->markDirty(
+						nd.offset & ~(kPageSize - 1),
+						(nd.size + misalign + kPageSize - 1)
+							& ~(kPageSize - 1)
+					);
 
-			    nd.view->unlockRange(nd.offset, nd.size);
-		    })
-		  );
-	  }
+					nd.view->unlockRange(nd.offset, nd.size);
+				})
+			);
+		}
 	);
 	co_return {};
 }
 
 coroutine<frg::expected<Error>> MemoryView::copyFrom(
-  uintptr_t offset,
-  void *pointer,
-  size_t size,
-  smarter::shared_ptr<WorkQueue> wq
+	uintptr_t offset,
+	void *pointer,
+	size_t size,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	struct Node {
 		MemoryView *view;
@@ -308,80 +331,100 @@ coroutine<frg::expected<Error>> MemoryView::copyFrom(
 	};
 
 	co_await async::let(
-	  [=] {
-		  return Node {
-		    .view = this,
-		    .offset = offset,
-		    .pointer = pointer,
-		    .size = size,
-		    .wq = std::move(wq)};
-	  },
-	  [](Node &nd) {
-		  return async::sequence(
-		    async::transform(
-		      nd.view->asyncLockRange(nd.offset, nd.size, nd.wq),
-		      [](Error e) {
-			      // TODO: properly propagate the error.
-			      assert(e == Error::success);
-		      }
-		    ),
-		    async::repeat_while(
-		      [&nd] { return nd.progress < nd.size; },
-		      [&nd] {
-			      auto fetchOffset = (nd.offset + nd.progress) & ~(kPageSize - 1);
-			      return async::sequence(
-			        async::transform(
-			          nd.view->fetchRange(fetchOffset, 0, nd.wq),
-			          [&nd](frg::expected<Error, PhysicalRange> resultOrError) {
-				          assert(resultOrError);
-				          auto range = resultOrError.value();
-				          assert(range.get<0>() != PhysicalAddr(-1));
-				          assert(range.get<1>() >= kPageSize);
-				          nd.physical = range.get<0>();
-			          }
-			        ),
-			        // Do heavy copying on the WQ.
-			        // TODO: This could use wq->enter() but we
-			        // want to keep stack depth low.
-			        nd.wq->schedule(),
-			        async::invocable([&nd] {
-				        auto misalign = (nd.offset + nd.progress) & (kPageSize - 1);
-				        size_t chunk =
-				          frg::min(kPageSize - misalign, nd.size - nd.progress);
+		[=] {
+			return Node {
+				.view = this,
+				.offset = offset,
+				.pointer = pointer,
+				.size = size,
+				.wq = std::move(wq)};
+		},
+		[](Node &nd) {
+			return async::sequence(
+				async::transform(
+					nd.view->asyncLockRange(nd.offset, nd.size, nd.wq),
+					[](Error e) {
+						// TODO: properly propagate the error.
+						assert(e == Error::success);
+					}
+				),
+				async::repeat_while(
+					[&nd] { return nd.progress < nd.size; },
+					[&nd] {
+						auto fetchOffset = (nd.offset + nd.progress)
+								 & ~(kPageSize - 1);
+						return async::sequence(
+							async::transform(
+								nd.view->fetchRange(
+									fetchOffset,
+									0,
+									nd.wq
+								),
+								[&nd](frg::expected<
+									Error,
+									PhysicalRange> resultOrError
+								) {
+									assert(resultOrError);
+									auto range =
+										resultOrError.value(
+										);
+									assert(range.get<0>()
+									       != PhysicalAddr(-1));
+									assert(range.get<1>()
+									       >= kPageSize);
+									nd.physical =
+										range.get<0>();
+								}
+							),
+							// Do heavy copying on the WQ.
+							// TODO: This could use wq->enter() but we
+							// want to keep stack depth low.
+							nd.wq->schedule(),
+							async::invocable([&nd] {
+								auto misalign =
+									(nd.offset + nd.progress)
+									& (kPageSize - 1);
+								size_t chunk = frg::min(
+									kPageSize - misalign,
+									nd.size - nd.progress
+								);
 
-				        PageAccessor accessor {nd.physical};
-				        memcpy(
-				          reinterpret_cast<uint8_t *>(nd.pointer) + nd.progress,
-				          reinterpret_cast<uint8_t *>(accessor.get()) + misalign,
-				          chunk
-				        );
-				        nd.progress += chunk;
-			        })
-			      );
-		      }
-		    ),
-		    async::invocable([&nd] { nd.view->unlockRange(nd.offset, nd.size); })
-		  );
-	  }
+								PageAccessor accessor {nd.physical};
+								memcpy(reinterpret_cast<uint8_t *>(
+									       nd.pointer
+								       ) + nd.progress,
+								       reinterpret_cast<uint8_t *>(
+									       accessor.get()
+								       ) + misalign,
+								       chunk);
+								nd.progress += chunk;
+							})
+						);
+					}
+				),
+				async::invocable([&nd] { nd.view->unlockRange(nd.offset, nd.size); }
+				)
+			);
+		}
 	);
 	co_return {};
 }
 
 bool MemoryView::asyncLockRange(
-  uintptr_t offset,
-  size_t size,
-  smarter::shared_ptr<WorkQueue>,
-  LockRangeNode *node
+	uintptr_t offset,
+	size_t size,
+	smarter::shared_ptr<WorkQueue>,
+	LockRangeNode *node
 ) {
 	node->result = lockRange(offset, size);
 	return true;
 }
 
 coroutine<frg::expected<Error>> MemoryView::touchRange(
-  uintptr_t offset,
-  size_t size,
-  FetchFlags flags,
-  smarter::shared_ptr<WorkQueue> wq
+	uintptr_t offset,
+	size_t size,
+	FetchFlags flags,
+	smarter::shared_ptr<WorkQueue> wq
 ) {
 	size_t progress = 0;
 	while (progress < size) {
@@ -452,10 +495,10 @@ struct ZeroMemory final
 
 	void markDirty(uintptr_t, size_t) override {
 		infoLogger() << "\e[31m"
-		                "thor: ZeroMemory::markDirty() called,"
-		                ""
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: ZeroMemory::markDirty() called,"
+				""
+				"\e[39m"
+			     << frg::endlog;
 	}
 
 	coroutine<frg::expected<Error, PhysicalAddr>>
@@ -520,8 +563,7 @@ void ImmediateMemory::resize(size_t newSize, async::any_receiver<void> receiver)
 		_physicalPages.resize(newNumPages);
 		for (size_t i = currentNumPages; i < newNumPages; ++i) {
 			auto physical = physicalAllocator->allocate(kPageSize, 64);
-			assert(
-			  physical != PhysicalAddr(-1) && "OOM when allocating ImmediateMemory"
+			assert(physical != PhysicalAddr(-1) && "OOM when allocating ImmediateMemory"
 			);
 
 			PageAccessor accessor {physical};
@@ -648,10 +690,10 @@ size_t HardwareMemory::getLength() {
 // --------------------------------------------------------
 
 AllocatedMemory::AllocatedMemory(
-  size_t desiredLngth,
-  int addressBits,
-  size_t desiredChunkSize,
-  size_t chunkAlign
+	size_t desiredLngth,
+	int addressBits,
+	size_t desiredChunkSize,
+	size_t chunkAlign
 )
 : _physicalChunks {*kernelAlloc}
 , _addressBits {addressBits}
@@ -660,13 +702,13 @@ AllocatedMemory::AllocatedMemory(
 	_chunkSize = size_t(1) << (64 - __builtin_clzl(desiredChunkSize - 1));
 	if (_chunkSize != desiredChunkSize)
 		infoLogger() << "\e[31mPhysical allocation of size " << (void *) desiredChunkSize
-		             << " rounded up to power of 2\e[39m" << frg::endlog;
+			     << " rounded up to power of 2\e[39m" << frg::endlog;
 
 	size_t length = (desiredLngth + (_chunkSize - 1)) & ~(_chunkSize - 1);
 	if (length != desiredLngth)
 		infoLogger() << "\e[31mMemory length " << (void *) desiredLngth
-		             << " rounded up to chunk size " << (void *) _chunkSize << "\e[39m"
-		             << frg::endlog;
+			     << " rounded up to chunk size " << (void *) _chunkSize << "\e[39m"
+			     << frg::endlog;
 
 	assert(_chunkSize % kPageSize == 0);
 	assert(_chunkAlign % kPageSize == 0);
@@ -679,15 +721,15 @@ AllocatedMemory::~AllocatedMemory() {
 	// Rework this to only schedule the deallocation but not actually perform it?
 	if (logUsage)
 		infoLogger() << "thor: Releasing AllocatedMemory ("
-		             << (physicalAllocator->numUsedPages() * 4) << " KiB in use)"
-		             << frg::endlog;
+			     << (physicalAllocator->numUsedPages() * 4) << " KiB in use)"
+			     << frg::endlog;
 	for (size_t i = 0; i < _physicalChunks.size(); ++i) {
 		if (_physicalChunks[i] != PhysicalAddr(-1))
 			physicalAllocator->free(_physicalChunks[i], _chunkSize);
 	}
 	if (logUsage)
 		infoLogger() << "thor:     (" << (physicalAllocator->numUsedPages() * 4)
-		             << " KiB in use)" << frg::endlog;
+			     << " KiB in use)" << frg::endlog;
 }
 
 void AllocatedMemory::resize(size_t newSize, async::any_receiver<void> receiver) {
@@ -731,8 +773,8 @@ frg::tuple<PhysicalAddr, CachingMode> AllocatedMemory::peekRange(uintptr_t offse
 	if (_physicalChunks[index] == PhysicalAddr(-1))
 		return frg::tuple<PhysicalAddr, CachingMode> {PhysicalAddr(-1), CachingMode::null};
 	return frg::tuple<PhysicalAddr, CachingMode> {
-	  _physicalChunks[index] + disp,
-	  CachingMode::null};
+		_physicalChunks[index] + disp,
+		CachingMode::null};
 }
 
 coroutine<frg::expected<Error, PhysicalRange>>
@@ -758,9 +800,9 @@ AllocatedMemory::fetchRange(uintptr_t offset, FetchFlags, smarter::shared_ptr<Wo
 
 	assert(_physicalChunks[index] != PhysicalAddr(-1));
 	co_return PhysicalRange {
-	  _physicalChunks[index] + disp,
-	  _chunkSize - disp,
-	  CachingMode::null};
+		_physicalChunks[index] + disp,
+		_chunkSize - disp,
+		CachingMode::null};
 }
 
 void AllocatedMemory::markDirty(uintptr_t, size_t) {
@@ -819,8 +861,8 @@ ManagedSpace::ManagedSpace(size_t length, bool readahead)
 			}
 
 			co_await self->_evictQueue.evictRange(
-			  page->identity << kPageShift,
-			  kPageSize
+				page->identity << kPageShift,
+				kPageSize
 			);
 
 			PhysicalAddr physical;
@@ -950,7 +992,7 @@ void ManagedSpace::_progressManagement(ManageList &pending) {
 			auto fuse_cache_page = _writebackList.front();
 			auto fuse_index = fuse_cache_page->identity;
 			auto fuse_managed_page =
-			  frg::container_of(fuse_cache_page, &ManagedPage::cachePage);
+				frg::container_of(fuse_cache_page, &ManagedPage::cachePage);
 			if (fuse_index != index + count)
 				break;
 			assert(fuse_managed_page->loadState == kStateWantWriteback);
@@ -962,10 +1004,10 @@ void ManagedSpace::_progressManagement(ManageList &pending) {
 
 		auto node = _managementQueue.pop_front();
 		node->setup(
-		  Error::success,
-		  ManageRequest::writeback,
-		  index << kPageShift,
-		  count << kPageShift
+			Error::success,
+			ManageRequest::writeback,
+			index << kPageShift,
+			count << kPageShift
 		);
 		pending.push_back(node);
 	}
@@ -980,7 +1022,7 @@ void ManagedSpace::_progressManagement(ManageList &pending) {
 			auto fuse_cache_page = _initializationList.front();
 			auto fuse_index = fuse_cache_page->identity;
 			auto fuse_managed_page =
-			  frg::container_of(fuse_cache_page, &ManagedPage::cachePage);
+				frg::container_of(fuse_cache_page, &ManagedPage::cachePage);
 			if (fuse_index != index + count)
 				break;
 			assert(fuse_managed_page->loadState == kStateWantInitialization);
@@ -992,10 +1034,10 @@ void ManagedSpace::_progressManagement(ManageList &pending) {
 
 		auto node = _managementQueue.pop_front();
 		node->setup(
-		  Error::success,
-		  ManageRequest::initialize,
-		  index << kPageShift,
-		  count << kPageShift
+			Error::success,
+			ManageRequest::initialize,
+			index << kPageShift,
+			count << kPageShift
 		);
 		pending.push_back(node);
 	}
@@ -1008,15 +1050,16 @@ void ManagedSpace::_progressMonitors(MonitorList &pending) {
 			size_t index = (node->offset + node->progress) >> kPageShift;
 			auto pit = pages.find(index);
 			assert(pit);
-			if (pit->loadState == kStateMissing || pit->loadState == kStateWantInitialization || pit->loadState == kStateInitialization)
+			if (pit->loadState == kStateMissing
+			    || pit->loadState == kStateWantInitialization
+			    || pit->loadState == kStateInitialization)
 				return false;
 
-			assert(
-			  pit->loadState == kStatePresent || pit->loadState == kStateWantWriteback
-			  || pit->loadState == kStateWriteback
-			  || pit->loadState == kStateAnotherWriteback
-			  || pit->loadState == kStateEvicting
-			);
+			assert(pit->loadState == kStatePresent
+			       || pit->loadState == kStateWantWriteback
+			       || pit->loadState == kStateWriteback
+			       || pit->loadState == kStateAnotherWriteback
+			       || pit->loadState == kStateEvicting);
 			node->progress += kPageSize;
 		}
 		return true;
@@ -1043,30 +1086,30 @@ void BackingMemory::resize(size_t newSize, async::any_receiver<void> receiver) {
 	auto newPages = newSize >> kPageShift;
 
 	async::detach_with_allocator(
-	  *kernelAlloc,
-	  [](BackingMemory *self, size_t newPages, async::any_receiver<void> receiver)
-	    -> coroutine<void> {
-		  size_t oldPages;
-		  {
-			  auto irqLock = frg::guard(&irqMutex());
-			  auto lock = frg::guard(&self->_managed->mutex);
+		*kernelAlloc,
+		[](BackingMemory *self, size_t newPages, async::any_receiver<void> receiver
+		) -> coroutine<void> {
+			size_t oldPages;
+			{
+				auto irqLock = frg::guard(&irqMutex());
+				auto lock = frg::guard(&self->_managed->mutex);
 
-			  oldPages = self->_managed->numPages;
-			  self->_managed->numPages = newPages;
-		  }
+				oldPages = self->_managed->numPages;
+				self->_managed->numPages = newPages;
+			}
 
-		  if (newPages > self->_managed->numPages) {
-			  // Do nothing for now.
-		  } else if (newPages < self->_managed->numPages) {
-			  // TODO: also free the affected pages!
-			  co_await self->_managed->_evictQueue.evictRange(
-			    newPages << kPageShift,
-			    oldPages << kPageShift
-			  );
-		  }
+			if (newPages > self->_managed->numPages) {
+				// Do nothing for now.
+			} else if (newPages < self->_managed->numPages) {
+				// TODO: also free the affected pages!
+				co_await self->_managed->_evictQueue.evictRange(
+					newPages << kPageShift,
+					oldPages << kPageShift
+				);
+			}
 
-		  receiver.set_value();
-	  }(this, newPages, std::move(receiver))
+			receiver.set_value();
+		}(this, newPages, std::move(receiver))
 	);
 }
 
@@ -1145,13 +1188,13 @@ Error BackingMemory::updateRange(ManageRequest type, size_t offset, size_t lengt
 		assert((offset + length) / kPageSize <= _managed->numPages);
 
 		/*	assert(length == kPageSize);
-		        auto inspect = (unsigned char
+			auto inspect = (unsigned char
 		   *)physicalToVirtual(_managed->physicalPages[offset / kPageSize]); auto log =
 		   infoLogger() << "dump"; for(size_t b = 0; b < kPageSize; b += 16) { log <<
 		   frg::hex_fmt(offset + b) << "   "; for(size_t i = 0; i < 16; i++) log << " " <<
 		   frg::hex_fmt(inspect[b + i]); log << "\n";
-		        }
-		        log << frg::endlog;*/
+			}
+			log << frg::endlog;*/
 
 		if (type == ManageRequest::initialize) {
 			for (size_t pg = 0; pg < length; pg += kPageSize) {
@@ -1174,9 +1217,8 @@ Error BackingMemory::updateRange(ManageRequest type, size_t offset, size_t lengt
 					if (!pit->lockCount)
 						globalReclaimer->addPage(&pit->cachePage);
 				} else {
-					assert(
-					  pit->loadState == ManagedSpace::kStateAnotherWriteback
-					);
+					assert(pit->loadState
+					       == ManagedSpace::kStateAnotherWriteback);
 					pit->loadState = ManagedSpace::kStateWantWriteback;
 					_managed->_writebackList.push_back(&pit->cachePage);
 				}
@@ -1224,7 +1266,11 @@ frg::tuple<PhysicalAddr, CachingMode> FrontalMemory::peekRange(uintptr_t offset)
 	if (!pit)
 		return frg::tuple<PhysicalAddr, CachingMode> {PhysicalAddr(-1), CachingMode::null};
 
-	if (pit->loadState == ManagedSpace::kStatePresent || pit->loadState == ManagedSpace::kStateWantWriteback || pit->loadState == ManagedSpace::kStateWriteback || pit->loadState == ManagedSpace::kStateAnotherWriteback || pit->loadState == ManagedSpace::kStateEvicting) {
+	if (pit->loadState == ManagedSpace::kStatePresent
+	    || pit->loadState == ManagedSpace::kStateWantWriteback
+	    || pit->loadState == ManagedSpace::kStateWriteback
+	    || pit->loadState == ManagedSpace::kStateAnotherWriteback
+	    || pit->loadState == ManagedSpace::kStateEvicting) {
 		auto physical = pit->physical;
 		assert(physical != PhysicalAddr(-1));
 
@@ -1236,11 +1282,9 @@ frg::tuple<PhysicalAddr, CachingMode> FrontalMemory::peekRange(uintptr_t offset)
 
 		return frg::tuple<PhysicalAddr, CachingMode> {physical, CachingMode::null};
 	} else {
-		assert(
-		  pit->loadState == ManagedSpace::kStateMissing
-		  || pit->loadState == ManagedSpace::kStateWantInitialization
-		  || pit->loadState == ManagedSpace::kStateInitialization
-		);
+		assert(pit->loadState == ManagedSpace::kStateMissing
+		       || pit->loadState == ManagedSpace::kStateWantInitialization
+		       || pit->loadState == ManagedSpace::kStateInitialization);
 		return frg::tuple<PhysicalAddr, CachingMode> {PhysicalAddr(-1), CachingMode::null};
 	}
 }
@@ -1261,9 +1305,13 @@ FrontalMemory::fetchRange(uintptr_t offset, FetchFlags flags, smarter::shared_pt
 
 		// Try the fast-paths first.
 		auto [pit, wasInserted] =
-		  _managed->pages.find_or_insert(index, _managed.get(), index);
+			_managed->pages.find_or_insert(index, _managed.get(), index);
 		assert(pit);
-		if (pit->loadState == ManagedSpace::kStatePresent || pit->loadState == ManagedSpace::kStateWantWriteback || pit->loadState == ManagedSpace::kStateWriteback || pit->loadState == ManagedSpace::kStateAnotherWriteback || pit->loadState == ManagedSpace::kStateEvicting) {
+		if (pit->loadState == ManagedSpace::kStatePresent
+		    || pit->loadState == ManagedSpace::kStateWantWriteback
+		    || pit->loadState == ManagedSpace::kStateWriteback
+		    || pit->loadState == ManagedSpace::kStateAnotherWriteback
+		    || pit->loadState == ManagedSpace::kStateEvicting) {
 			auto physical = pit->physical;
 			assert(physical != PhysicalAddr(-1));
 
@@ -1277,22 +1325,20 @@ FrontalMemory::fetchRange(uintptr_t offset, FetchFlags flags, smarter::shared_pt
 			}
 
 			co_return PhysicalRange {
-			  physical + misalign,
-			  kPageSize - misalign,
-			  CachingMode::null};
+				physical + misalign,
+				kPageSize - misalign,
+				CachingMode::null};
 		} else {
-			assert(
-			  pit->loadState == ManagedSpace::kStateMissing
-			  || pit->loadState == ManagedSpace::kStateWantInitialization
-			  || pit->loadState == ManagedSpace::kStateInitialization
-			);
+			assert(pit->loadState == ManagedSpace::kStateMissing
+			       || pit->loadState == ManagedSpace::kStateWantInitialization
+			       || pit->loadState == ManagedSpace::kStateInitialization);
 		}
 
 		if (flags & fetchDisallowBacking) {
 			infoLogger() << "\e[31m"
-			                "thor: Backing of page is disallowed"
-			                "\e[39m"
-			             << frg::endlog;
+					"thor: Backing of page is disallowed"
+					"\e[39m"
+				     << frg::endlog;
 			co_return Error::fault;
 		}
 
@@ -1308,9 +1354,9 @@ FrontalMemory::fetchRange(uintptr_t offset, FetchFlags flags, smarter::shared_pt
 				if (!(index + i < _managed->numPages))
 					break;
 				auto [pit, wasInserted] = _managed->pages.find_or_insert(
-				  index + i,
-				  _managed.get(),
-				  index + i
+					index + i,
+					_managed.get(),
+					index + i
 				);
 				assert(pit);
 				if (pit->loadState == ManagedSpace::kStateMissing) {
@@ -1379,10 +1425,8 @@ void FrontalMemory::markDirty(uintptr_t offset, size_t size) {
 			} else if (pit->loadState == ManagedSpace::kStateWriteback) {
 				pit->loadState = ManagedSpace::kStateAnotherWriteback;
 			} else {
-				assert(
-				  pit->loadState == ManagedSpace::kStateWantWriteback
-				  || pit->loadState == ManagedSpace::kStateAnotherWriteback
-				);
+				assert(pit->loadState == ManagedSpace::kStateWantWriteback
+				       || pit->loadState == ManagedSpace::kStateAnotherWriteback);
 			}
 		}
 	}
@@ -1401,7 +1445,7 @@ coroutine<frg::expected<Error, PhysicalAddr>>
 FrontalMemory::takeGlobalFutex(uintptr_t offset, smarter::shared_ptr<WorkQueue> wq) {
 	// For now, we pick the trival implementation here.
 	auto lockError =
-	  co_await MemoryView::asyncLockRange(offset & ~(kPageSize - 1), kPageSize, wq);
+		co_await MemoryView::asyncLockRange(offset & ~(kPageSize - 1), kPageSize, wq);
 	if (lockError != Error::success)
 		co_return Error::fault;
 	auto range = FRG_CO_TRY(co_await fetchRange(offset & ~(kPageSize - 1), 0, wq));
@@ -1452,8 +1496,8 @@ Error IndirectMemory::lockRange(uintptr_t offset, size_t size) {
 	if (inSlotOffset + size > indirections_[slot]->size)
 		return Error::fault;
 	return indirections_[slot]->memory->lockRange(
-	  indirections_[slot]->offset + inSlotOffset,
-	  size
+		indirections_[slot]->offset + inSlotOffset,
+		size
 	);
 }
 
@@ -1467,8 +1511,8 @@ void IndirectMemory::unlockRange(uintptr_t offset, size_t size) {
 	assert(indirections_[slot]);  // TODO: Return Error::fault.
 	assert(inSlotOffset + size <= indirections_[slot]->size);  // TODO: Return Error::fault.
 	return indirections_[slot]->memory->unlockRange(
-	  indirections_[slot]->offset + inSlotOffset,
-	  size
+		indirections_[slot]->offset + inSlotOffset,
+		size
 	);
 }
 
@@ -1492,8 +1536,11 @@ IndirectMemory::fetchRange(uintptr_t offset, FetchFlags flags, smarter::shared_p
 	auto inSlotOffset = offset & ((uintptr_t(1) << 32) - 1);
 	assert(slot < indirections_.size());  // TODO: Return Error::fault.
 	assert(indirections_[slot]);  // TODO: Return Error::fault.
-	return indirections_[slot]
-	  ->memory->fetchRange(indirections_[slot]->offset + inSlotOffset, flags, std::move(wq));
+	return indirections_[slot]->memory->fetchRange(
+		indirections_[slot]->offset + inSlotOffset,
+		flags,
+		std::move(wq)
+	);
 }
 
 void IndirectMemory::markDirty(uintptr_t offset, size_t size) {
@@ -1513,18 +1560,24 @@ size_t IndirectMemory::getLength() {
 }
 
 Error IndirectMemory::setIndirection(
-  size_t slot,
-  smarter::shared_ptr<MemoryView> memory,
-  uintptr_t offset,
-  size_t size
+	size_t slot,
+	smarter::shared_ptr<MemoryView> memory,
+	uintptr_t offset,
+	size_t size
 ) {
 	auto irqLock = frg::guard(&irqMutex());
 	auto lock = frg::guard(&mutex_);
 
 	if (slot >= indirections_.size())
 		return Error::outOfBounds;
-	auto indirection =
-	  smarter::allocate_shared<IndirectionSlot>(*kernelAlloc, this, slot, memory, offset, size);
+	auto indirection = smarter::allocate_shared<IndirectionSlot>(
+		*kernelAlloc,
+		this,
+		slot,
+		memory,
+		offset,
+		size
+	);
 	// TODO: start a coroutine to observe evictions.
 	memory->addObserver(&indirection->observer);
 	indirections_[slot] = std::move(indirection);
@@ -1536,10 +1589,10 @@ Error IndirectMemory::setIndirection(
 // --------------------------------------------------------
 
 CopyOnWriteMemory::CopyOnWriteMemory(
-  smarter::shared_ptr<MemoryView> view,
-  uintptr_t offset,
-  size_t length,
-  smarter::shared_ptr<CowChain> chain
+	smarter::shared_ptr<MemoryView> view,
+	uintptr_t offset,
+	size_t length,
+	smarter::shared_ptr<CowChain> chain
 )
 : MemoryView {&_evictQueue}
 , _view {std::move(view)}
@@ -1571,7 +1624,7 @@ CopyOnWriteMemory::resolveGlobalFutex(uintptr_t offset) {
 }
 
 void CopyOnWriteMemory::fork(
-  async::any_receiver<frg::tuple<Error, smarter::shared_ptr<MemoryView>>> receiver
+	async::any_receiver<frg::tuple<Error, smarter::shared_ptr<MemoryView>>> receiver
 ) {
 	// Note that locked pages require special attention during CoW: as we cannot
 	// replace them by copies, we have to copy them eagerly.
@@ -1591,11 +1644,11 @@ void CopyOnWriteMemory::fork(
 
 		// Create a new mapping in the forked space.
 		forked = smarter::allocate_shared<CopyOnWriteMemory>(
-		  *kernelAlloc,
-		  _view,
-		  _viewOffset,
-		  _length,
-		  newChain
+			*kernelAlloc,
+			_view,
+			_viewOffset,
+			_length,
+			newChain
 		);
 		forked->selfPtr = forked;
 
@@ -1629,8 +1682,8 @@ void CopyOnWriteMemory::fork(
 				// Update the chains.
 				auto pageOffset = _viewOffset + pg;
 				auto newIt = newChain->_pages.insert(
-				  pageOffset >> kPageShift,
-				  PhysicalAddr(-1)
+					pageOffset >> kPageShift,
+					PhysicalAddr(-1)
 				);
 				_ownedPages.erase(pg >> kPageShift);
 				newIt->store(physical, std::memory_order_relaxed);
@@ -1639,169 +1692,181 @@ void CopyOnWriteMemory::fork(
 	}
 
 	async::detach_with_allocator(
-	  *kernelAlloc,
-	  [](
-	    CopyOnWriteMemory *self,
-	    smarter::shared_ptr<CopyOnWriteMemory> forked,
-	    async::any_receiver<frg::tuple<Error, smarter::shared_ptr<MemoryView>>> receiver
-	  ) -> coroutine<void> {
-		  co_await self->_evictQueue.evictRange(0, self->_length);
-		  receiver.set_value({Error::success, std::move(forked)});
-	  }(this, std::move(forked), receiver)
+		*kernelAlloc,
+		[](CopyOnWriteMemory *self,
+		   smarter::shared_ptr<CopyOnWriteMemory> forked,
+		   async::any_receiver<frg::tuple<Error, smarter::shared_ptr<MemoryView>>> receiver
+		) -> coroutine<void> {
+			co_await self->_evictQueue.evictRange(0, self->_length);
+			receiver.set_value({Error::success, std::move(forked)});
+		}(this, std::move(forked), receiver)
 	);
 }
 
 Error CopyOnWriteMemory::lockRange(uintptr_t, size_t) {
 	panicLogger() << "CopyOnWriteMemory does not support synchronous lockRange()"
-	              << frg::endlog;
+		      << frg::endlog;
 	__builtin_unreachable();
 }
 
 bool CopyOnWriteMemory::asyncLockRange(
-  uintptr_t offset,
-  size_t size,
-  smarter::shared_ptr<WorkQueue> wq,
-  LockRangeNode *node
+	uintptr_t offset,
+	size_t size,
+	smarter::shared_ptr<WorkQueue> wq,
+	LockRangeNode *node
 ) {
 	// For now, it is enough to populate the range, as pages can only be evicted from
 	// the root of the CoW chain, but copies are never evicted.
 	async::detach_with_allocator(
-	  *kernelAlloc,
-	  [](
-	    CopyOnWriteMemory *self,
-	    uintptr_t overallOffset,
-	    size_t size,
-	    smarter::shared_ptr<WorkQueue> wq,
-	    LockRangeNode *node
-	  ) -> coroutine<void> {
-		  size_t progress = 0;
-		  while (progress < size) {
-			  auto offset = overallOffset + progress;
+		*kernelAlloc,
+		[](CopyOnWriteMemory *self,
+		   uintptr_t overallOffset,
+		   size_t size,
+		   smarter::shared_ptr<WorkQueue> wq,
+		   LockRangeNode *node) -> coroutine<void> {
+			size_t progress = 0;
+			while (progress < size) {
+				auto offset = overallOffset + progress;
 
-			  smarter::shared_ptr<CowChain> chain;
-			  smarter::shared_ptr<MemoryView> view;
-			  uintptr_t viewOffset;
-			  CowPage *cowIt;
-			  bool waitForCopy = false;
-			  {
-				  // If the page is present in our private chain, we just
-				  // return it.
-				  auto irqLock = frg::guard(&irqMutex());
-				  auto lock = frg::guard(&self->_mutex);
+				smarter::shared_ptr<CowChain> chain;
+				smarter::shared_ptr<MemoryView> view;
+				uintptr_t viewOffset;
+				CowPage *cowIt;
+				bool waitForCopy = false;
+				{
+					// If the page is present in our private chain, we just
+					// return it.
+					auto irqLock = frg::guard(&irqMutex());
+					auto lock = frg::guard(&self->_mutex);
 
-				  cowIt = self->_ownedPages.find(offset >> kPageShift);
-				  if (cowIt) {
-					  if (cowIt->state == CowState::hasCopy) {
-						  assert(cowIt->physical != PhysicalAddr(-1));
+					cowIt = self->_ownedPages.find(offset >> kPageShift);
+					if (cowIt) {
+						if (cowIt->state == CowState::hasCopy) {
+							assert(cowIt->physical != PhysicalAddr(-1));
 
-						  cowIt->lockCount++;
-						  progress += kPageSize;
-						  continue;
-					  } else {
-						  assert(cowIt->state == CowState::inProgress);
-						  waitForCopy = true;
-					  }
-				  } else {
-					  chain = self->_copyChain;
-					  view = self->_view;
-					  viewOffset = self->_viewOffset;
+							cowIt->lockCount++;
+							progress += kPageSize;
+							continue;
+						} else {
+							assert(cowIt->state == CowState::inProgress
+							);
+							waitForCopy = true;
+						}
+					} else {
+						chain = self->_copyChain;
+						view = self->_view;
+						viewOffset = self->_viewOffset;
 
-					  // Otherwise we need to copy from the chain or from
-					  // the root view.
-					  cowIt = self->_ownedPages.insert(offset >> kPageShift);
-					  cowIt->state = CowState::inProgress;
-				  }
-			  }
+						// Otherwise we need to copy from the chain or from
+						// the root view.
+						cowIt = self->_ownedPages.insert(
+							offset >> kPageShift
+						);
+						cowIt->state = CowState::inProgress;
+					}
+				}
 
-			  if (waitForCopy) {
-				  bool stillWaiting;
-				  do {
-					  stillWaiting =
-					    co_await self->_copyEvent.async_wait_if([&]() -> bool {
-						    // TODO: this could be
-						    // faster if cowIt->state
-						    // was atomic.
-						    auto irqLock = frg::guard(&irqMutex());
-						    auto lock = frg::guard(&self->_mutex);
+				if (waitForCopy) {
+					bool stillWaiting;
+					do {
+						stillWaiting =
+							co_await self->_copyEvent.async_wait_if(
+								[&]() -> bool {
+									// TODO: this could be
+									// faster if cowIt->state
+									// was atomic.
+									auto irqLock = frg::guard(
+										&irqMutex()
+									);
+									auto lock = frg::guard(
+										&self->_mutex
+									);
 
-						    if (cowIt->state == CowState::inProgress)
-							    return true;
-						    assert(cowIt->state == CowState::hasCopy);
-						    return false;
-					    });
-					  co_await wq->schedule();
-				  } while (stillWaiting);
+									if (cowIt->state
+									    == CowState::inProgress)
+										return true;
+									assert(cowIt->state
+									       == CowState::hasCopy
+									);
+									return false;
+								}
+							);
+						co_await wq->schedule();
+					} while (stillWaiting);
 
-				  {
-					  auto irqLock = frg::guard(&irqMutex());
-					  auto lock = frg::guard(&self->_mutex);
+					{
+						auto irqLock = frg::guard(&irqMutex());
+						auto lock = frg::guard(&self->_mutex);
 
-					  assert(cowIt->state == CowState::hasCopy);
-					  cowIt->lockCount++;
-				  }
-				  progress += kPageSize;
-				  continue;
-			  }
+						assert(cowIt->state == CowState::hasCopy);
+						cowIt->lockCount++;
+					}
+					progress += kPageSize;
+					continue;
+				}
 
-			  PhysicalAddr physical = physicalAllocator->allocate(kPageSize);
-			  assert(physical != PhysicalAddr(-1) && "OOM");
-			  PageAccessor accessor {physical};
+				PhysicalAddr physical = physicalAllocator->allocate(kPageSize);
+				assert(physical != PhysicalAddr(-1) && "OOM");
+				PageAccessor accessor {physical};
 
-			  // Try to copy from a descendant CoW chain.
-			  auto pageOffset = viewOffset + offset;
-			  while (chain) {
-				  auto irqLock = frg::guard(&irqMutex());
-				  auto lock = frg::guard(&chain->_mutex);
+				// Try to copy from a descendant CoW chain.
+				auto pageOffset = viewOffset + offset;
+				while (chain) {
+					auto irqLock = frg::guard(&irqMutex());
+					auto lock = frg::guard(&chain->_mutex);
 
-				  if (auto it = chain->_pages.find(pageOffset >> kPageShift); it) {
-					  // We can just copy synchronously here -- the
-					  // descendant is not evicted.
-					  auto srcPhysical = it->load(std::memory_order_relaxed);
-					  assert(srcPhysical != PhysicalAddr(-1));
-					  auto srcAccessor = PageAccessor {srcPhysical};
-					  memcpy(accessor.get(), srcAccessor.get(), kPageSize);
-					  break;
-				  }
+					if (auto it = chain->_pages.find(pageOffset >> kPageShift);
+					    it) {
+						// We can just copy synchronously here -- the
+						// descendant is not evicted.
+						auto srcPhysical =
+							it->load(std::memory_order_relaxed);
+						assert(srcPhysical != PhysicalAddr(-1));
+						auto srcAccessor = PageAccessor {srcPhysical};
+						memcpy(accessor.get(), srcAccessor.get(), kPageSize
+						);
+						break;
+					}
 
-				  chain = chain->_superChain;
-			  }
+					chain = chain->_superChain;
+				}
 
-			  // Copy from the root view.
-			  if (!chain) {
-				  // TODO: Handle errors here -- we need to drop the lock
-				  // again.
-				  auto copyOutcome = co_await view->copyFrom(
-				    pageOffset & ~(kPageSize - 1),
-				    accessor.get(),
-				    kPageSize,
-				    wq
-				  );
-				  assert(copyOutcome);
-			  }
+				// Copy from the root view.
+				if (!chain) {
+					// TODO: Handle errors here -- we need to drop the lock
+					// again.
+					auto copyOutcome = co_await view->copyFrom(
+						pageOffset & ~(kPageSize - 1),
+						accessor.get(),
+						kPageSize,
+						wq
+					);
+					assert(copyOutcome);
+				}
 
-			  // To make CoW unobservable, we first need to evict the page here.
-			  // TODO: enable read-only eviction.
-			  co_await self->_evictQueue.evictRange(
-			    offset & ~(kPageSize - 1),
-			    kPageSize
-			  );
+				// To make CoW unobservable, we first need to evict the page here.
+				// TODO: enable read-only eviction.
+				co_await self->_evictQueue.evictRange(
+					offset & ~(kPageSize - 1),
+					kPageSize
+				);
 
-			  {
-				  auto irqLock = frg::guard(&irqMutex());
-				  auto lock = frg::guard(&self->_mutex);
+				{
+					auto irqLock = frg::guard(&irqMutex());
+					auto lock = frg::guard(&self->_mutex);
 
-				  assert(cowIt->state == CowState::inProgress);
-				  cowIt->state = CowState::hasCopy;
-				  cowIt->physical = physical;
-				  cowIt->lockCount++;
-			  }
-			  self->_copyEvent.raise();
-			  progress += kPageSize;
-		  }
+					assert(cowIt->state == CowState::inProgress);
+					cowIt->state = CowState::hasCopy;
+					cowIt->physical = physical;
+					cowIt->lockCount++;
+				}
+				self->_copyEvent.raise();
+				progress += kPageSize;
+			}
 
-		  node->result = Error::success;
-		  node->resume();
-	  }(this, offset, size, std::move(wq), node)
+			node->result = Error::success;
+			node->resume();
+		}(this, offset, size, std::move(wq), node)
 	);
 	return false;
 }
@@ -1849,9 +1914,9 @@ CopyOnWriteMemory::fetchRange(uintptr_t offset, FetchFlags, smarter::shared_ptr<
 				assert(cowIt->physical != PhysicalAddr(-1));
 
 				co_return PhysicalRange {
-				  cowIt->physical,
-				  kPageSize,
-				  CachingMode::null};
+					cowIt->physical,
+					kPageSize,
+					CachingMode::null};
 			} else {
 				assert(cowIt->state == CowState::inProgress);
 				waitForCopy = true;
@@ -1910,10 +1975,12 @@ CopyOnWriteMemory::fetchRange(uintptr_t offset, FetchFlags, smarter::shared_ptr<
 
 	// Copy from the root view.
 	if (!chain) {
-		FRG_CO_TRY(
-		  co_await view
-		    ->copyFrom(pageOffset & ~(kPageSize - 1), accessor.get(), kPageSize, wq)
-		);
+		FRG_CO_TRY(co_await view->copyFrom(
+			pageOffset & ~(kPageSize - 1),
+			accessor.get(),
+			kPageSize,
+			wq
+		));
 	}
 
 	// To make CoW unobservable, we first need to evict the page here.
@@ -1940,7 +2007,7 @@ coroutine<frg::expected<Error, PhysicalAddr>>
 CopyOnWriteMemory::takeGlobalFutex(uintptr_t offset, smarter::shared_ptr<WorkQueue> wq) {
 	// For now, we pick the trival implementation here.
 	auto lockError =
-	  co_await MemoryView::asyncLockRange(offset & ~(kPageSize - 1), kPageSize, wq);
+		co_await MemoryView::asyncLockRange(offset & ~(kPageSize - 1), kPageSize, wq);
 	if (lockError != Error::success)
 		co_return Error::fault;
 	auto range = FRG_CO_TRY(co_await fetchRange(offset & ~(kPageSize - 1), 0, wq));

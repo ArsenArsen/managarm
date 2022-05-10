@@ -102,16 +102,15 @@ auto checkAddress(const void *addr_ptr, size_t addr_len, uint32_t &ip) {
 struct Ip4Socket {
 	explicit Ip4Socket(int proto) : proto(proto) {}
 
-	static async::result<RecvResult> recvmsg(
-	  void *obj,
-	  const char *creds,
-	  uint32_t flags,
-	  void *data,
-	  size_t len,
-	  void *addr_buf,
-	  size_t addr_size,
-	  size_t max_ctrl_len
-	) {
+	static async::result<RecvResult>
+	recvmsg(void *obj,
+		const char *creds,
+		uint32_t flags,
+		void *data,
+		size_t len,
+		void *addr_buf,
+		size_t addr_size,
+		size_t max_ctrl_len) {
 		using arch::convert_endian;
 		using arch::endian;
 		auto self = static_cast<Ip4Socket *>(obj);
@@ -124,24 +123,23 @@ struct Ip4Socket {
 		auto copy_size = std::min(packet.size(), len);
 		std::memcpy(data, packet.data(), copy_size);
 		sockaddr_in addr {
-		  .sin_family = AF_INET,
-		  .sin_port = convert_endian<endian::big>(element->header.protocol),
-		  .sin_addr = {convert_endian<endian::big>(element->header.source)}};
+			.sin_family = AF_INET,
+			.sin_port = convert_endian<endian::big>(element->header.protocol),
+			.sin_addr = {convert_endian<endian::big>(element->header.source)}};
 		std::memset(addr_buf, 0, addr_size);
 		std::memcpy(addr_buf, &addr, std::min(addr_size, sizeof(addr)));
 		co_return RecvData {copy_size, sizeof(addr), {}};
 	}
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>> sendmsg(
-	  void *obj,
-	  const char *creds,
-	  uint32_t flags,
-	  void *data,
-	  size_t len,
-	  void *addr_ptr,
-	  size_t addr_size,
-	  std::vector<uint32_t> fds
-	);
+	static async::result<frg::expected<protocols::fs::Error, size_t>>
+	sendmsg(void *obj,
+		const char *creds,
+		uint32_t flags,
+		void *data,
+		size_t len,
+		void *addr_ptr,
+		size_t addr_size,
+		std::vector<uint32_t> fds);
 
 	static async::result<Error>
 	connect(void *obj, const char *creds, const void *addr_ptr, size_t addr_size) {
@@ -161,9 +159,9 @@ struct Ip4Socket {
 	}
 
 	constexpr static FileOperations ops {
-	  .connect = &connect,
-	  .recvMsg = &recvmsg,
-	  .sendMsg = &sendmsg,
+		.connect = &connect,
+		.recvMsg = &recvmsg,
+		.sendMsg = &sendmsg,
 	};
 
 private:
@@ -175,14 +173,14 @@ private:
 };
 
 async::result<frg::expected<protocols::fs::Error, size_t>> Ip4Socket::sendmsg(
-  void *obj,
-  const char *creds,
-  uint32_t flags,
-  void *data,
-  size_t len,
-  void *addr_ptr,
-  size_t addr_size,
-  std::vector<uint32_t> fds
+	void *obj,
+	const char *creds,
+	uint32_t flags,
+	void *data,
+	size_t len,
+	void *addr_ptr,
+	size_t addr_size,
+	std::vector<uint32_t> fds
 ) {
 	using arch::convert_endian;
 	using arch::endian;
@@ -242,7 +240,7 @@ async::result<std::optional<Ip4TargetInfo>> Ip4::targetByRemote(uint32_t remote)
 	}
 	if (source == 0) {
 		std::cout << "netserver: could not find same network ip for " << std::hex
-		          << std::setw(8) << remote << std::dec << std::endl;
+			  << std::setw(8) << remote << std::dec << std::endl;
 		co_return std::nullopt;
 	}
 
@@ -317,21 +315,22 @@ Ip4::sendFrame(Ip4TargetInfo ti, void *data, size_t len, uint16_t proto) {
 }
 
 void Ip4::feedPacket(
-  nic::MacAddress,
-  nic::MacAddress,
-  arch::dma_buffer owner,
-  arch::dma_buffer_view frame
+	nic::MacAddress,
+	nic::MacAddress,
+	arch::dma_buffer owner,
+	arch::dma_buffer_view frame
 ) {
 	Ip4Packet hdr;
 	if (!hdr.parse(std::move(owner), frame)) {
 		std::cout << "netserver: runt, or otherwise invalid, ip4 frame received"
-		          << std::endl;
+			  << std::endl;
 		return;
 	}
 	auto proto = hdr.header.protocol;
 
 	auto begin = sockets.lower_bound(proto);
-	if (begin == sockets.end() && proto != static_cast<uint16_t>(IpProto::udp) && proto != static_cast<uint16_t>(IpProto::tcp)) {
+	if (begin == sockets.end() && proto != static_cast<uint16_t>(IpProto::udp)
+	    && proto != static_cast<uint16_t>(IpProto::tcp)) {
 		return;
 	}
 
@@ -392,15 +391,15 @@ managarm::fs::Errors Ip4::serveSocket(helix::UniqueLane lane, int type, int prot
 		auto sock = smarter::make_shared<Ip4Socket>(proto);
 		sockets.emplace(proto, sock);
 		async::detach(
-		  servePassthrough(std::move(lane), sock, &Ip4Socket::ops),
-		  [this, socket = sock.get()] {
-			  for (auto i = sockets.begin(); i != sockets.end(); i++) {
-				  if (i->second.get() == socket) {
-					  sockets.erase(i);
-					  break;
-				  }
-			  }
-		  }
+			servePassthrough(std::move(lane), sock, &Ip4Socket::ops),
+			[this, socket = sock.get()] {
+				for (auto i = sockets.begin(); i != sockets.end(); i++) {
+					if (i->second.get() == socket) {
+						sockets.erase(i);
+						break;
+					}
+				}
+			}
 		);
 		return managarm::fs::Errors::SUCCESS;
 	}

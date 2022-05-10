@@ -30,9 +30,9 @@ struct OpenFile : File {
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  smarter::shared_ptr<File> {file},
-		  &File::fileOperations
+			std::move(lane),
+			smarter::shared_ptr<File> {file},
+			&File::fileOperations
 		));
 	}
 
@@ -64,8 +64,7 @@ struct OpenFile : File {
 		uint64_t num;
 		memcpy(&num, data, 8);
 
-		assert(
-		  num != 0xFFFFFFFFFFFFFFFF
+		assert(num != 0xFFFFFFFFFFFFFFFF
 		);  // TODO: return Error::wouldBlock to user instead
 
 		if (num && num + _counter <= _counter) {
@@ -85,7 +84,7 @@ struct OpenFile : File {
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		(void) mask;  // TODO: utilize mask.
 
 		assert(sequence <= _currentSeq);

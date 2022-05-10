@@ -42,8 +42,8 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 		auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 		assert(respError == Error::success && "Unexpected mbus transaction");
 		frg::unique_memory<KernelAlloc> cmdlineBuffer {
-		  *kernelAlloc,
-		  kernelCommandLine->size()};
+			*kernelAlloc,
+			kernelCommandLine->size()};
 		memcpy(cmdlineBuffer.data(), kernelCommandLine->data(), kernelCommandLine->size());
 		auto cmdlineError = co_await SendBufferSender {lane, std::move(cmdlineBuffer)};
 		assert(cmdlineError == Error::success && "Unexpected mbus transaction");
@@ -82,14 +82,14 @@ coroutine<Error> handleByteRingReq(LogRingBuffer *ringBuffer, LaneHandle boundLa
 		uint64_t currentPtr;
 		while (true) {
 			auto [success, recordPtr, nextPtr, actualSize] =
-			  ringBuffer->dequeueAt(req.dequeue(), dataBuffer.data(), req.size());
+				ringBuffer->dequeueAt(req.dequeue(), dataBuffer.data(), req.size());
 			if (success) {
 				assert(actualSize
 				);  // For now, we do not support size zero records.
 				if (actualSize == req.size())
 					infoLogger()
-					  << "thor: kerncfg truncates a ring buffer record"
-					  << frg::endlog;
+						<< "thor: kerncfg truncates a ring buffer record"
+						<< frg::endlog;
 				effectivePtr = recordPtr;
 				currentPtr = nextPtr;
 				progress += actualSize;
@@ -102,9 +102,9 @@ coroutine<Error> handleByteRingReq(LogRingBuffer *ringBuffer, LaneHandle boundLa
 		// Extract further records. We stop on failure, or if we miss records.
 		while (true) {
 			auto [success, recordPtr, nextPtr, actualSize] = ringBuffer->dequeueAt(
-			  currentPtr,
-			  static_cast<std::byte *>(dataBuffer.data()) + progress,
-			  req.size() - progress
+				currentPtr,
+				static_cast<std::byte *>(dataBuffer.data()) + progress,
+				req.size() - progress
 			);
 			if (recordPtr != currentPtr)
 				break;
@@ -273,8 +273,8 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 				break;
 			if (isRemoteIpcError(error))
 				infoLogger() << "thor: Aborting kerncfg request"
-				                " after remote violated the protocol"
-				             << frg::endlog;
+						" after remote violated the protocol"
+					     << frg::endlog;
 			assert(error == Error::success);
 		}
 	})(boundLane));
@@ -307,19 +307,19 @@ coroutine<void> handleByteRingBind(LogRingBuffer *ringBuffer, LaneHandle objectL
 	auto boundLane = stream.get<0>();
 
 	async::detach_with_allocator(
-	  *kernelAlloc,
-	  ([](LogRingBuffer *ringBuffer, LaneHandle boundLane) -> coroutine<void> {
-		  while (true) {
-			  auto error = co_await handleByteRingReq(ringBuffer, boundLane);
-			  if (error == Error::endOfLane)
-				  break;
-			  if (isRemoteIpcError(error))
-				  infoLogger() << "thor: Aborting kerncfg request"
-				                  " after remote violated the protocol"
-				               << frg::endlog;
-			  assert(error == Error::success);
-		  }
-	  })(ringBuffer, boundLane)
+		*kernelAlloc,
+		([](LogRingBuffer *ringBuffer, LaneHandle boundLane) -> coroutine<void> {
+			while (true) {
+				auto error = co_await handleByteRingReq(ringBuffer, boundLane);
+				if (error == Error::endOfLane)
+					break;
+				if (isRemoteIpcError(error))
+					infoLogger() << "thor: Aborting kerncfg request"
+							" after remote violated the protocol"
+						     << frg::endlog;
+				assert(error == Error::success);
+			}
+		})(ringBuffer, boundLane)
 	);
 }
 
@@ -332,24 +332,28 @@ void initializeKerncfg() {
 
 #ifdef KERNEL_LOG_ALLOCATIONS
 		async::detach_with_allocator(
-		  *kernelAlloc,
-		  createByteRingObject(allocLog.get(), *mbusClient, "heap-trace")
+			*kernelAlloc,
+			createByteRingObject(allocLog.get(), *mbusClient, "heap-trace")
 		);
 #endif
 
 		if (wantKernelProfile)
 			async::detach_with_allocator(
-			  *kernelAlloc,
-			  createByteRingObject(
-			    getGlobalProfileRing(),
-			    *mbusClient,
-			    "kernel-profile"
-			  )
+				*kernelAlloc,
+				createByteRingObject(
+					getGlobalProfileRing(),
+					*mbusClient,
+					"kernel-profile"
+				)
 			);
 		if (wantOsTrace)
 			async::detach_with_allocator(
-			  *kernelAlloc,
-			  createByteRingObject(getGlobalOsTraceRing(), *mbusClient, "os-trace")
+				*kernelAlloc,
+				createByteRingObject(
+					getGlobalOsTraceRing(),
+					*mbusClient,
+					"os-trace"
+				)
 			);
 	});
 }

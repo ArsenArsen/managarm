@@ -76,12 +76,12 @@ async::result<void> enumerateSvrctl() {
 	auto filter = mbus::Conjunction({mbus::EqualsFilter("class", "svrctl")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  //		std::cout << "runsvr: Found svrctl" << std::endl;
+		[](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+			//		std::cout << "runsvr: Found svrctl" << std::endl;
 
-		  svrctlLane = helix::UniqueLane(co_await entity.bind());
-		  foundSvrctl.raise();
-	  }
+			svrctlLane = helix::UniqueLane(co_await entity.bind());
+			foundSvrctl.raise();
+		}
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
@@ -95,12 +95,12 @@ async::result<helix::UniqueLane> runServer(const char *name) {
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp, pull_server] = co_await helix_ng::exchangeMsgs(
-	  svrctlLane,
-	  helix_ng::offer(
-	    helix_ng::sendBuffer(ser.data(), ser.size()),
-	    helix_ng::recvInline(),
-	    helix_ng::pullDescriptor()
-	  )
+		svrctlLane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline(),
+			helix_ng::pullDescriptor()
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -123,11 +123,11 @@ async::result<void> uploadFile(const char *name) {
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  svrctlLane,
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::recvInline()
-		  )
+			svrctlLane,
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -148,12 +148,12 @@ async::result<void> uploadFile(const char *name) {
 
 		auto ser = req.SerializeAsString();
 		auto [offer, send_req, send_data, recv_resp] = co_await helix_ng::exchangeMsgs(
-		  svrctlLane,
-		  helix_ng::offer(
-		    helix_ng::sendBuffer(ser.data(), ser.size()),
-		    helix_ng::sendBuffer(buffer.data(), buffer.size()),
-		    helix_ng::recvInline()
-		  )
+			svrctlLane,
+			helix_ng::offer(
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::sendBuffer(buffer.data(), buffer.size()),
+				helix_ng::recvInline()
+			)
 		);
 		HEL_CHECK(offer.error());
 		HEL_CHECK(send_req.error());
@@ -181,8 +181,11 @@ async::result<void> bindServer(helix::UniqueLane &lane, int mbusId) {
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-	  lane,
-	  helix_ng::offer(helix_ng::sendBuffer(ser.data(), ser.size()), helix_ng::recvInline())
+		lane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline()
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -277,7 +280,7 @@ int main(int argc, const char **argv) {
 	sub_runsvr->add_option("path", path, "Path to executable")->required();
 
 	CLI::App *sub_run =
-	  app.add_subcommand("run", "Run a server (used in conjunction with bind)");
+		app.add_subcommand("run", "Run a server (used in conjunction with bind)");
 	sub_run->add_option("path", path, "Path to description")->required();
 
 	CLI::App *sub_bind = app.add_subcommand("bind", "Bind an mbus ID to a server");

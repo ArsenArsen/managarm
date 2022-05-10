@@ -163,8 +163,8 @@ HelError helSubmitAsyncNop(HelHandle queueHandle, uintptr_t context) {
 		queue = queueWrapper->get<QueueDescriptor>().queue;
 	}
 
-	[](smarter::shared_ptr<IpcQueue> queue, uintptr_t context, enable_detached_coroutine = {})
-	  -> void {
+	[](smarter::shared_ptr<IpcQueue> queue, uintptr_t context, enable_detached_coroutine = {}
+	) -> void {
 		HelSimpleResult helResult {.error = kHelErrNone};
 		QueueSource ipcSource {&helResult, sizeof(HelSimpleResult), nullptr};
 		co_await queue->submit(&ipcSource, context);
@@ -184,8 +184,8 @@ HelError helCreateUniverse(HelHandle *handle) {
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  UniverseDescriptor(std::move(new_universe))
+			universe_guard,
+			UniverseDescriptor(std::move(new_universe))
 		);
 	}
 
@@ -322,18 +322,20 @@ HelError helCreateQueue(HelQueueParameters *paramsPtr, HelHandle *handle) {
 		return kHelErrIllegalArgs;
 
 	auto queue = smarter::allocate_shared<IpcQueue>(
-	  *kernelAlloc,
-	  params.ringShift,
-	  params.numChunks,
-	  params.chunkSize
+		*kernelAlloc,
+		params.ringShift,
+		params.numChunks,
+		params.chunkSize
 	);
 	queue->setupSelfPtr(queue);
 	{
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(thisUniverse->lock);
 
-		*handle =
-		  thisUniverse->attachDescriptor(universe_guard, QueueDescriptor(std::move(queue)));
+		*handle = thisUniverse->attachDescriptor(
+			universe_guard,
+			QueueDescriptor(std::move(queue))
+		);
 	}
 
 	return kHelErrNone;
@@ -362,10 +364,10 @@ HelError helCancelAsync(HelHandle handle, uint64_t async_id) {
 }
 
 HelError helAllocateMemory(
-  size_t size,
-  uint32_t flags,
-  HelAllocRestrictions *restrictions,
-  HelHandle *handle
+	size_t size,
+	uint32_t flags,
+	HelAllocRestrictions *restrictions,
+	HelHandle *handle
 ) {
 	if (!size)
 		return kHelErrIllegalArgs;
@@ -387,24 +389,24 @@ HelError helAllocateMemory(
 	smarter::shared_ptr<AllocatedMemory> memory;
 	if (flags & kHelAllocContinuous) {
 		memory = smarter::allocate_shared<AllocatedMemory>(
-		  *kernelAlloc,
-		  size,
-		  effective.addressBits,
-		  size,
-		  kPageSize
+			*kernelAlloc,
+			size,
+			effective.addressBits,
+			size,
+			kPageSize
 		);
 	} else if (flags & kHelAllocOnDemand) {
 		memory = smarter::allocate_shared<AllocatedMemory>(
-		  *kernelAlloc,
-		  size,
-		  effective.addressBits
+			*kernelAlloc,
+			size,
+			effective.addressBits
 		);
 	} else {
 		// TODO:
 		memory = smarter::allocate_shared<AllocatedMemory>(
-		  *kernelAlloc,
-		  size,
-		  effective.addressBits
+			*kernelAlloc,
+			size,
+			effective.addressBits
 		);
 	}
 	memory->selfPtr = memory;
@@ -414,8 +416,8 @@ HelError helAllocateMemory(
 		Universe::Guard universeGuard(thisUniverse->lock);
 
 		*handle = thisUniverse->attachDescriptor(
-		  universeGuard,
-		  MemoryViewDescriptor(std::move(memory))
+			universeGuard,
+			MemoryViewDescriptor(std::move(memory))
 		);
 	}
 
@@ -440,19 +442,19 @@ HelError helResizeMemory(HelHandle handle, size_t newSize) {
 	}
 
 	Thread::asyncBlockCurrent(
-	  [](smarter::shared_ptr<MemoryView> memory, size_t newSize) -> coroutine<void> {
-		  co_await memory->resize(newSize);
-	  }(std::move(memory), newSize)
+		[](smarter::shared_ptr<MemoryView> memory, size_t newSize) -> coroutine<void> {
+			co_await memory->resize(newSize);
+		}(std::move(memory), newSize)
 	);
 
 	return kHelErrNone;
 }
 
 HelError helCreateManagedMemory(
-  size_t size,
-  uint32_t flags,
-  HelHandle *backing_handle,
-  HelHandle *frontal_handle
+	size_t size,
+	uint32_t flags,
+	HelHandle *backing_handle,
+	HelHandle *frontal_handle
 ) {
 	if (flags & ~uint32_t {kHelManagedReadahead})
 		return kHelErrIllegalArgs;
@@ -462,12 +464,15 @@ HelError helCreateManagedMemory(
 	auto thisThread = getCurrentThread();
 	auto thisUniverse = thisThread->getUniverse();
 
-	auto managed =
-	  smarter::allocate_shared<ManagedSpace>(*kernelAlloc, size, flags & kHelManagedReadahead);
+	auto managed = smarter::allocate_shared<ManagedSpace>(
+		*kernelAlloc,
+		size,
+		flags & kHelManagedReadahead
+	);
 	managed->selfPtr = managed;
 	auto backingMemory = smarter::allocate_shared<BackingMemory>(*kernelAlloc, managed);
 	auto frontalMemory =
-	  smarter::allocate_shared<FrontalMemory>(*kernelAlloc, std::move(managed));
+		smarter::allocate_shared<FrontalMemory>(*kernelAlloc, std::move(managed));
 	frontalMemory->selfPtr = frontalMemory;
 
 	{
@@ -475,12 +480,12 @@ HelError helCreateManagedMemory(
 		Universe::Guard universe_guard(thisUniverse->lock);
 
 		*backing_handle = thisUniverse->attachDescriptor(
-		  universe_guard,
-		  MemoryViewDescriptor(std::move(backingMemory))
+			universe_guard,
+			MemoryViewDescriptor(std::move(backingMemory))
 		);
 		*frontal_handle = thisUniverse->attachDescriptor(
-		  universe_guard,
-		  MemoryViewDescriptor(std::move(frontalMemory))
+			universe_guard,
+			MemoryViewDescriptor(std::move(frontalMemory))
 		);
 	}
 
@@ -514,16 +519,20 @@ helCopyOnWrite(HelHandle memoryHandle, uintptr_t offset, size_t size, HelHandle 
 		}
 	}
 
-	auto slice =
-	  smarter::allocate_shared<CopyOnWriteMemory>(*kernelAlloc, std::move(view), offset, size);
+	auto slice = smarter::allocate_shared<CopyOnWriteMemory>(
+		*kernelAlloc,
+		std::move(view),
+		offset,
+		size
+	);
 	slice->selfPtr = slice;
 	{
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*outHandle = this_universe->attachDescriptor(
-		  universe_guard,
-		  MemoryViewDescriptor(std::move(slice))
+			universe_guard,
+			MemoryViewDescriptor(std::move(slice))
 		);
 	}
 
@@ -537,15 +546,19 @@ HelError helAccessPhysical(uintptr_t physical, size_t size, HelHandle *handle) {
 	auto this_thread = getCurrentThread();
 	auto this_universe = this_thread->getUniverse();
 
-	auto memory =
-	  smarter::allocate_shared<HardwareMemory>(*kernelAlloc, physical, size, CachingMode::null);
+	auto memory = smarter::allocate_shared<HardwareMemory>(
+		*kernelAlloc,
+		physical,
+		size,
+		CachingMode::null
+	);
 	{
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  MemoryViewDescriptor(std::move(memory))
+			universe_guard,
+			MemoryViewDescriptor(std::move(memory))
 		);
 	}
 
@@ -562,8 +575,8 @@ HelError helCreateIndirectMemory(size_t numSlots, HelHandle *handle) {
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  MemoryViewDescriptor(std::move(memory))
+			universe_guard,
+			MemoryViewDescriptor(std::move(memory))
 		);
 	}
 
@@ -571,11 +584,11 @@ HelError helCreateIndirectMemory(size_t numSlots, HelHandle *handle) {
 }
 
 HelError helAlterMemoryIndirection(
-  HelHandle indirectHandle,
-  size_t slot,
-  HelHandle memoryHandle,
-  uintptr_t offset,
-  size_t size
+	HelHandle indirectHandle,
+	size_t slot,
+	HelHandle memoryHandle,
+	uintptr_t offset,
+	size_t size
 ) {
 	auto thisThread = getCurrentThread();
 	auto thisUniverse = thisThread->getUniverse();
@@ -614,11 +627,11 @@ HelError helAlterMemoryIndirection(
 }
 
 HelError helCreateSliceView(
-  HelHandle memoryHandle,
-  uintptr_t offset,
-  size_t size,
-  uint32_t flags,
-  HelHandle *handle
+	HelHandle memoryHandle,
+	uintptr_t offset,
+	size_t size,
+	uint32_t flags,
+	HelHandle *handle
 ) {
 	assert(!flags);
 	assert((offset % kPageSize) == 0);
@@ -641,14 +654,14 @@ HelError helCreateSliceView(
 	}
 
 	auto slice =
-	  smarter::allocate_shared<MemorySlice>(*kernelAlloc, std::move(view), offset, size);
+		smarter::allocate_shared<MemorySlice>(*kernelAlloc, std::move(view), offset, size);
 	{
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  MemorySliceDescriptor(std::move(slice))
+			universe_guard,
+			MemorySliceDescriptor(std::move(slice))
 		);
 	}
 
@@ -682,8 +695,10 @@ HelError helForkMemory(HelHandle handle, HelHandle *forkedHandle) {
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(this_universe->lock);
 
-		*forkedHandle =
-		  this_universe->attachDescriptor(universe_guard, MemoryViewDescriptor(forkedView));
+		*forkedHandle = this_universe->attachDescriptor(
+			universe_guard,
+			MemoryViewDescriptor(forkedView)
+		);
 	}
 
 	return kHelErrNone;
@@ -698,8 +713,10 @@ HelError helCreateSpace(HelHandle *handle) {
 	auto irq_lock = frg::guard(&irqMutex());
 	Universe::Guard universe_guard(this_universe->lock);
 
-	*handle =
-	  this_universe->attachDescriptor(universe_guard, AddressSpaceDescriptor(std::move(space)));
+	*handle = this_universe->attachDescriptor(
+		universe_guard,
+		AddressSpaceDescriptor(std::move(space))
+	);
 
 	return kHelErrNone;
 }
@@ -722,8 +739,8 @@ HelError helCreateVirtualizedSpace(HelHandle *handle) {
 	auto vspace = thor::vmx::EptSpace::create(pml4e);
 	Universe::Guard universe_guard(this_universe->lock);
 	*handle = this_universe->attachDescriptor(
-	  universe_guard,
-	  VirtualizedSpaceDescriptor(std::move(vspace))
+		universe_guard,
+		VirtualizedSpaceDescriptor(std::move(vspace))
 	);
 	return kHelErrNone;
 #else
@@ -749,13 +766,13 @@ HelError helCreateVirtualizedCpu(HelHandle handle, HelHandle *out) {
 	auto space = wrapper->get<VirtualizedSpaceDescriptor>();
 
 	smarter::shared_ptr<vmx::Vmcs> vcpu = smarter::allocate_shared<vmx::Vmcs>(
-	  Allocator {},
-	  (smarter::static_pointer_cast<thor::vmx::EptSpace>(space.space))
+		Allocator {},
+		(smarter::static_pointer_cast<thor::vmx::EptSpace>(space.space))
 	);
 
 	*out = this_universe->attachDescriptor(
-	  universe_guard,
-	  VirtualizedCpuDescriptor(std::move(vcpu))
+		universe_guard,
+		VirtualizedCpuDescriptor(std::move(vcpu))
 	);
 	return kHelErrNone;
 #else
@@ -787,7 +804,7 @@ HelError helRunVirtualizedCpu(HelHandle handle, HelVmexitReason *exitInfo) {
 HelError helGetRandomBytes(void *buffer, size_t wantedSize, size_t *actualSize) {
 	char bounceBuffer[128];
 	size_t generatedSize =
-	  generateRandomBytes(bounceBuffer, frg::min(wantedSize, size_t {128}));
+		generateRandomBytes(bounceBuffer, frg::min(wantedSize, size_t {128}));
 
 	if (!writeUserMemory(buffer, bounceBuffer, generatedSize))
 		return kHelErrFault;
@@ -797,13 +814,13 @@ HelError helGetRandomBytes(void *buffer, size_t wantedSize, size_t *actualSize) 
 }
 
 HelError helMapMemory(
-  HelHandle memory_handle,
-  HelHandle space_handle,
-  void *pointer,
-  uintptr_t offset,
-  size_t length,
-  uint32_t flags,
-  void **actualPointer
+	HelHandle memory_handle,
+	HelHandle space_handle,
+	void *pointer,
+	uintptr_t offset,
+	size_t length,
+	uint32_t flags,
+	void **actualPointer
 ) {
 	if (length == 0)
 		return kHelErrIllegalArgs;
@@ -851,19 +868,19 @@ HelError helMapMemory(
 			auto memory = memory_wrapper->get<MemoryViewDescriptor>().memory;
 			auto sliceLength = memory->getLength();
 			slice = smarter::allocate_shared<MemorySlice>(
-			  *kernelAlloc,
-			  std::move(memory),
-			  0,
-			  sliceLength
+				*kernelAlloc,
+				std::move(memory),
+				0,
+				sliceLength
 			);
 		} else if (memory_wrapper->is<QueueDescriptor>()) {
 			auto memory = memory_wrapper->get<QueueDescriptor>().queue->getMemory();
 			auto sliceLength = memory->getLength();
 			slice = smarter::allocate_shared<MemorySlice>(
-			  *kernelAlloc,
-			  std::move(memory),
-			  0,
-			  sliceLength
+				*kernelAlloc,
+				std::move(memory),
+				0,
+				sliceLength
 			);
 		} else {
 			return kHelErrBadDescriptor;
@@ -873,7 +890,7 @@ HelError helMapMemory(
 			space = this_thread->getAddressSpace().lock();
 		} else {
 			auto space_wrapper =
-			  this_universe->getDescriptor(universe_guard, space_handle);
+				this_universe->getDescriptor(universe_guard, space_handle);
 			if (!space_wrapper)
 				return kHelErrNoDescriptor;
 			if (space_wrapper->is<AddressSpaceDescriptor>()) {
@@ -892,11 +909,11 @@ HelError helMapMemory(
 	frg::expected<Error, VirtualAddr> mapResult;
 	if (!isVspace) {
 		mapResult = Thread::asyncBlockCurrent(
-		  space->map(slice, (VirtualAddr) pointer, offset, length, map_flags)
+			space->map(slice, (VirtualAddr) pointer, offset, length, map_flags)
 		);
 	} else {
 		mapResult = Thread::asyncBlockCurrent(
-		  vspace->map(slice, (VirtualAddr) pointer, offset, length, map_flags)
+			vspace->map(slice, (VirtualAddr) pointer, offset, length, map_flags)
 		);
 	}
 
@@ -910,12 +927,12 @@ HelError helMapMemory(
 }
 
 HelError helSubmitProtectMemory(
-  HelHandle space_handle,
-  void *pointer,
-  size_t length,
-  uint32_t flags,
-  HelHandle queue_handle,
-  uintptr_t context
+	HelHandle space_handle,
+	void *pointer,
+	size_t length,
+	uint32_t flags,
+	HelHandle queue_handle,
+	uintptr_t context
 ) {
 	auto this_thread = getCurrentThread();
 	auto this_universe = this_thread->getUniverse();
@@ -938,7 +955,7 @@ HelError helSubmitProtectMemory(
 			space = this_thread->getAddressSpace().lock();
 		} else {
 			auto space_wrapper =
-			  this_universe->getDescriptor(universe_guard, space_handle);
+				this_universe->getDescriptor(universe_guard, space_handle);
 			if (!space_wrapper)
 				return kHelErrNoDescriptor;
 			if (!space_wrapper->is<AddressSpaceDescriptor>())
@@ -957,15 +974,13 @@ HelError helSubmitProtectMemory(
 	if (!queue->validSize(ipcSourceSize(sizeof(HelSimpleResult))))
 		return kHelErrQueueTooSmall;
 
-	[](
-	  smarter::shared_ptr<AddressSpace, BindableHandle> space,
-	  smarter::shared_ptr<IpcQueue> queue,
-	  VirtualAddr pointer,
-	  size_t length,
-	  uint32_t protectFlags,
-	  uintptr_t context,
-	  enable_detached_coroutine = {}
-	) -> void {
+	[](smarter::shared_ptr<AddressSpace, BindableHandle> space,
+	   smarter::shared_ptr<IpcQueue> queue,
+	   VirtualAddr pointer,
+	   size_t length,
+	   uint32_t protectFlags,
+	   uintptr_t context,
+	   enable_detached_coroutine = {}) -> void {
 		auto outcome = co_await space->protect(pointer, length, protectFlags);
 		// TODO: handle errors after propagating them through VirtualSpace::protect.
 		assert(outcome);
@@ -974,11 +989,11 @@ HelError helSubmitProtectMemory(
 		QueueSource ipcSource {&helResult, sizeof(HelSimpleResult), nullptr};
 		co_await queue->submit(&ipcSource, context);
 	}(std::move(space),
-	  std::move(queue),
-	  reinterpret_cast<VirtualAddr>(pointer),
-	  length,
-	  protectFlags,
-	  context);
+					   std::move(queue),
+					   reinterpret_cast<VirtualAddr>(pointer),
+					   length,
+					   protectFlags,
+					   context);
 
 	return kHelErrNone;
 }
@@ -996,7 +1011,7 @@ HelError helUnmapMemory(HelHandle space_handle, void *pointer, size_t length) {
 			space = this_thread->getAddressSpace().lock();
 		} else {
 			auto space_wrapper =
-			  this_universe->getDescriptor(universe_guard, space_handle);
+				this_universe->getDescriptor(universe_guard, space_handle);
 			if (!space_wrapper)
 				return kHelErrNoDescriptor;
 			if (!space_wrapper->is<AddressSpaceDescriptor>())
@@ -1015,11 +1030,11 @@ HelError helUnmapMemory(HelHandle space_handle, void *pointer, size_t length) {
 }
 
 HelError helSubmitSynchronizeSpace(
-  HelHandle spaceHandle,
-  void *pointer,
-  size_t length,
-  HelHandle queueHandle,
-  uintptr_t context
+	HelHandle spaceHandle,
+	void *pointer,
+	size_t length,
+	HelHandle queueHandle,
+	uintptr_t context
 ) {
 	auto thisThread = getCurrentThread();
 	auto thisUniverse = thisThread->getUniverse();
@@ -1049,14 +1064,12 @@ HelError helSubmitSynchronizeSpace(
 		queue = queueWrapper->get<QueueDescriptor>().queue;
 	}
 
-	[](
-	  smarter::shared_ptr<AddressSpace, BindableHandle> space,
-	  void *pointer,
-	  size_t length,
-	  smarter::shared_ptr<IpcQueue> queue,
-	  uintptr_t context,
-	  enable_detached_coroutine = {}
-	) -> void {
+	[](smarter::shared_ptr<AddressSpace, BindableHandle> space,
+	   void *pointer,
+	   size_t length,
+	   smarter::shared_ptr<IpcQueue> queue,
+	   uintptr_t context,
+	   enable_detached_coroutine = {}) -> void {
 		auto outcome = co_await space->synchronize((VirtualAddr) pointer, length);
 		// TODO: handle errors after propagating them through VirtualSpace::synchronize.
 		assert(outcome);
@@ -1077,7 +1090,7 @@ HelError helPointerPhysical(const void *pointer, uintptr_t *physical) {
 	auto pageAddress = reinterpret_cast<VirtualAddr>(pointer) - disp;
 
 	auto physicalOrError = Thread::asyncBlockCurrent(
-	  space->retrievePhysical(pageAddress, thisThread->mainWorkQueue()->take())
+		space->retrievePhysical(pageAddress, thisThread->mainWorkQueue()->take())
 	);
 	if (!physicalOrError) {
 		assert(physicalOrError.error() == Error::fault);
@@ -1090,12 +1103,12 @@ HelError helPointerPhysical(const void *pointer, uintptr_t *physical) {
 }
 
 HelError helSubmitReadMemory(
-  HelHandle handle,
-  uintptr_t address,
-  size_t length,
-  void *buffer,
-  HelHandle queueHandle,
-  uintptr_t context
+	HelHandle handle,
+	uintptr_t address,
+	size_t length,
+	void *buffer,
+	HelHandle queueHandle,
+	uintptr_t context
 ) {
 	auto thisThread = getCurrentThread();
 	auto thisUniverse = thisThread->getUniverse();
@@ -1119,16 +1132,14 @@ HelError helSubmitReadMemory(
 		queue = queueWrapper->get<QueueDescriptor>().queue;
 	}
 
-	auto readMemoryView = [](
-	                        smarter::shared_ptr<Thread> submitThread,
-	                        smarter::shared_ptr<MemoryView> view,
-	                        uintptr_t address,
-	                        size_t length,
-	                        void *buffer,
-	                        smarter::shared_ptr<IpcQueue> queue,
-	                        uintptr_t context,
-	                        enable_detached_coroutine = {}
-	                      ) -> void {
+	auto readMemoryView = [](smarter::shared_ptr<Thread> submitThread,
+				 smarter::shared_ptr<MemoryView> view,
+				 uintptr_t address,
+				 size_t length,
+				 void *buffer,
+				 smarter::shared_ptr<IpcQueue> queue,
+				 uintptr_t context,
+				 enable_detached_coroutine = {}) -> void {
 		// Make sure that the pointer arithmetic below does not overflow.
 		uintptr_t limit;
 		if (__builtin_add_overflow(reinterpret_cast<uintptr_t>(buffer), length, &limit)) {
@@ -1146,10 +1157,10 @@ HelError helSubmitReadMemory(
 			while (progress < length) {
 				auto chunk = frg::min(length - progress, size_t {128});
 				auto copyOutcome = co_await view->copyFrom(
-				  address + progress,
-				  temp,
-				  chunk,
-				  submitThread->mainWorkQueue()->take()
+					address + progress,
+					temp,
+					chunk,
+					submitThread->mainWorkQueue()->take()
 				);
 				if (!copyOutcome) {
 					error = copyOutcome.error();
@@ -1161,9 +1172,9 @@ HelError helSubmitReadMemory(
 				co_await submitThread->mainWorkQueue()->schedule();
 
 				if (!writeUserMemory(
-				      reinterpret_cast<char *>(buffer) + progress,
-				      temp,
-				      chunk
+					    reinterpret_cast<char *>(buffer) + progress,
+					    temp,
+					    chunk
 				    )) {
 					error = Error::fault;
 					break;
@@ -1178,16 +1189,14 @@ HelError helSubmitReadMemory(
 		co_await queue->submit(&ipcSource, context);
 	};
 
-	auto readAddressSpace = [](
-	                          smarter::shared_ptr<Thread> submitThread,
-	                          smarter::shared_ptr<AddressSpace, BindableHandle> space,
-	                          uintptr_t address,
-	                          size_t length,
-	                          void *buffer,
-	                          smarter::shared_ptr<IpcQueue> queue,
-	                          uintptr_t context,
-	                          enable_detached_coroutine = {}
-	                        ) -> void {
+	auto readAddressSpace = [](smarter::shared_ptr<Thread> submitThread,
+				   smarter::shared_ptr<AddressSpace, BindableHandle> space,
+				   uintptr_t address,
+				   size_t length,
+				   void *buffer,
+				   smarter::shared_ptr<IpcQueue> queue,
+				   uintptr_t context,
+				   enable_detached_coroutine = {}) -> void {
 		// Make sure that the pointer arithmetic below does not overflow.
 		uintptr_t limit;
 		if (__builtin_add_overflow(reinterpret_cast<uintptr_t>(buffer), length, &limit)) {
@@ -1206,10 +1215,10 @@ HelError helSubmitReadMemory(
 				auto chunk = frg::min(length - progress, size_t {128});
 
 				auto outcome = co_await space->readSpace(
-				  address + progress,
-				  temp,
-				  chunk,
-				  submitThread->mainWorkQueue()->take()
+					address + progress,
+					temp,
+					chunk,
+					submitThread->mainWorkQueue()->take()
 				);
 				if (!outcome) {
 					error = Error::fault;
@@ -1221,9 +1230,9 @@ HelError helSubmitReadMemory(
 				co_await submitThread->mainWorkQueue()->schedule();
 
 				if (!writeUserMemory(
-				      reinterpret_cast<char *>(buffer) + progress,
-				      temp,
-				      chunk
+					    reinterpret_cast<char *>(buffer) + progress,
+					    temp,
+					    chunk
 				    )) {
 					error = Error::fault;
 					break;
@@ -1237,16 +1246,14 @@ HelError helSubmitReadMemory(
 		co_await queue->submit(&ipcSource, context);
 	};
 
-	auto readVirtualizedSpace = [](
-	                              smarter::shared_ptr<Thread> submitThread,
-	                              smarter::shared_ptr<VirtualizedPageSpace> space,
-	                              uintptr_t address,
-	                              size_t length,
-	                              void *buffer,
-	                              smarter::shared_ptr<IpcQueue> queue,
-	                              uintptr_t context,
-	                              enable_detached_coroutine = {}
-	                            ) -> void {
+	auto readVirtualizedSpace = [](smarter::shared_ptr<Thread> submitThread,
+				       smarter::shared_ptr<VirtualizedPageSpace> space,
+				       uintptr_t address,
+				       size_t length,
+				       void *buffer,
+				       smarter::shared_ptr<IpcQueue> queue,
+				       uintptr_t context,
+				       enable_detached_coroutine = {}) -> void {
 		// Enter the submitter's work-queue so that we can access memory directly.
 		co_await submitThread->mainWorkQueue()->schedule();
 
@@ -1263,47 +1270,47 @@ HelError helSubmitReadMemory(
 	if (descriptor.is<MemoryViewDescriptor>()) {
 		auto view = descriptor.get<MemoryViewDescriptor>().memory;
 		readMemoryView(
-		  thisThread.lock(),
-		  std::move(view),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(view),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else if (descriptor.is<AddressSpaceDescriptor>()) {
 		auto space = descriptor.get<AddressSpaceDescriptor>().space;
 		readAddressSpace(
-		  thisThread.lock(),
-		  std::move(space),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(space),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else if (descriptor.is<ThreadDescriptor>()) {
 		auto thread = descriptor.get<ThreadDescriptor>().thread;
 		auto space = thread->getAddressSpace().lock();
 		readAddressSpace(
-		  thisThread.lock(),
-		  std::move(space),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(space),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else if (descriptor.is<VirtualizedSpaceDescriptor>()) {
 		auto space = descriptor.get<VirtualizedSpaceDescriptor>().space;
 		readVirtualizedSpace(
-		  thisThread.lock(),
-		  std::move(space),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(space),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else {
 		return kHelErrBadDescriptor;
@@ -1313,12 +1320,12 @@ HelError helSubmitReadMemory(
 }
 
 HelError helSubmitWriteMemory(
-  HelHandle handle,
-  uintptr_t address,
-  size_t length,
-  const void *buffer,
-  HelHandle queueHandle,
-  uintptr_t context
+	HelHandle handle,
+	uintptr_t address,
+	size_t length,
+	const void *buffer,
+	HelHandle queueHandle,
+	uintptr_t context
 ) {
 	auto thisThread = getCurrentThread();
 	auto thisUniverse = thisThread->getUniverse();
@@ -1342,16 +1349,14 @@ HelError helSubmitWriteMemory(
 		queue = queueWrapper->get<QueueDescriptor>().queue;
 	}
 
-	auto writeMemoryView = [](
-	                         smarter::shared_ptr<Thread> submitThread,
-	                         smarter::shared_ptr<MemoryView> view,
-	                         uintptr_t address,
-	                         size_t length,
-	                         const void *buffer,
-	                         smarter::shared_ptr<IpcQueue> queue,
-	                         uintptr_t context,
-	                         enable_detached_coroutine = {}
-	                       ) -> void {
+	auto writeMemoryView = [](smarter::shared_ptr<Thread> submitThread,
+				  smarter::shared_ptr<MemoryView> view,
+				  uintptr_t address,
+				  size_t length,
+				  const void *buffer,
+				  smarter::shared_ptr<IpcQueue> queue,
+				  uintptr_t context,
+				  enable_detached_coroutine = {}) -> void {
 		// Make sure that the pointer arithmetic below does not overflow.
 		uintptr_t limit;
 		if (__builtin_add_overflow(reinterpret_cast<uintptr_t>(buffer), length, &limit)) {
@@ -1374,19 +1379,19 @@ HelError helSubmitWriteMemory(
 				co_await submitThread->mainWorkQueue()->schedule();
 
 				if (!readUserMemory(
-				      temp,
-				      reinterpret_cast<const char *>(buffer) + progress,
-				      chunk
+					    temp,
+					    reinterpret_cast<const char *>(buffer) + progress,
+					    chunk
 				    )) {
 					error = Error::fault;
 					break;
 				}
 
 				auto copyOutcome = co_await view->copyTo(
-				  address + progress,
-				  temp,
-				  chunk,
-				  submitThread->mainWorkQueue()->take()
+					address + progress,
+					temp,
+					chunk,
+					submitThread->mainWorkQueue()->take()
 				);
 				if (!copyOutcome) {
 					error = copyOutcome.error();
@@ -1401,16 +1406,14 @@ HelError helSubmitWriteMemory(
 		co_await queue->submit(&ipcSource, context);
 	};
 
-	auto writeAddressSpace = [](
-	                           smarter::shared_ptr<Thread> submitThread,
-	                           smarter::shared_ptr<AddressSpace, BindableHandle> space,
-	                           uintptr_t address,
-	                           size_t length,
-	                           const void *buffer,
-	                           smarter::shared_ptr<IpcQueue> queue,
-	                           uintptr_t context,
-	                           enable_detached_coroutine = {}
-	                         ) -> void {
+	auto writeAddressSpace = [](smarter::shared_ptr<Thread> submitThread,
+				    smarter::shared_ptr<AddressSpace, BindableHandle> space,
+				    uintptr_t address,
+				    size_t length,
+				    const void *buffer,
+				    smarter::shared_ptr<IpcQueue> queue,
+				    uintptr_t context,
+				    enable_detached_coroutine = {}) -> void {
 		// Make sure that the pointer arithmetic below does not overflow.
 		uintptr_t limit;
 		if (__builtin_add_overflow(reinterpret_cast<uintptr_t>(buffer), length, &limit)) {
@@ -1432,19 +1435,19 @@ HelError helSubmitWriteMemory(
 				// directly.
 				co_await submitThread->mainWorkQueue()->schedule();
 				if (!readUserMemory(
-				      temp,
-				      reinterpret_cast<const char *>(buffer) + progress,
-				      chunk
+					    temp,
+					    reinterpret_cast<const char *>(buffer) + progress,
+					    chunk
 				    )) {
 					error = Error::fault;
 					break;
 				}
 
 				auto outcome = co_await space->writeSpace(
-				  address + progress,
-				  temp,
-				  chunk,
-				  submitThread->mainWorkQueue()->take()
+					address + progress,
+					temp,
+					chunk,
+					submitThread->mainWorkQueue()->take()
 				);
 				if (!outcome) {
 					error = Error::fault;
@@ -1459,16 +1462,14 @@ HelError helSubmitWriteMemory(
 		co_await queue->submit(&ipcSource, context);
 	};
 
-	auto writeVirtualizedSpace = [](
-	                               smarter::shared_ptr<Thread> submitThread,
-	                               smarter::shared_ptr<VirtualizedPageSpace> space,
-	                               uintptr_t address,
-	                               size_t length,
-	                               const void *buffer,
-	                               smarter::shared_ptr<IpcQueue> queue,
-	                               uintptr_t context,
-	                               enable_detached_coroutine = {}
-	                             ) -> void {
+	auto writeVirtualizedSpace = [](smarter::shared_ptr<Thread> submitThread,
+					smarter::shared_ptr<VirtualizedPageSpace> space,
+					uintptr_t address,
+					size_t length,
+					const void *buffer,
+					smarter::shared_ptr<IpcQueue> queue,
+					uintptr_t context,
+					enable_detached_coroutine = {}) -> void {
 		// Enter the submitter's work-queue so that we can access memory directly.
 		co_await submitThread->mainWorkQueue()->schedule();
 
@@ -1485,47 +1486,47 @@ HelError helSubmitWriteMemory(
 	if (descriptor.is<MemoryViewDescriptor>()) {
 		auto view = descriptor.get<MemoryViewDescriptor>().memory;
 		writeMemoryView(
-		  thisThread.lock(),
-		  std::move(view),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(view),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else if (descriptor.is<AddressSpaceDescriptor>()) {
 		auto space = descriptor.get<AddressSpaceDescriptor>().space;
 		writeAddressSpace(
-		  thisThread.lock(),
-		  std::move(space),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(space),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else if (descriptor.is<ThreadDescriptor>()) {
 		auto thread = descriptor.get<ThreadDescriptor>().thread;
 		auto space = thread->getAddressSpace().lock();
 		writeAddressSpace(
-		  thisThread.lock(),
-		  std::move(space),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(space),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else if (descriptor.is<VirtualizedSpaceDescriptor>()) {
 		auto space = descriptor.get<VirtualizedSpaceDescriptor>().space;
 		writeVirtualizedSpace(
-		  thisThread.lock(),
-		  std::move(space),
-		  address,
-		  length,
-		  buffer,
-		  std::move(queue),
-		  context
+			thisThread.lock(),
+			std::move(space),
+			address,
+			length,
+			buffer,
+			std::move(queue),
+			context
 		);
 	} else {
 		return kHelErrBadDescriptor;
@@ -1583,12 +1584,10 @@ HelError helSubmitManageMemory(HelHandle handle, HelHandle queue_handle, uintptr
 	if (!queue->validSize(ipcSourceSize(sizeof(HelManageResult))))
 		return kHelErrQueueTooSmall;
 
-	[](
-	  smarter::shared_ptr<IpcQueue> queue,
-	  smarter::shared_ptr<MemoryView> memory,
-	  uintptr_t context,
-	  enable_detached_coroutine = {}
-	) -> void {
+	[](smarter::shared_ptr<IpcQueue> queue,
+	   smarter::shared_ptr<MemoryView> memory,
+	   uintptr_t context,
+	   enable_detached_coroutine = {}) -> void {
 		auto [error, type, offset, size] = co_await memory->submitManage();
 
 		int helType;
@@ -1651,11 +1650,11 @@ HelError helUpdateMemory(HelHandle handle, int type, uintptr_t offset, size_t le
 }
 
 HelError helSubmitLockMemoryView(
-  HelHandle handle,
-  uintptr_t offset,
-  size_t size,
-  HelHandle queue_handle,
-  uintptr_t context
+	HelHandle handle,
+	uintptr_t offset,
+	size_t size,
+	HelHandle queue_handle,
+	uintptr_t context
 ) {
 	auto this_thread = getCurrentThread();
 	auto this_universe = this_thread->getUniverse();
@@ -1684,16 +1683,14 @@ HelError helSubmitLockMemoryView(
 	if (!queue->validSize(ipcSourceSize(sizeof(HelHandleResult))))
 		return kHelErrQueueTooSmall;
 
-	[](
-	  smarter::borrowed_ptr<thor::Universe> universe,
-	  smarter::shared_ptr<MemoryView> memory,
-	  smarter::shared_ptr<IpcQueue> queue,
-	  uintptr_t offset,
-	  size_t size,
-	  uintptr_t context,
-	  smarter::shared_ptr<WorkQueue> wq,
-	  enable_detached_coroutine = {}
-	) -> void {
+	[](smarter::borrowed_ptr<thor::Universe> universe,
+	   smarter::shared_ptr<MemoryView> memory,
+	   smarter::shared_ptr<IpcQueue> queue,
+	   uintptr_t offset,
+	   size_t size,
+	   uintptr_t context,
+	   smarter::shared_ptr<WorkQueue> wq,
+	   enable_detached_coroutine = {}) -> void {
 		MemoryViewLockHandle lockHandle {memory, offset, size};
 		co_await lockHandle.acquire(wq);
 		if (!lockHandle) {
@@ -1709,9 +1706,9 @@ HelError helSubmitLockMemoryView(
 		auto touchOutcome = co_await memory->touchRange(offset, size, 0, wq);
 		if (!touchOutcome) {
 			HelHandleResult helResult {
-			  translateError(touchOutcome.error()),
-			  0,
-			  kHelNullHandle};
+				translateError(touchOutcome.error()),
+				0,
+				kHelNullHandle};
 			QueueSource ipcSource {&helResult, sizeof(HelHandleResult), nullptr};
 			co_await queue->submit(&ipcSource, context);
 			co_return;
@@ -1724,11 +1721,12 @@ HelError helSubmitLockMemoryView(
 			Universe::Guard lock(universe->lock);
 
 			handle = universe->attachDescriptor(
-			  lock,
-			  MemoryViewLockDescriptor {smarter::allocate_shared<NamedMemoryViewLock>(
-			    *kernelAlloc,
-			    std::move(lockHandle)
-			  )}
+				lock,
+				MemoryViewLockDescriptor {
+					smarter::allocate_shared<NamedMemoryViewLock>(
+						*kernelAlloc,
+						std::move(lockHandle)
+					)}
 			);
 		}
 
@@ -1736,12 +1734,12 @@ HelError helSubmitLockMemoryView(
 		QueueSource ipcSource {&helResult, sizeof(HelHandleResult), nullptr};
 		co_await queue->submit(&ipcSource, context);
 	}(std::move(this_universe),
-	  std::move(memory),
-	  std::move(queue),
-	  offset,
-	  size,
-	  context,
-	  this_thread->mainWorkQueue()->take());
+					   std::move(memory),
+					   std::move(queue),
+					   offset,
+					   size,
+					   context,
+					   this_thread->mainWorkQueue()->take());
 
 	return kHelErrNone;
 }
@@ -1766,11 +1764,11 @@ HelError helLoadahead(HelHandle handle, uintptr_t offset, size_t length) {
 	}
 
 	/*	auto handle_load = smarter::allocate_shared<AsyncInitiateLoad>(*kernelAlloc,
-	                        NullCompleter(), offset, length);
-	        {
-	                // TODO: protect memory object with a guard
-	                memory->submitInitiateLoad(std::move(handle_load));
-	        }*/
+				NullCompleter(), offset, length);
+		{
+			// TODO: protect memory object with a guard
+			memory->submitInitiateLoad(std::move(handle_load));
+		}*/
 
 	return kHelErrNone;
 }
@@ -1778,13 +1776,13 @@ HelError helLoadahead(HelHandle handle, uintptr_t offset, size_t length) {
 std::atomic<unsigned int> globalNextCpu = 0;
 
 HelError helCreateThread(
-  HelHandle universe_handle,
-  HelHandle space_handle,
-  int abi,
-  void *ip,
-  void *sp,
-  uint32_t flags,
-  HelHandle *handle
+	HelHandle universe_handle,
+	HelHandle space_handle,
+	int abi,
+	void *ip,
+	void *sp,
+	uint32_t flags,
+	HelHandle *handle
 ) {
 	(void) abi;
 	auto this_thread = getCurrentThread();
@@ -1803,7 +1801,7 @@ HelError helCreateThread(
 			universe = this_thread->getUniverse().lock();
 		} else {
 			auto universe_wrapper =
-			  this_universe->getDescriptor(universe_guard, universe_handle);
+				this_universe->getDescriptor(universe_guard, universe_handle);
 			if (!universe_wrapper)
 				return kHelErrNoDescriptor;
 			if (!universe_wrapper->is<UniverseDescriptor>())
@@ -1815,7 +1813,7 @@ HelError helCreateThread(
 			space = this_thread->getAddressSpace().lock();
 		} else {
 			auto space_wrapper =
-			  this_universe->getDescriptor(universe_guard, space_handle);
+				this_universe->getDescriptor(universe_guard, space_handle);
 			if (!space_wrapper)
 				return kHelErrNoDescriptor;
 			if (!space_wrapper->is<AddressSpaceDescriptor>())
@@ -1844,8 +1842,8 @@ HelError helCreateThread(
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  ThreadDescriptor(std::move(new_thread))
+			universe_guard,
+			ThreadDescriptor(std::move(new_thread))
 		);
 	}
 
@@ -1940,13 +1938,11 @@ helSubmitObserve(HelHandle handle, uint64_t inSeq, HelHandle queueHandle, uintpt
 	if (!queue->validSize(ipcSourceSize(sizeof(HelObserveResult))))
 		return kHelErrQueueTooSmall;
 
-	[](
-	  smarter::shared_ptr<Thread> thread,
-	  uint64_t inSeq,
-	  smarter::shared_ptr<IpcQueue> queue,
-	  uintptr_t context,
-	  enable_detached_coroutine = {}
-	) -> void {
+	[](smarter::shared_ptr<Thread> thread,
+	   uint64_t inSeq,
+	   smarter::shared_ptr<IpcQueue> queue,
+	   uintptr_t context,
+	   enable_detached_coroutine = {}) -> void {
 		auto [error, sequence, interrupt] = co_await thread->observe(inSeq);
 
 		HelObserveResult helResult {translateError(error), 0, sequence};
@@ -2144,9 +2140,9 @@ HelError helLoadRegisters(HelHandle handle, int set, void *image) {
 	} else if (set == kHelRegsSimd) {
 #if defined(__x86_64__)
 		if (!writeUserMemory(
-		      image,
-		      thread->_executor._fxState(),
-		      Executor::determineSimdSize()
+			    image,
+			    thread->_executor._fxState(),
+			    Executor::determineSimdSize()
 		    ))
 			return kHelErrFault;
 #elif defined(__aarch64__)
@@ -2261,8 +2257,8 @@ HelError helStoreRegisters(HelHandle handle, int set, const void *image) {
 		}
 		HelX86VirtualizationRegs regs;
 		if (!readUserObject(
-		      reinterpret_cast<const HelX86VirtualizationRegs *>(image),
-		      regs
+			    reinterpret_cast<const HelX86VirtualizationRegs *>(image),
+			    regs
 		    ))
 			return kHelErrFault;
 		vcpu.vcpu->storeRegs(&regs);
@@ -2270,9 +2266,9 @@ HelError helStoreRegisters(HelHandle handle, int set, const void *image) {
 	} else if (set == kHelRegsSimd) {
 #if defined(__x86_64__)
 		if (!readUserMemory(
-		      thread->_executor._fxState(),
-		      image,
-		      Executor::determineSimdSize()
+			    thread->_executor._fxState(),
+			    image,
+			    Executor::determineSimdSize()
 		    ))
 			return kHelErrFault;
 #elif defined(__aarch64__)
@@ -2301,23 +2297,26 @@ HelError helGetClock(uint64_t *counter) {
 }
 
 HelError helSubmitAwaitClock(
-  uint64_t counter,
-  HelHandle queue_handle,
-  uintptr_t context,
-  uint64_t *async_id
+	uint64_t counter,
+	HelHandle queue_handle,
+	uintptr_t context,
+	uint64_t *async_id
 ) {
 	struct Closure final
 	: CancelNode
 	, PrecisionTimerNode
 	, IpcNode {
-		static void issue(
-		  uint64_t nanos,
-		  smarter::shared_ptr<IpcQueue> queue,
-		  uintptr_t context,
-		  uint64_t *async_id
-		) {
-			auto closure =
-			  frg::construct<Closure>(*kernelAlloc, nanos, std::move(queue), context);
+		static void
+		issue(uint64_t nanos,
+		      smarter::shared_ptr<IpcQueue> queue,
+		      uintptr_t context,
+		      uint64_t *async_id) {
+			auto closure = frg::construct<Closure>(
+				*kernelAlloc,
+				nanos,
+				std::move(queue),
+				context
+			);
 			closure->queue->registerNode(closure);
 			*async_id = closure->asyncId();
 			generalTimerEngine()->installTimer(closure);
@@ -2332,9 +2331,9 @@ HelError helSubmitAwaitClock(
 		}
 
 		explicit Closure(
-		  uint64_t nanos,
-		  smarter::shared_ptr<IpcQueue> the_queue,
-		  uintptr_t context
+			uint64_t nanos,
+			smarter::shared_ptr<IpcQueue> the_queue,
+			uintptr_t context
 		)
 		: queue {std::move(the_queue)}
 		, source {&result, sizeof(HelSimpleResult), nullptr}
@@ -2391,12 +2390,12 @@ HelError helCreateStream(HelHandle *lane1_handle, HelHandle *lane2_handle) {
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*lane1_handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  LaneDescriptor(std::move(lanes.get<0>()))
+			universe_guard,
+			LaneDescriptor(std::move(lanes.get<0>()))
 		);
 		*lane2_handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  LaneDescriptor(std::move(lanes.get<1>()))
+			universe_guard,
+			LaneDescriptor(std::move(lanes.get<1>()))
 		);
 	}
 
@@ -2404,12 +2403,12 @@ HelError helCreateStream(HelHandle *lane1_handle, HelHandle *lane2_handle) {
 }
 
 HelError helSubmitAsync(
-  HelHandle handle,
-  const HelAction *actions,
-  size_t count,
-  HelHandle queueHandle,
-  uintptr_t context,
-  uint32_t flags
+	HelHandle handle,
+	const HelAction *actions,
+	size_t count,
+	HelHandle queueHandle,
+	uintptr_t context,
+	uint32_t flags
 ) {
 	if (flags)
 		return kHelErrIllegalArgs;
@@ -2501,13 +2500,13 @@ HelError helSubmitAsync(
 		case kHelActionSendFromBuffer:
 			if (recipe->length <= kPageSize) {
 				frg::unique_memory<KernelAlloc> buffer(
-				  *kernelAlloc,
-				  recipe->length
+					*kernelAlloc,
+					recipe->length
 				);
 				if (!readUserMemory(
-				      reinterpret_cast<char *>(buffer.data()),
-				      reinterpret_cast<char *>(recipe->buffer),
-				      recipe->length
+					    reinterpret_cast<char *>(buffer.data()),
+					    reinterpret_cast<char *>(recipe->buffer),
+					    recipe->length
 				    ))
 					return kHelErrFault;
 
@@ -2535,9 +2534,9 @@ HelError helSubmitAsync(
 				HelSgItem item;
 				readUserObject(sglist + j, item);
 				if (!readUserMemory(
-				      reinterpret_cast<char *>(buffer.data()) + offset,
-				      reinterpret_cast<char *>(item.buffer),
-				      item.length
+					    reinterpret_cast<char *>(buffer.data()) + offset,
+					    reinterpret_cast<char *>(item.buffer),
+					    item.length
 				    ))
 					return kHelErrFault;
 				offset += item.length;
@@ -2568,7 +2567,7 @@ HelError helSubmitAsync(
 				Universe::Guard universe_guard(thisUniverse->lock);
 
 				auto wrapper =
-				  thisUniverse->getDescriptor(universe_guard, recipe->handle);
+					thisUniverse->getDescriptor(universe_guard, recipe->handle);
 				if (!wrapper)
 					return kHelErrNoDescriptor;
 				operand = *wrapper;
@@ -2628,14 +2627,15 @@ HelError helSubmitAsync(
 				if (recipe->type == kHelActionDismiss) {
 					item->helSimpleResult = {translateError(node->error()), 0};
 					item->mainSource.setup(
-					  &item->helSimpleResult,
-					  sizeof(HelSimpleResult)
+						&item->helSimpleResult,
+						sizeof(HelSimpleResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionOffer) {
 					HelHandle handle = kHelNullHandle;
 
-					if (node->error() == Error::success && (recipe->flags & kHelItemWantLane)) {
+					if (node->error() == Error::success
+					    && (recipe->flags & kHelItemWantLane)) {
 						auto universe = closure->weakUniverse.lock();
 						assert(universe);
 
@@ -2643,18 +2643,18 @@ HelError helSubmitAsync(
 						Universe::Guard lock(universe->lock);
 
 						handle = universe->attachDescriptor(
-						  lock,
-						  LaneDescriptor {node->lane()}
+							lock,
+							LaneDescriptor {node->lane()}
 						);
 					}
 
 					item->helHandleResult = {
-					  translateError(node->error()),
-					  0,
-					  handle};
+						translateError(node->error()),
+						0,
+						handle};
 					item->mainSource.setup(
-					  &item->helSimpleResult,
-					  sizeof(HelHandleResult)
+						&item->helSimpleResult,
+						sizeof(HelHandleResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionAccept) {
@@ -2669,77 +2669,75 @@ HelError helSubmitAsync(
 						Universe::Guard lock(universe->lock);
 
 						handle = universe->attachDescriptor(
-						  lock,
-						  LaneDescriptor {node->lane()}
+							lock,
+							LaneDescriptor {node->lane()}
 						);
 					}
 
 					item->helHandleResult = {
-					  translateError(node->error()),
-					  0,
-					  handle};
+						translateError(node->error()),
+						0,
+						handle};
 					item->mainSource.setup(
-					  &item->helHandleResult,
-					  sizeof(HelHandleResult)
+						&item->helHandleResult,
+						sizeof(HelHandleResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionImbueCredentials) {
 					item->helSimpleResult = {translateError(node->error()), 0};
 					item->mainSource.setup(
-					  &item->helSimpleResult,
-					  sizeof(HelSimpleResult)
+						&item->helSimpleResult,
+						sizeof(HelSimpleResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionExtractCredentials) {
 					item->helCredentialsResult = {
-					  .error = translateError(node->error())};
-					memcpy(
-					  item->helCredentialsResult.credentials,
-					  node->credentials().data(),
-					  16
-					);
+						.error = translateError(node->error())};
+					memcpy(item->helCredentialsResult.credentials,
+					       node->credentials().data(),
+					       16);
 					item->mainSource.setup(
-					  &item->helCredentialsResult,
-					  sizeof(HelCredentialsResult)
+						&item->helCredentialsResult,
+						sizeof(HelCredentialsResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionSendFromBuffer || recipe->type == kHelActionSendFromBufferSg) {
 					item->helSimpleResult = {translateError(node->error()), 0};
 					item->mainSource.setup(
-					  &item->helSimpleResult,
-					  sizeof(HelSimpleResult)
+						&item->helSimpleResult,
+						sizeof(HelSimpleResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionRecvInline) {
 					item->helInlineResult = {
-					  translateError(node->error()),
-					  0,
-					  node->_transmitBuffer.size()};
+						translateError(node->error()),
+						0,
+						node->_transmitBuffer.size()};
 					item->mainSource.setup(
-					  &item->helInlineResult,
-					  sizeof(HelInlineResultNoFlex)
+						&item->helInlineResult,
+						sizeof(HelInlineResultNoFlex)
 					);
 					item->dataSource.setup(
-					  node->_transmitBuffer.data(),
-					  node->_transmitBuffer.size()
+						node->_transmitBuffer.data(),
+						node->_transmitBuffer.size()
 					);
 					link(&item->mainSource);
 					link(&item->dataSource);
 				} else if (recipe->type == kHelActionRecvToBuffer) {
 					item->helLengthResult = {
-					  translateError(node->error()),
-					  0,
-					  node->actualLength()};
+						translateError(node->error()),
+						0,
+						node->actualLength()};
 					item->mainSource.setup(
-					  &item->helLengthResult,
-					  sizeof(HelLengthResult)
+						&item->helLengthResult,
+						sizeof(HelLengthResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionPushDescriptor) {
 					item->helSimpleResult = {translateError(node->error()), 0};
 					item->mainSource.setup(
-					  &item->helSimpleResult,
-					  sizeof(HelSimpleResult)
+						&item->helSimpleResult,
+						sizeof(HelSimpleResult)
 					);
 					link(&item->mainSource);
 				} else if (recipe->type == kHelActionPullDescriptor) {
@@ -2754,18 +2752,18 @@ HelError helSubmitAsync(
 						Universe::Guard lock(universe->lock);
 
 						handle = universe->attachDescriptor(
-						  lock,
-						  node->descriptor()
+							lock,
+							node->descriptor()
 						);
 					}
 
 					item->helHandleResult = {
-					  translateError(node->error()),
-					  0,
-					  handle};
+						translateError(node->error()),
+						0,
+						handle};
 					item->mainSource.setup(
-					  &item->helHandleResult,
-					  sizeof(HelHandleResult)
+						&item->helHandleResult,
+						sizeof(HelHandleResult)
 					);
 					link(&item->mainSource);
 				} else {
@@ -2811,17 +2809,15 @@ HelError helSubmitAsync(
 		} else {
 			// Add the item to an ancillary list of another item.
 			closure->items[l].transmit.ancillaryChain.push_back(
-			  &closure->items[i].transmit
+				&closure->items[i].transmit
 			);
 		}
 	}
 
-	auto handleFlow = [](
-	                    Closure *closure,
-	                    size_t numFlows,
-	                    smarter::shared_ptr<Thread> thread,
-	                    enable_detached_coroutine = {}
-	                  ) -> void {
+	auto handleFlow = [](Closure *closure,
+			     size_t numFlows,
+			     smarter::shared_ptr<Thread> thread,
+			     enable_detached_coroutine = {}) -> void {
 		// We exit once we processed numFlows-many items.
 		// This guarantees that we do not access the closure object after it is freed.
 		// Below, we need to ensure that we always complete our own nodes
@@ -2852,15 +2848,19 @@ HelError helSubmitAsync(
 				continue;
 			}
 
-			if (recipe->type == kHelActionSendFromBuffer && node->tag() == kTagSendFlow && peer->tag() == kTagRecvKernelBuffer) {
+			if (recipe->type == kHelActionSendFromBuffer && node->tag() == kTagSendFlow
+			    && peer->tag() == kTagRecvKernelBuffer) {
 				frg::unique_memory<KernelAlloc> buffer(
-				  *kernelAlloc,
-				  recipe->length
+					*kernelAlloc,
+					recipe->length
 				);
 
 				co_await thread->mainWorkQueue()->enter();
-				auto outcome =
-				  readUserMemory(buffer.data(), recipe->buffer, recipe->length);
+				auto outcome = readUserMemory(
+					buffer.data(),
+					recipe->buffer,
+					recipe->length
+				);
 				if (!outcome) {
 					// We complete with fault; the remote with success.
 					// TODO: it probably makes sense to introduce a "remote
@@ -2896,7 +2896,7 @@ HelError helSubmitAsync(
 						    && numSent - numAcked < xferBuffers.size())
 							break;
 						auto ackPacket =
-						  co_await node->flowQueue.async_get();
+							co_await node->flowQueue.async_get();
 						assert(ackPacket);
 						if (ackPacket->fault)
 							anyRemoteFault = true;
@@ -2922,7 +2922,8 @@ HelError helSubmitAsync(
 						assert(numSent > numAcked);
 						while (numSent != numAcked) {
 							auto ackPacket =
-							  co_await node->flowQueue.async_get();
+								co_await node->flowQueue.async_get(
+								);
 							assert(ackPacket);
 							++numAcked;
 						}
@@ -2936,23 +2937,24 @@ HelError helSubmitAsync(
 					auto &xb = xferBuffers[numSent & (xferBuffers.size() - 1)];
 					if (!xb.size())
 						xb = frg::unique_memory<KernelAlloc> {
-						  *kernelAlloc,
-						  4096};
+							*kernelAlloc,
+							4096};
 
 					auto chunkSize =
-					  frg::min(recipe->length - progress, xb.size());
+						frg::min(recipe->length - progress, xb.size());
 					assert(chunkSize);
 
 					co_await thread->mainWorkQueue()->enter();
 					auto outcome = readUserMemory(
-					  xb.data(),
-					  reinterpret_cast<std::byte *>(recipe->buffer) + progress,
-					  chunkSize
+						xb.data(),
+						reinterpret_cast<std::byte *>(recipe->buffer)
+							+ progress,
+						chunkSize
 					);
 					if (!outcome) {
 						// Send the packet (may deallocate the peer!).
 						peer->flowQueue.put(
-						  {.terminate = true, .fault = true}
+							{.terminate = true, .fault = true}
 						);
 						++numSent;
 
@@ -2960,7 +2962,8 @@ HelError helSubmitAsync(
 						assert(numSent > numAcked);
 						while (numSent != numAcked) {
 							auto ackPacket =
-							  co_await node->flowQueue.async_get();
+								co_await node->flowQueue.async_get(
+								);
 							assert(ackPacket);
 							++numAcked;
 						}
@@ -2972,9 +2975,9 @@ HelError helSubmitAsync(
 					lastTransferSent = (progress + chunkSize == recipe->length);
 					// Send the packet (may deallocate the peer!).
 					peer->flowQueue.put(
-					  {.data = xb.data(),
-					   .size = chunkSize,
-					   .terminate = lastTransferSent}
+						{.data = xb.data(),
+						 .size = chunkSize,
+						 .terminate = lastTransferSent}
 					);
 					++numSent;
 					progress += chunkSize;
@@ -2984,9 +2987,9 @@ HelError helSubmitAsync(
 			} else if (recipe->type == kHelActionRecvToBuffer && peer->tag() == kTagSendKernelBuffer) {
 				co_await thread->mainWorkQueue()->enter();
 				auto outcome = writeUserMemory(
-				  recipe->buffer,
-				  peer->_inBuffer.data(),
-				  peer->_inBuffer.size()
+					recipe->buffer,
+					peer->_inBuffer.data(),
+					peer->_inBuffer.size()
 				);
 				if (!outcome) {
 					// We complete with fault; the remote with success.
@@ -3004,10 +3007,8 @@ HelError helSubmitAsync(
 				peer->complete();
 				node->complete();
 			} else {
-				assert(
-				  recipe->type == kHelActionRecvToBuffer
-				  && peer->tag() == kTagSendFlow
-				);
+				assert(recipe->type == kHelActionRecvToBuffer
+				       && peer->tag() == kTagSendFlow);
 
 				size_t progress = 0;
 				bool didFault = false;
@@ -3019,16 +3020,15 @@ HelError helSubmitAsync(
 					if (xferPacket->data && !didFault) {
 						// Otherwise, there would have been a transmission
 						// error.
-						assert(
-						  progress + xferPacket->size <= recipe->length
+						assert(progress + xferPacket->size <= recipe->length
 						);
 
 						co_await thread->mainWorkQueue()->enter();
 						auto outcome = writeUserMemory(
-						  reinterpret_cast<std::byte *>(recipe->buffer)
-						    + progress,
-						  xferPacket->data,
-						  xferPacket->size
+							reinterpret_cast<std::byte *>(recipe->buffer
+							) + progress,
+							xferPacket->data,
+							xferPacket->size
 						);
 						if (outcome) {
 							progress += xferPacket->size;
@@ -3042,8 +3042,8 @@ HelError helSubmitAsync(
 							// Ack the packet (may deallocate the
 							// peer!).
 							peer->flowQueue.put({
-							  .terminate = true,
-							  .fault = true,
+								.terminate = true,
+								.fault = true,
 							});
 							node->_error = Error::fault;
 						} else {
@@ -3113,8 +3113,8 @@ HelError helFutexWait(int *pointer, int expected, int64_t deadline) {
 	auto space = thisThread->getAddressSpace();
 
 	auto futexOrError = Thread::asyncBlockCurrent(space->grabGlobalFutex(
-	  reinterpret_cast<uintptr_t>(pointer),
-	  thisThread->mainWorkQueue()->take()
+		reinterpret_cast<uintptr_t>(pointer),
+		thisThread->mainWorkQueue()->take()
 	));
 	if (!futexOrError)
 		return kHelErrFault;
@@ -3127,13 +3127,13 @@ HelError helFutexWait(int *pointer, int expected, int64_t deadline) {
 		Thread::asyncBlockCurrent(getGlobalFutexRealm()->wait(std::move(futex), expected));
 	} else {
 		Thread::asyncBlockCurrent(async::race_and_cancel(
-		  [&](async::cancellation_token cancellation) {
-			  return getGlobalFutexRealm()
-			    ->wait(std::move(futex), expected, cancellation);
-		  },
-		  [&](async::cancellation_token cancellation) {
-			  return generalTimerEngine()->sleep(deadline, cancellation);
-		  }
+			[&](async::cancellation_token cancellation) {
+				return getGlobalFutexRealm()
+					->wait(std::move(futex), expected, cancellation);
+			},
+			[&](async::cancellation_token cancellation) {
+				return generalTimerEngine()->sleep(deadline, cancellation);
+			}
 		));
 	}
 
@@ -3163,8 +3163,8 @@ HelError helCreateOneshotEvent(HelHandle *handle) {
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  OneshotEventDescriptor(std::move(event))
+			universe_guard,
+			OneshotEventDescriptor(std::move(event))
 		);
 	}
 
@@ -3182,8 +3182,8 @@ HelError helCreateBitsetEvent(HelHandle *handle) {
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  BitsetEventDescriptor(std::move(event))
+			universe_guard,
+			BitsetEventDescriptor(std::move(event))
 		);
 	}
 
@@ -3221,8 +3221,8 @@ HelError helAccessIrq(int number, HelHandle *handle) {
 	auto this_universe = this_thread->getUniverse();
 
 	auto irq = smarter::allocate_shared<GenericIrqObject>(
-	  *kernelAlloc,
-	  frg::string<KernelAlloc> {*kernelAlloc, "generic-irq-object"}
+		*kernelAlloc,
+		frg::string<KernelAlloc> {*kernelAlloc, "generic-irq-object"}
 	);
 	IrqPin::attachSink(getGlobalSystemIrq(number), irq.get());
 
@@ -3230,8 +3230,10 @@ HelError helAccessIrq(int number, HelHandle *handle) {
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(this_universe->lock);
 
-		*handle =
-		  this_universe->attachDescriptor(universe_guard, IrqDescriptor(std::move(irq)));
+		*handle = this_universe->attachDescriptor(
+			universe_guard,
+			IrqDescriptor(std::move(irq))
+		);
 	}
 
 	return kHelErrNone;
@@ -3283,20 +3285,19 @@ HelError helAcknowledgeIrq(HelHandle handle, uint32_t flags, uint64_t sequence) 
 }
 
 HelError helSubmitAwaitEvent(
-  HelHandle handle,
-  uint64_t sequence,
-  HelHandle queue_handle,
-  uintptr_t context
+	HelHandle handle,
+	uint64_t sequence,
+	HelHandle queue_handle,
+	uintptr_t context
 ) {
 	struct IrqClosure final : IpcNode {
-		static void issue(
-		  smarter::shared_ptr<IrqObject> irq,
-		  uint64_t sequence,
-		  smarter::shared_ptr<IpcQueue> queue,
-		  intptr_t context
-		) {
+		static void
+		issue(smarter::shared_ptr<IrqObject> irq,
+		      uint64_t sequence,
+		      smarter::shared_ptr<IpcQueue> queue,
+		      intptr_t context) {
 			auto closure =
-			  frg::construct<IrqClosure>(*kernelAlloc, std::move(queue), context);
+				frg::construct<IrqClosure>(*kernelAlloc, std::move(queue), context);
 			irq->submitAwait(&closure->irqNode, sequence);
 		}
 
@@ -3329,25 +3330,29 @@ HelError helSubmitAwaitEvent(
 	};
 
 	struct EventClosure final : IpcNode {
-		static void issue(
-		  smarter::shared_ptr<OneshotEvent> event,
-		  uint64_t sequence,
-		  smarter::shared_ptr<IpcQueue> queue,
-		  intptr_t context
-		) {
-			auto closure =
-			  frg::construct<EventClosure>(*kernelAlloc, std::move(queue), context);
+		static void
+		issue(smarter::shared_ptr<OneshotEvent> event,
+		      uint64_t sequence,
+		      smarter::shared_ptr<IpcQueue> queue,
+		      intptr_t context) {
+			auto closure = frg::construct<EventClosure>(
+				*kernelAlloc,
+				std::move(queue),
+				context
+			);
 			event->submitAwait(&closure->eventNode, sequence);
 		}
 
-		static void issue(
-		  smarter::shared_ptr<BitsetEvent> event,
-		  uint64_t sequence,
-		  smarter::shared_ptr<IpcQueue> queue,
-		  intptr_t context
-		) {
-			auto closure =
-			  frg::construct<EventClosure>(*kernelAlloc, std::move(queue), context);
+		static void
+		issue(smarter::shared_ptr<BitsetEvent> event,
+		      uint64_t sequence,
+		      smarter::shared_ptr<IpcQueue> queue,
+		      intptr_t context) {
+			auto closure = frg::construct<EventClosure>(
+				*kernelAlloc,
+				std::move(queue),
+				context
+			);
 			event->submitAwait(&closure->eventNode, sequence);
 		}
 
@@ -3471,8 +3476,8 @@ HelError helAccessIo(uintptr_t *port_array, size_t num_ports, HelHandle *handle)
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  IoDescriptor(std::move(io_space))
+			universe_guard,
+			IoDescriptor(std::move(io_space))
 		);
 	}
 
@@ -3519,10 +3524,10 @@ HelError helEnableFullIo() {
 }
 
 HelError helBindKernlet(
-  HelHandle handle,
-  const HelKernletData *data,
-  size_t num_data,
-  HelHandle *bound_handle
+	HelHandle handle,
+	const HelKernletData *data,
+	size_t num_data,
+	HelHandle *bound_handle
 ) {
 	auto this_thread = getCurrentThread();
 	auto this_universe = this_thread->getUniverse();
@@ -3560,7 +3565,7 @@ HelError helBindKernlet(
 				Universe::Guard universe_guard(this_universe->lock);
 
 				auto wrapper =
-				  this_universe->getDescriptor(universe_guard, d.handle);
+					this_universe->getDescriptor(universe_guard, d.handle);
 				if (!wrapper)
 					return kHelErrNoDescriptor;
 				if (!wrapper->is<MemoryViewDescriptor>())
@@ -3568,18 +3573,19 @@ HelError helBindKernlet(
 				memory = wrapper->get<MemoryViewDescriptor>().memory;
 			}
 
-			auto window =
-			  reinterpret_cast<char *>(KernelVirtualMemory::global().allocate(0x10000));
+			auto window = reinterpret_cast<char *>(
+				KernelVirtualMemory::global().allocate(0x10000)
+			);
 			assert(memory->getLength() <= 0x10000);
 
 			for (size_t off = 0; off < memory->getLength(); off += kPageSize) {
 				auto range = memory->peekRange(off);
 				assert(range.get<0>() != PhysicalAddr(-1));
 				KernelPageSpace::global().mapSingle4k(
-				  reinterpret_cast<uintptr_t>(window + off),
-				  range.get<0>(),
-				  page_access::write,
-				  range.get<1>()
+					reinterpret_cast<uintptr_t>(window + off),
+					range.get<0>(),
+					page_access::write,
+					range.get<1>()
 				);
 			}
 
@@ -3593,7 +3599,7 @@ HelError helBindKernlet(
 				Universe::Guard universe_guard(this_universe->lock);
 
 				auto wrapper =
-				  this_universe->getDescriptor(universe_guard, d.handle);
+					this_universe->getDescriptor(universe_guard, d.handle);
 				if (!wrapper)
 					return kHelErrNoDescriptor;
 				if (!wrapper->is<BitsetEventDescriptor>())
@@ -3610,8 +3616,8 @@ HelError helBindKernlet(
 		Universe::Guard universe_guard(this_universe->lock);
 
 		*bound_handle = this_universe->attachDescriptor(
-		  universe_guard,
-		  BoundKernletDescriptor(std::move(bound))
+			universe_guard,
+			BoundKernletDescriptor(std::move(bound))
 		);
 	}
 

@@ -16,13 +16,13 @@ constexpr size_t kasanScale = size_t {1} << kasanShift;
 
 int8_t *kasanShadowOf(void *ptr) {
 	return reinterpret_cast<int8_t *>(
-	  kasanShadowDelta + (reinterpret_cast<uintptr_t>(ptr) >> kasanShift)
+		kasanShadowDelta + (reinterpret_cast<uintptr_t>(ptr) >> kasanShift)
 	);
 }
 
 void *kasanPointerOf(int8_t *shadow) {
 	return reinterpret_cast<void *>(
-	  ((reinterpret_cast<uintptr_t>(shadow) - kasanShadowDelta) << kasanShift)
+		((reinterpret_cast<uintptr_t>(shadow) - kasanShadowDelta) << kasanShift)
 	);
 }
 }  // namespace
@@ -34,7 +34,7 @@ void *kasanPointerOf(int8_t *shadow) {
 	auto shadow = kasanShadowOf(pointer);
 	if (debugKasan)
 		infoLogger() << "thor: Unpoisioning KASAN at " << pointer
-		             << ", size: " << (void *) size << frg::endlog;
+			     << ", size: " << (void *) size << frg::endlog;
 	for (size_t n = 0; n < (size >> kasanShift); ++n) {
 		assert(shadow[n] == static_cast<int8_t>(0xFF));
 		shadow[n] = 0;
@@ -55,7 +55,7 @@ void *kasanPointerOf(int8_t *shadow) {
 	auto shadow = kasanShadowOf(pointer);
 	if (debugKasan)
 		infoLogger() << "thor: Poisioning KASAN at " << pointer
-		             << ", size: " << (void *) size << frg::endlog;
+			     << ", size: " << (void *) size << frg::endlog;
 	for (size_t n = 0; n < (size >> kasanShift); ++n) {
 		assert(shadow[n] == static_cast<int8_t>(0x00));
 		shadow[n] = 0xFF;
@@ -75,7 +75,7 @@ void *kasanPointerOf(int8_t *shadow) {
 	assert(!(reinterpret_cast<uintptr_t>(pointer) & (kasanScale - 1)));
 	if (debugKasan)
 		infoLogger() << "thor: Cleaning KASAN at " << pointer << ", size: " << (void *) size
-		             << frg::endlog;
+			     << frg::endlog;
 	auto shadow = kasanShadowOf(pointer);
 	for (size_t n = 0; n < (size >> kasanShift); ++n)
 		shadow[n] = 0;
@@ -106,8 +106,8 @@ void scrubStackFrom(uintptr_t top, Continuation cont) {
 	cleanKasanShadow(cont.sp, top - bottom);
 	// Perform some sanity checking.
 	validateKasanClean(
-	  reinterpret_cast<void *>(bottom & ~(kPageSize - 1)),
-	  bottom & (kPageSize - 1)
+		reinterpret_cast<void *>(bottom & ~(kPageSize - 1)),
+		bottom & (kPageSize - 1)
 	);
 }
 
@@ -136,8 +136,8 @@ extern "C" [[gnu::no_sanitize_address]] void __asan_set_shadow_00(void *pointer,
 namespace {
 [[gnu::no_sanitize_address]] void doReport(bool write, uintptr_t address, size_t size, void *ip) {
 	thor::infoLogger() << "thor: KASAN failure at IP " << ip << ", " << size << "-byte "
-	                   << (write ? "write to " : "read from ") << "address " << (void *) address
-	                   << frg::endlog;
+			   << (write ? "write to " : "read from ") << "address " << (void *) address
+			   << frg::endlog;
 	auto shadow = thor::kasanShadowOf(reinterpret_cast<void *>(address));
 	auto l = reinterpret_cast<uintptr_t>(shadow) & 15;
 	auto validBehind = (reinterpret_cast<uintptr_t>(shadow) - l) & (thor::kPageSize - 1);

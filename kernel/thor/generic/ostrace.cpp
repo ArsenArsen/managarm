@@ -33,18 +33,18 @@ std::atomic<uint64_t> nextId {1};
 frg::manual_box<LogRingBuffer> globalOsTraceRing;
 
 initgraph::Task initOsTraceCore {
-  &globalInitEngine,
-  "generic.init-ostrace-core",
-  initgraph::Entails {getOsTraceAvailableStage()},
-  [] {
-	  if (!wantOsTrace)
-		  return;
+	&globalInitEngine,
+	"generic.init-ostrace-core",
+	initgraph::Entails {getOsTraceAvailableStage()},
+	[] {
+		if (!wantOsTrace)
+			return;
 
-	  void *osTraceMemory = kernelAlloc->allocate(1 << 20);
-	  globalOsTraceRing.initialize(reinterpret_cast<uintptr_t>(osTraceMemory), 1 << 20);
+		void *osTraceMemory = kernelAlloc->allocate(1 << 20);
+		globalOsTraceRing.initialize(reinterpret_cast<uintptr_t>(osTraceMemory), 1 << 20);
 
-	  osTraceInUse.store(true);
-  }};
+		osTraceInUse.store(true);
+	}};
 
 template<typename R>
 void commitOsTrace(R record) {
@@ -55,9 +55,9 @@ void commitOsTrace(R record) {
 	frg::small_vector<char, 64, KernelAlloc> ser(*kernelAlloc);
 	ser.resize(8 + ts);
 	bool encodeSuccess = bragi::write_head_tail(
-	  record,
-	  frg::span<char>(ser.data(), 8),
-	  frg::span<char>(ser.data() + 8, ts)
+		record,
+		frg::span<char>(ser.data(), 8),
+		frg::span<char>(ser.data() + 8, ts)
 	);
 	assert(encodeSuccess);
 
@@ -165,8 +165,8 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 				break;
 			if (error == Error::protocolViolation) {
 				infoLogger() << "thor: Aborting ostrace request"
-				                " after remote violated the protocol"
-				             << frg::endlog;
+						" after remote violated the protocol"
+					     << frg::endlog;
 			} else {
 				assert(error == Error::success);
 			}
@@ -189,8 +189,8 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 		co_return Error::protocolViolation;
 	}
 	frg::span<const char> reqSpan {
-	  reinterpret_cast<const char *>(reqBuffer.data()),
-	  reqBuffer.size()};
+		reinterpret_cast<const char *>(reqBuffer.data()),
+		reqBuffer.size()};
 
 	auto preamble = bragi::read_preamble(reqSpan);
 	if (preamble.error())
@@ -203,9 +203,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	switch (preamble.id()) {
 	case bragi::message_id<managarm::ostrace::NegotiateReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::NegotiateReq>(
-		  headSpan,
-		  tailSpan,
-		  *kernelAlloc
+			headSpan,
+			tailSpan,
+			*kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -229,9 +229,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	} break;
 	case bragi::message_id<managarm::ostrace::EmitEventReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::EmitEventReq>(
-		  headSpan,
-		  tailSpan,
-		  *kernelAlloc
+			headSpan,
+			tailSpan,
+			*kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -258,9 +258,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	} break;
 	case bragi::message_id<managarm::ostrace::AnnounceEventReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::AnnounceEventReq>(
-		  headSpan,
-		  tailSpan,
-		  *kernelAlloc
+			headSpan,
+			tailSpan,
+			*kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -289,9 +289,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	} break;
 	case bragi::message_id<managarm::ostrace::AnnounceItemReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::AnnounceItemReq>(
-		  headSpan,
-		  tailSpan,
-		  *kernelAlloc
+			headSpan,
+			tailSpan,
+			*kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -337,34 +337,37 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 }
 
 initgraph::Task initOsTraceMbus {
-  &globalInitEngine,
-  "generic.init-ostrace-sinks",
-  initgraph::Requires {&initOsTraceCore, getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
-  [] {
-	  // Create a fiber to manage requests to the ostrace mbus object.
-	  KernelFiber::run([=] {
-		  // We unconditionally create the mbus object since userspace might use it.
-		  async::detach_with_allocator(*kernelAlloc, createObject(*mbusClient));
+	&globalInitEngine,
+	"generic.init-ostrace-sinks",
+	initgraph::Requires {
+		&initOsTraceCore,
+		getFibersAvailableStage(),
+		getIoChannelsDiscoveredStage()},
+	[] {
+		// Create a fiber to manage requests to the ostrace mbus object.
+		KernelFiber::run([=] {
+			// We unconditionally create the mbus object since userspace might use it.
+			async::detach_with_allocator(*kernelAlloc, createObject(*mbusClient));
 
-		  // Only dump to an I/O channel if ostrace is supported (otherwise, the ring
-		  // buffer does not even exist).
-		  if (wantOsTrace) {
-			  auto channel = solicitIoChannel("ostrace");
-			  if (channel) {
-				  infoLogger()
-				    << "thor: Connecting ostrace to I/O channel" << frg::endlog;
-				  async::detach_with_allocator(
-				    *kernelAlloc,
-				    dumpRingToChannel(
-				      globalOsTraceRing.get(),
-				      std::move(channel),
-				      256
-				    )
-				  );
-			  }
-		  }
-	  });
-  }};
+			// Only dump to an I/O channel if ostrace is supported (otherwise, the ring
+			// buffer does not even exist).
+			if (wantOsTrace) {
+				auto channel = solicitIoChannel("ostrace");
+				if (channel) {
+					infoLogger() << "thor: Connecting ostrace to I/O channel"
+						     << frg::endlog;
+					async::detach_with_allocator(
+						*kernelAlloc,
+						dumpRingToChannel(
+							globalOsTraceRing.get(),
+							std::move(channel),
+							256
+						)
+					);
+				}
+			}
+		});
+	}};
 
 }  // anonymous namespace
 

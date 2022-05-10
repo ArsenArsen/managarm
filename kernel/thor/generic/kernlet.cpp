@@ -31,8 +31,8 @@ extern frg::manual_box<LaneHandle> mbusClient;
 // ------------------------------------------------------------------------
 
 KernletObject::KernletObject(
-  void *entry,
-  const frg::vector<KernletParameterType, KernelAlloc> &bind_types
+	void *entry,
+	const frg::vector<KernletParameterType, KernelAlloc> &bind_types
 )
 : _entry(entry)
 , _bindDefns {*kernelAlloc}
@@ -82,7 +82,7 @@ void BoundKernlet::setupOffsetBinding(size_t index, uint32_t offset) {
 	const auto &defn = _object->defnOfBindParameter(index);
 	if (logBinding)
 		infoLogger() << "thor: Binding offset " << offset << " to instance offset "
-		             << defn.offset << frg::endlog;
+			     << defn.offset << frg::endlog;
 	memcpy(_instance + defn.offset, &offset, sizeof(uint32_t));
 }
 
@@ -91,7 +91,7 @@ void BoundKernlet::setupMemoryViewBinding(size_t index, void *p) {
 	const auto &defn = _object->defnOfBindParameter(index);
 	if (logBinding)
 		infoLogger() << "thor: Binding memory view " << p << " to instance offset "
-		             << defn.offset << frg::endlog;
+			     << defn.offset << frg::endlog;
 	memcpy(_instance + defn.offset, &p, sizeof(void *));
 }
 
@@ -100,7 +100,7 @@ void BoundKernlet::setupBitsetEventBinding(size_t index, smarter::shared_ptr<Bit
 	const auto &defn = _object->defnOfBindParameter(index);
 	if (logBinding)
 		infoLogger() << "thor: Binding bitset event " << (void *) event.get()
-		             << " to instance offset " << defn.offset << frg::endlog;
+			     << " to instance offset " << defn.offset << frg::endlog;
 	auto p = event.get();
 	memcpy(_instance + defn.offset, &p, sizeof(void *));
 }
@@ -117,18 +117,16 @@ int BoundKernlet::invokeIrqAutomation() {
 namespace {
 
 smarter::shared_ptr<KernletObject> processElfDso(
-  const char *buffer,
-  const frg::vector<KernletParameterType, KernelAlloc> &bind_types
+	const char *buffer,
+	const frg::vector<KernletParameterType, KernelAlloc> &bind_types
 ) {
 	auto base = reinterpret_cast<char *>(KernelVirtualMemory::global().allocate(0x10000));
 
 	// Check the EHDR file header.
 	Elf64_Ehdr ehdr;
 	memcpy(&ehdr, buffer, sizeof(Elf64_Ehdr));
-	assert(
-	  ehdr.e_ident[0] == 0x7F && ehdr.e_ident[1] == 'E' && ehdr.e_ident[2] == 'L'
-	  && ehdr.e_ident[3] == 'F'
-	);
+	assert(ehdr.e_ident[0] == 0x7F && ehdr.e_ident[1] == 'E' && ehdr.e_ident[2] == 'L'
+	       && ehdr.e_ident[3] == 'F');
 
 	// Load all PHDRs.
 	Elf64_Dyn *dynamic = nullptr;
@@ -149,11 +147,11 @@ smarter::shared_ptr<KernletObject> processElfDso(
 
 			for (size_t pg = 0; pg < misalign + phdr.p_memsz; pg += kPageSize) {
 				auto va = reinterpret_cast<VirtualAddr>(base + phdr.p_vaddr + pg)
-				        & ~(kPageSize - 1);
+					& ~(kPageSize - 1);
 				auto physical = physicalAllocator->allocate(kPageSize);
 				assert(physical != PhysicalAddr(-1) && "OOM");
 				KernelPageSpace::global()
-				  .mapSingle4k(va, physical, pf, CachingMode::null);
+					.mapSingle4k(va, physical, pf, CachingMode::null);
 			}
 
 			// Fill the segment.
@@ -228,11 +226,11 @@ smarter::shared_ptr<KernletObject> processElfDso(
 			return value;
 		};
 
-		void (*abi_pio_write16
-		)(ptrdiff_t, uint16_t) = [](ptrdiff_t offset, uint16_t value) {
+		void (*abi_pio_write16)(ptrdiff_t, uint16_t) = [](ptrdiff_t offset,
+								  uint16_t value) {
 			if (logIo)
 				infoLogger()
-				  << "__pio_write16 on offset: " << offset << frg::endlog;
+					<< "__pio_write16 on offset: " << offset << frg::endlog;
 			arch::io_ops<uint16_t>::store(offset, value);
 			if (logIo)
 				infoLogger() << "    Wrote " << value << frg::endlog;
@@ -243,7 +241,7 @@ smarter::shared_ptr<KernletObject> processElfDso(
 		)(const char *, ptrdiff_t) = [](const char *base, ptrdiff_t offset) -> uint8_t {
 			if (logIo)
 				infoLogger() << "__mmio_read8 on " << (void *) base
-				             << ", offset: " << offset << frg::endlog;
+					     << ", offset: " << offset << frg::endlog;
 			auto p = reinterpret_cast<const uint8_t *>(base + offset);
 			auto value = arch::mem_ops<uint8_t>::load(p);
 			if (logIo)
@@ -254,7 +252,7 @@ smarter::shared_ptr<KernletObject> processElfDso(
 		)(const char *, ptrdiff_t) = [](const char *base, ptrdiff_t offset) -> uint32_t {
 			if (logIo)
 				infoLogger() << "__mmio_read32 on " << (void *) base
-				             << ", offset: " << offset << frg::endlog;
+					     << ", offset: " << offset << frg::endlog;
 			auto p = reinterpret_cast<const uint32_t *>(base + offset);
 			auto value = arch::mem_ops<uint32_t>::load(p);
 			if (logIo)
@@ -266,7 +264,7 @@ smarter::shared_ptr<KernletObject> processElfDso(
 		)(char *, ptrdiff_t, uint32_t) = [](char *base, ptrdiff_t offset, uint32_t value) {
 			if (logIo)
 				infoLogger() << "__mmio_write32 on " << (void *) base
-				             << ", offset: " << offset << frg::endlog;
+					     << ", offset: " << offset << frg::endlog;
 			auto p = reinterpret_cast<uint32_t *>(base + offset);
 			arch::mem_ops<uint32_t>::store(p, value);
 			if (logIo)
@@ -276,7 +274,7 @@ smarter::shared_ptr<KernletObject> processElfDso(
 		void (*abi_trigger_bitset)(void *, uint32_t) = [](void *p, uint32_t bits) {
 			if (logIo)
 				infoLogger() << "__trigger_bitset on " << p << ", bits: " << bits
-				             << frg::endlog;
+					     << frg::endlog;
 			auto event = static_cast<BitsetEvent *>(p);
 			event->trigger(bits);
 		};
@@ -344,7 +342,7 @@ smarter::shared_ptr<KernletObject> processElfDso(
 			return base + candidate->st_value;
 		}
 		panicLogger() << "thor: Unable to resolve kernel symbol '" << name.data() << "'"
-		              << frg::endlog;
+			      << frg::endlog;
 		__builtin_unreachable();
 	};
 
@@ -385,7 +383,7 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 		if (elfError != Error::success)
 			co_return elfError;
 		auto kernlet =
-		  processElfDso(reinterpret_cast<char *>(elfBuffer.data()), bind_types);
+			processElfDso(reinterpret_cast<char *>(elfBuffer.data()), bind_types);
 
 		managarm::kernlet::SvrResponse<KernelAlloc> resp(*kernelAlloc);
 		resp.set_error(managarm::kernlet::Error::SUCCESS);
@@ -398,8 +396,8 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 		if (respError != Error::success)
 			co_return respError;
 		auto objectError = co_await PushDescriptorSender {
-		  lane,
-		  KernletObjectDescriptor {std::move(kernlet)}};
+			lane,
+			KernletObjectDescriptor {std::move(kernlet)}};
 		if (objectError != Error::success)
 			co_return objectError;
 	} else {
@@ -495,8 +493,8 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 				break;
 			if (isRemoteIpcError(error))
 				infoLogger() << "thor: Aborting svrctl request"
-				                " after remote violated the protocol"
-				             << frg::endlog;
+						" after remote violated the protocol"
+					     << frg::endlog;
 			assert(error == Error::success);
 		}
 	})(boundLane));

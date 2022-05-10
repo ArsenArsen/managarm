@@ -26,20 +26,20 @@ struct DtbPciIrqRouter : PciIrqRouter {
 };
 
 DtbPciIrqRouter::DtbPciIrqRouter(
-  PciIrqRouter *parent_,
-  PciBus *associatedBus_,
-  DeviceTreeNode *node
+	PciIrqRouter *parent_,
+	PciBus *associatedBus_,
+	DeviceTreeNode *node
 )
 : PciIrqRouter {parent_, associatedBus_} {
 	if (!node) {
 		for (int i = 0; i < 4; i++) {
 			bridgeIrqs[i] = parent->resolveIrqRoute(
-			  associatedBus->associatedBridge->slot,
-			  static_cast<IrqIndex>(i + 1)
+				associatedBus->associatedBridge->slot,
+				static_cast<IrqIndex>(i + 1)
 			);
 			if (bridgeIrqs[i])
 				infoLogger() << "thor:     Bridge IRQ [" << i
-				             << "]: " << bridgeIrqs[i]->name() << frg::endlog;
+					     << "]: " << bridgeIrqs[i]->name() << frg::endlog;
 		}
 
 		routingModel = RoutingModel::expansionBridge;
@@ -77,9 +77,9 @@ DtbPciIrqRouter::DtbPciIrqRouter(
 			assert(bus == associatedBus->busId);
 			assert(!func && "TODO: support routing of individual functions");
 			infoLogger()
-			  << "    Route for slot " << slot << ", " << nameOf(index) << ": "
-			  << "IRQ " << ent.parentIrq.id << " on " << ent.interruptController->path()
-			  << frg::endlog;
+				<< "    Route for slot " << slot << ", " << nameOf(index) << ": "
+				<< "IRQ " << ent.parentIrq.id << " on "
+				<< ent.interruptController->path() << frg::endlog;
 
 			// TODO: care about polarity
 			auto irq = ent.parentIrq.id;
@@ -114,11 +114,11 @@ void initPciNode(DeviceTreeNode *node) {
 		assert(node->reg().size() == 1);
 
 		io = frg::construct<EcamPcieConfigIo>(
-		  *kernelAlloc,
-		  node->reg()[0].addr,
-		  0,
-		  range.from,
-		  range.to
+			*kernelAlloc,
+			node->reg()[0].addr,
+			0,
+			range.from,
+			range.to
 		);
 
 	} else if (node->isCompatible<1>({"brcm,bcm2711-pcie"})) {
@@ -129,12 +129,12 @@ void initPciNode(DeviceTreeNode *node) {
 
 	if (!io) {
 		infoLogger() << "thor: Unsupported PCI(e) controller \"" << node->path() << "\""
-		             << frg::endlog;
+			     << frg::endlog;
 		return;
 	}
 
 	auto rootBus =
-	  frg::construct<PciBus>(*kernelAlloc, nullptr, nullptr, io, nullptr, 0, range.from);
+		frg::construct<PciBus>(*kernelAlloc, nullptr, nullptr, io, nullptr, 0, range.from);
 	rootBus->irqRouter = frg::construct<DtbPciIrqRouter>(*kernelAlloc, nullptr, rootBus, node);
 
 	for (auto &r : node->ranges()) {
@@ -161,7 +161,7 @@ void initPciNode(DeviceTreeNode *node) {
 		}
 
 		infoLogger() << "thor: Adding resource " << (void *) r.childAddr << " with flags "
-		             << resFlags << frg::endlog;
+			     << resFlags << frg::endlog;
 
 		rootBus->resources.push_back({r.childAddr, r.size, r.parentAddr, resFlags, true});
 	}
@@ -172,32 +172,32 @@ void initPciNode(DeviceTreeNode *node) {
 }  // namespace
 
 static initgraph::Task discoverDtbNodes {
-  &globalInitEngine,
-  "pci.discover-dtb-nodes",
-  initgraph::Requires {getDeviceTreeParsedStage()},
-  [] {
-	  size_t i = 0;
+	&globalInitEngine,
+	"pci.discover-dtb-nodes",
+	initgraph::Requires {getDeviceTreeParsedStage()},
+	[] {
+		size_t i = 0;
 
-	  getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
-		  if (node->isCompatible(dtPciCompatible)) {
-			  initPciNode(node);
-			  i++;
-		  }
+		getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
+			if (node->isCompatible(dtPciCompatible)) {
+				initPciNode(node);
+				i++;
+			}
 
-		  return false;
-	  });
+			return false;
+		});
 
-	  infoLogger() << "thor: Found " << i << " PCI nodes in total." << frg::endlog;
-  }};
+		infoLogger() << "thor: Found " << i << " PCI nodes in total." << frg::endlog;
+	}};
 
 static initgraph::Task enumerateRootBuses {
-  &globalInitEngine,
-  "pci.enumerate-buses",
-  initgraph::Requires {getTaskingAvailableStage()},
-  initgraph::Entails {getDevicesEnumeratedStage()},
-  [] {
-	  infoLogger() << "thor: Discovering PCI devices" << frg::endlog;
-	  enumerateAll();
-  }};
+	&globalInitEngine,
+	"pci.enumerate-buses",
+	initgraph::Requires {getTaskingAvailableStage()},
+	initgraph::Entails {getDevicesEnumeratedStage()},
+	[] {
+		infoLogger() << "thor: Discovering PCI devices" << frg::endlog;
+		enumerateAll();
+	}};
 
 }  // namespace thor::pci

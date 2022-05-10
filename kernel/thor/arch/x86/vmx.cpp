@@ -15,8 +15,7 @@ bool vmxon() {
 	infoLogger() << "vmx: enabling vmx" << frg::endlog;
 
 	auto vmxonRegion = physicalAllocator->allocate(kPageSize);
-	assert(
-	  reinterpret_cast<PhysicalAddr>(vmxonRegion) != static_cast<PhysicalAddr>(-1) && "OOM"
+	assert(reinterpret_cast<PhysicalAddr>(vmxonRegion) != static_cast<PhysicalAddr>(-1) && "OOM"
 	);
 
 	PageAccessor vmxonAccessor {vmxonRegion};
@@ -45,23 +44,23 @@ bool vmxon() {
 	*(uint32_t *) vmxonAccessor.get() = static_cast<uint32_t>(vmxRevision);
 	uint16_t successful = 0;
 	asm volatile(
-	  "vmxon %1;"
-	  "jnc success;"
-	  "movq $0, %%rdx;"
-	  "success:"
-	  "movq $1, %%rdx;"
-	  : "=d"(successful)
-	  : "m"(vmxonRegion)
-	  : "memory", "cc"
+		"vmxon %1;"
+		"jnc success;"
+		"movq $0, %%rdx;"
+		"success:"
+		"movq $1, %%rdx;"
+		: "=d"(successful)
+		: "m"(vmxonRegion)
+		: "memory", "cc"
 	);
 
 	if (successful) {
 		infoLogger() << "thor: CPU entered vmxon operation" << frg::endlog;
 	} else {
 		infoLogger() << "\e[31m"
-		                "thor: vmxon failed; this will be a hard error in the future"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: vmxon failed; this will be a hard error in the future"
+				"\e[39m"
+			     << frg::endlog;
 	}
 
 	return successful;
@@ -70,11 +69,11 @@ bool vmxon() {
 inline static int vmptrld(PhysicalAddr vmcs) {
 	uint8_t ret;
 	asm volatile(
-	  "vmptrld %[pa];"
-	  "setna %[ret];"
-	  : [ret] "=rm"(ret)
-	  : [pa] "m"(vmcs)
-	  : "cc", "memory"
+		"vmptrld %[pa];"
+		"setna %[ret];"
+		: [ret] "=rm"(ret)
+		: [pa] "m"(vmcs)
+		: "cc", "memory"
 	);
 	return ret;
 }
@@ -82,11 +81,11 @@ inline static int vmptrld(PhysicalAddr vmcs) {
 inline static int vmclear(PhysicalAddr vmcs) {
 	uint8_t ret;
 	asm volatile(
-	  "vmclear %[pa];"
-	  "setna %[ret];"
-	  : [ret] "=rm"(ret)
-	  : [pa] "m"(vmcs)
-	  : "cc", "memory"
+		"vmclear %[pa];"
+		"setna %[ret];"
+		: [ret] "=rm"(ret)
+		: [pa] "m"(vmcs)
+		: "cc", "memory"
 	);
 	return ret;
 }
@@ -94,11 +93,11 @@ inline static int vmclear(PhysicalAddr vmcs) {
 inline static int vmwrite(uint64_t encoding, uint64_t value) {
 	uint8_t ret;
 	asm volatile(
-	  "vmwrite %1, %2;"
-	  "setna %[ret]"
-	  : [ret] "=rm"(ret)
-	  : "rm"(value), "r"(encoding)
-	  : "cc", "memory"
+		"vmwrite %1, %2;"
+		"setna %[ret]"
+		: [ret] "=rm"(ret)
+		: "rm"(value), "r"(encoding)
+		: "cc", "memory"
 	);
 
 	return ret;
@@ -108,11 +107,11 @@ inline static uint64_t vmread(uint64_t encoding) {
 	uint64_t tmp;
 	uint8_t ret;
 	asm volatile(
-	  "vmread %[encoding], %[value];"
-	  "setna %[ret];"
-	  : [value] "=rm"(tmp), [ret] "=rm"(ret)
-	  : [encoding] "r"(encoding)
-	  : "cc", "memory"
+		"vmread %[encoding], %[value];"
+		"setna %[ret];"
+		: [value] "=rm"(tmp), [ret] "=rm"(ret)
+		: [encoding] "r"(encoding)
+		: "cc", "memory"
 	);
 
 	return tmp;
@@ -135,14 +134,10 @@ Vmcs::Vmcs(smarter::shared_ptr<EptSpace> ept) : space(ept) {
 	vmwrite(PIN_BASED_VM_EXEC_CONTROLS, pinbased | 1);
 	uint64_t allowedCpu = common::x86::rdmsr(MSR_IA32_VMX_PROCBASED_CTLS);
 	uint32_t cpu = (uint32_t) allowedCpu & (uint32_t) (allowedCpu >> 32);
-	vmwrite(
-	  PROC_BASED_VM_EXEC_CONTROLS,
-	  cpu | VMEXIT_ON_HLT | VMEXIT_ON_PIO | SECONDARY_CONTROLS_ON
-	);
-	vmwrite(
-	  PROC_BASED_VM_EXEC_CONTROLS2,
-	  EPT_ENABLE | UNRESTRICTED_GUEST | VMEXIT_ON_DESCRIPTOR
-	);
+	vmwrite(PROC_BASED_VM_EXEC_CONTROLS,
+		cpu | VMEXIT_ON_HLT | VMEXIT_ON_PIO | SECONDARY_CONTROLS_ON);
+	vmwrite(PROC_BASED_VM_EXEC_CONTROLS2,
+		EPT_ENABLE | UNRESTRICTED_GUEST | VMEXIT_ON_DESCRIPTOR);
 	vmwrite(EXCEPTION_BITMAP, 0);
 
 	uint64_t vmExitCtrls = common::x86::rdmsr(0x483);
@@ -185,7 +180,7 @@ Vmcs::Vmcs(smarter::shared_ptr<EptSpace> ept) : space(ept) {
 	uint32_t entry3 = (gdt[kGdtIndexTask * 2 + 1] >> 24) & 0xFF;
 	uint32_t entry4 = (gdt[kGdtIndexTask * 2 + 2]);
 	uint64_t trAddr =
-	  ((uint64_t) entry4 << 32) | (entry1 | ((entry2) << 16) | ((entry3) << 24));
+		((uint64_t) entry4 << 32) | (entry1 | ((entry2) << 16) | ((entry3) << 24));
 
 	vmwrite(HOST_TR_BASE, trAddr);
 	vmwrite(HOST_GDTR_BASE, (size_t) gdtr.pointer);
@@ -258,28 +253,22 @@ Vmcs::Vmcs(smarter::shared_ptr<EptSpace> ept) : space(ept) {
 
 	if (getGlobalCpuFeatures()->haveXsave) {
 		hostFstate =
-		  (uint8_t *) kernelAlloc->allocate(getGlobalCpuFeatures()->xsaveRegionSize);
-		assert(
-		  reinterpret_cast<PhysicalAddr>(hostFstate) != static_cast<PhysicalAddr>(-1)
-		  && "OOM"
-		);
+			(uint8_t *) kernelAlloc->allocate(getGlobalCpuFeatures()->xsaveRegionSize);
+		assert(reinterpret_cast<PhysicalAddr>(hostFstate) != static_cast<PhysicalAddr>(-1)
+		       && "OOM");
 		guestFstate =
-		  (uint8_t *) kernelAlloc->allocate(getGlobalCpuFeatures()->xsaveRegionSize);
-		assert(
-		  reinterpret_cast<PhysicalAddr>(guestFstate) != static_cast<PhysicalAddr>(-1)
-		  && "OOM"
-		);
+			(uint8_t *) kernelAlloc->allocate(getGlobalCpuFeatures()->xsaveRegionSize);
+		assert(reinterpret_cast<PhysicalAddr>(guestFstate) != static_cast<PhysicalAddr>(-1)
+		       && "OOM");
 		memset((void *) hostFstate, 0, getGlobalCpuFeatures()->xsaveRegionSize);
 		memset((void *) guestFstate, 0, getGlobalCpuFeatures()->xsaveRegionSize);
 	} else {
 		hostFstate = (uint8_t *) kernelAlloc->allocate(512);
 		hostFstate =
-		  (uint8_t *) kernelAlloc->allocate(getGlobalCpuFeatures()->xsaveRegionSize);
+			(uint8_t *) kernelAlloc->allocate(getGlobalCpuFeatures()->xsaveRegionSize);
 		guestFstate = (uint8_t *) kernelAlloc->allocate(512);
-		assert(
-		  reinterpret_cast<PhysicalAddr>(guestFstate) != static_cast<PhysicalAddr>(-1)
-		  && "OOM"
-		);
+		assert(reinterpret_cast<PhysicalAddr>(guestFstate) != static_cast<PhysicalAddr>(-1)
+		       && "OOM");
 		memset((void *) hostFstate, 0, 512);
 		memset((void *) guestFstate, 0, 512);
 	}
@@ -379,9 +368,9 @@ HelVmexitReason Vmcs::run() {
 				flags |= AddressSpace::kFaultExecute;
 
 			auto faultOutcome = Thread::asyncBlockCurrent(space->handleFault(
-			  address,
-			  flags,
-			  getCurrentThread()->mainWorkQueue()->take()
+				address,
+				flags,
+				getCurrentThread()->mainWorkQueue()->take()
 			));
 			if (!faultOutcome) {
 				exitInfo.exitReason = khelVmexitTranslationFault;

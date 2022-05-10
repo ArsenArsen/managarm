@@ -145,10 +145,10 @@ ClassSubsystem::ClassSubsystem(std::string name)
 }
 
 ClassDevice::ClassDevice(
-  ClassSubsystem *subsystem,
-  std::shared_ptr<Device> parent,
-  std::string name,
-  UnixDevice *unix_device
+	ClassSubsystem *subsystem,
+	std::shared_ptr<Device> parent,
+	std::string name,
+	UnixDevice *unix_device
 )
 : Device {std::move(parent), std::move(name), unix_device}
 , _subsystem {subsystem} {}
@@ -166,10 +166,10 @@ void ClassDevice::linkToSubsystem() {
 //-----------------------------------------------------------------------------
 
 BlockDevice::BlockDevice(
-  ClassSubsystem *subsystem,
-  std::shared_ptr<Device> parent,
-  std::string name,
-  UnixDevice *unix_device
+	ClassSubsystem *subsystem,
+	std::shared_ptr<Device> parent,
+	std::string name,
+	UnixDevice *unix_device
 )
 : Device {std::move(parent), std::move(name), unix_device}
 , _subsystem {subsystem} {}

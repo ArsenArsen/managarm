@@ -18,11 +18,11 @@ async::detached bindController(mbus::Entity entity) {
 	helix::Mapping mapping {bar0, barInfo.offset, barInfo.length};
 
 	auto controller = std::make_unique<Controller>(
-	  entity.getId(),
-	  std::move(device),
-	  std::move(mapping),
-	  std::move(bar0),
-	  std::move(irq)
+		entity.getId(),
+		std::move(device),
+		std::move(mapping),
+		std::move(bar0),
+		std::move(irq)
 	);
 	controller->run();
 	globalControllers.push_back(std::move(controller));
@@ -32,16 +32,16 @@ async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	auto filter = mbus::Conjunction({
-	  mbus::EqualsFilter("pci-class", "01"),
-	  mbus::EqualsFilter("pci-subclass", "08"),
-	  mbus::EqualsFilter("pci-interface", "02"),
+		mbus::EqualsFilter("pci-class", "01"),
+		mbus::EqualsFilter("pci-subclass", "08"),
+		mbus::EqualsFilter("pci-interface", "02"),
 	});
 
 	auto handler =
-	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		  std::cout << "block/nvme: Detected controller\n";
-		  bindController(std::move(entity));
-	  });
+		mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+			std::cout << "block/nvme: Detected controller\n";
+			bindController(std::move(entity));
+		});
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

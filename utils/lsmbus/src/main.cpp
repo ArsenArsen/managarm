@@ -19,14 +19,14 @@ async::detached enumerateBus() {
 	auto filter = mbus::Conjunction({});
 
 	auto handler =
-	  mbus::ObserverHandler {}.withAttach([](mbus::Entity, mbus::Properties props) {
-		  std::cout << "found mbus entry:\n";
-		  for (auto &[name, value] : props) {
-			  std::cout << "\tproperty: \"" << name << "\": ";
-			  std::visit(PrintVisitor {}, value);
-			  std::cout << std::endl;
-		  }
-	  });
+		mbus::ObserverHandler {}.withAttach([](mbus::Entity, mbus::Properties props) {
+			std::cout << "found mbus entry:\n";
+			for (auto &[name, value] : props) {
+				std::cout << "\tproperty: \"" << name << "\": ";
+				std::visit(PrintVisitor {}, value);
+				std::cout << std::endl;
+			}
+		});
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

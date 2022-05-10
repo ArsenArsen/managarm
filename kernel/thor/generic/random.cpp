@@ -52,8 +52,8 @@ struct Fortuna {
 				// TODO: for 32-bit size_t, this could potentially overflow.
 				//       For now, this should not be an issue though.
 				injectedIntoPoolZero_.fetch_add(
-				  2 + size,
-				  std::memory_order_release
+					2 + size,
+					std::memory_order_release
 				);
 			}
 		}
@@ -88,7 +88,7 @@ struct Fortuna {
 
 		if (injectedIntoPoolZero_.load(std::memory_order_acquire) >= entropyThreshold) {
 			infoLogger()
-			  << "thor: Reseeding PRNG from entropy accumulator" << frg::endlog;
+				<< "thor: Reseeding PRNG from entropy accumulator" << frg::endlog;
 
 			cralgo::sha2_32_secrets keyHash;
 			cralgo::sha2_32_secrets localHash;
@@ -204,23 +204,23 @@ void initializeRandom() {
 		return;
 	} else if (e == Error::noHardwareSupport) {
 		infoLogger() << "\e[31m"
-		                "thor: CPU-based hardware PRNG not available"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: CPU-based hardware PRNG not available"
+				"\e[39m"
+			     << frg::endlog;
 	} else {
 		assert(e == Error::hardwareBroken);
 		infoLogger() << "\e[31m"
-		                "thor: CPU-based hardware PRNG is broken"
-		                "\e[39m"
-		             << frg::endlog;
+				"thor: CPU-based hardware PRNG is broken"
+				"\e[39m"
+			     << frg::endlog;
 	}
 
 	// TODO: we can do something *much* better here, this case is highly insecure!
 	//       Use jitter-based entropy (e.g., HAVEGE) instead.
 	infoLogger() << "\e[31m"
-	                "thor: Falling back to entropy from CPU clock"
-	                "\e[39m"
-	             << frg::endlog;
+			"thor: Falling back to entropy from CPU clock"
+			"\e[39m"
+		     << frg::endlog;
 	uint64_t tsc = getRawTimestampCounter();
 	csprng->forceReseed(&tsc, sizeof(uint64_t));
 }

@@ -22,12 +22,12 @@ async::result<void> enumerateRtc() {
 	auto filter = mbus::Conjunction({mbus::EqualsFilter("class", "rtc")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		  std::cout << "drivers/clocktracker: Found RTC" << std::endl;
+		[](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+			std::cout << "drivers/clocktracker: Found RTC" << std::endl;
 
-		  rtcLane = helix::UniqueLane(co_await entity.bind());
-		  foundRtc.raise();
-	  }
+			rtcLane = helix::UniqueLane(co_await entity.bind());
+			foundRtc.raise();
+		}
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
@@ -40,8 +40,11 @@ async::result<RtcTime> getRtcTime() {
 
 	auto ser = req.SerializeAsString();
 	auto [offer, send_req, recv_resp] = co_await helix_ng::exchangeMsgs(
-	  rtcLane,
-	  helix_ng::offer(helix_ng::sendBuffer(ser.data(), ser.size()), helix_ng::recvInline())
+		rtcLane,
+		helix_ng::offer(
+			helix_ng::sendBuffer(ser.data(), ser.size()),
+			helix_ng::recvInline()
+		)
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());
@@ -71,8 +74,10 @@ TrackerPage *accessPage() {
 
 async::detached serve(helix::UniqueLane lane) {
 	while (true) {
-		auto [accept, recv_req] =
-		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
+		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
+			lane,
+			helix_ng::accept(helix_ng::recvInline())
+		);
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_req.error());
 
@@ -86,9 +91,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, send_memory] = co_await helix_ng::exchangeMsgs(
-			  conversation,
-			  helix_ng::sendBuffer(ser.data(), ser.size()),
-			  helix_ng::pushDescriptor(trackerPageMemory)
+				conversation,
+				helix_ng::sendBuffer(ser.data(), ser.size()),
+				helix_ng::pushDescriptor(trackerPageMemory)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(send_memory.error());
@@ -130,7 +135,7 @@ async::detached initializeDriver() {
 #endif
 
 	std::cout << "drivers/clocktracker: Initializing time to " << std::get<1>(result)
-	          << std::endl;
+		  << std::endl;
 	accessPage()->refClock = std::get<0>(result);
 	accessPage()->baseRealtime = std::get<1>(result);
 
@@ -138,17 +143,17 @@ async::detached initializeDriver() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	mbus::Properties descriptor {
-	  {"class", mbus::StringItem {"clocktracker"}},
+		{"class", mbus::StringItem {"clocktracker"}},
 	};
 
 	auto handler =
-	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		  helix::UniqueLane local_lane, remote_lane;
-		  std::tie(local_lane, remote_lane) = helix::createStream();
-		  serve(std::move(local_lane));
+		mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+			helix::UniqueLane local_lane, remote_lane;
+			std::tie(local_lane, remote_lane) = helix::createStream();
+			serve(std::move(local_lane));
 
-		  co_return std::move(remote_lane);
-	  });
+			co_return std::move(remote_lane);
+		});
 
 	co_await root.createObject("clocktracker", descriptor, std::move(handler));
 }

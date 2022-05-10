@@ -14,10 +14,10 @@ UniqueKernelStack UniqueKernelStack::make() {
 		PhysicalAddr physical = physicalAllocator->allocate(kPageSize);
 		assert(physical != static_cast<PhysicalAddr>(-1) && "OOM");
 		KernelPageSpace::global().mapSingle4k(
-		  reinterpret_cast<VirtualAddr>(pointer) + guardedSize - kSize + offset,
-		  physical,
-		  page_access::write,
-		  CachingMode::null
+			reinterpret_cast<VirtualAddr>(pointer) + guardedSize - kSize + offset,
+			physical,
+			page_access::write,
+			CachingMode::null
 		);
 	}
 
@@ -31,16 +31,17 @@ UniqueKernelStack::~UniqueKernelStack() {
 	size_t guardedSize = kSize + kPageSize;
 	auto address = reinterpret_cast<uintptr_t>(_base - guardedSize);
 	for (size_t offset = 0; offset < kSize; offset += kPageSize) {
-		PhysicalAddr physical =
-		  KernelPageSpace::global().unmapSingle4k(address + guardedSize - kSize + offset);
+		PhysicalAddr physical = KernelPageSpace::global().unmapSingle4k(
+			address + guardedSize - kSize + offset
+		);
 		physicalAllocator->free(physical, kPageSize);
 	}
 
 	struct Closure final : ShootNode {
 		void complete() override {
 			KernelVirtualMemory::global().deallocate(
-			  reinterpret_cast<void *>(address),
-			  size
+				reinterpret_cast<void *>(address),
+				size
 			);
 			auto physical = thisPage;
 			Closure::~Closure();

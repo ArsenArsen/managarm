@@ -51,16 +51,16 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  smarter::shared_ptr<File> {file},
-		  &File::fileOperations
+			std::move(lane),
+			smarter::shared_ptr<File> {file},
+			&File::fileOperations
 		));
 	}
 
 	ReaderFile(
-	  std::shared_ptr<MountView> mount,
-	  std::shared_ptr<FsLink> link,
-	  bool nonBlock = false
+		std::shared_ptr<MountView> mount,
+		std::shared_ptr<FsLink> link,
+		bool nonBlock = false
 	)
 	: File {StructName::get("fifo.read"), mount, link, File::defaultPipeLikeSeek}
 	, nonBlock_ {nonBlock} {}
@@ -113,7 +113,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t pastSeq, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		(void) mask;  // TODO: utilize mask.
 		// TODO: Return Error::fileClosed as appropriate.
 		assert(pastSeq <= _channel->currentSeq);
@@ -122,7 +122,7 @@ public:
 
 		if (cancellation.is_cancellation_requested())
 			std::cout << "\e[33mposix: fifo::pollWait() cancellation is untested\e[39m"
-			          << std::endl;
+				  << std::endl;
 
 		int edges = 0;
 		if (_channel->noWriterSeq > pastSeq)
@@ -147,10 +147,10 @@ public:
 
 	async::result<void> setFileFlags(int flags) override {
 		std::cout << "posix: setFileFlags on fifo \e[1;34m" << structName()
-		          << "\e[0m only supports O_NONBLOCK" << std::endl;
+			  << "\e[0m only supports O_NONBLOCK" << std::endl;
 		if (flags & ~O_NONBLOCK) {
 			std::cout << "posix: setFileFlags on socket \e[1;34m" << structName()
-			          << "\e[0m called with unknown flags" << std::endl;
+				  << "\e[0m called with unknown flags" << std::endl;
 			co_return;
 		}
 		if (flags & O_NONBLOCK)
@@ -182,9 +182,9 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		  std::move(lane),
-		  smarter::shared_ptr<File> {file},
-		  &File::fileOperations
+			std::move(lane),
+			smarter::shared_ptr<File> {file},
+			&File::fileOperations
 		));
 	}
 
@@ -199,8 +199,8 @@ public:
 
 	void handleClose() override {
 		std::cout
-		  << "\e[35mposix: Cancel passthrough on fifo WriterFile::handleClose()\e[39m"
-		  << std::endl;
+			<< "\e[35mposix: Cancel passthrough on fifo WriterFile::handleClose()\e[39m"
+			<< std::endl;
 		if (_channel->writerCount-- == 1) {
 			_channel->noWriterSeq = ++_channel->currentSeq;
 			_channel->statusBell.raise();
@@ -223,7 +223,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t pastSeq, int mask, async::cancellation_token cancellation)
-	  override {
+		override {
 		// TODO: Return Error::fileClosed as appropriate.
 		assert(pastSeq <= _channel->currentSeq);
 		while (pastSeq == _channel->currentSeq && !cancellation.is_cancellation_requested())
@@ -231,7 +231,7 @@ public:
 
 		if (cancellation.is_cancellation_requested())
 			std::cout << "\e[33mposix: fifo::poll() cancellation is untested\e[39m"
-			          << std::endl;
+				  << std::endl;
 
 		int edges = EPOLLOUT;
 		if (_channel->noReaderSeq > pastSeq)
@@ -272,10 +272,10 @@ void unlinkNamedChannel(FsNode *node) {
 }
 
 async::result<smarter::shared_ptr<File, FileHandle>> openNamedChannel(
-  std::shared_ptr<MountView> mount,
-  std::shared_ptr<FsLink> link,
-  FsNode *node,
-  SemanticFlags flags
+	std::shared_ptr<MountView> mount,
+	std::shared_ptr<FsLink> link,
+	FsNode *node,
+	SemanticFlags flags
 ) {
 	if (globalChannelMap.find(node) == globalChannelMap.end())
 		co_return nullptr;

@@ -81,9 +81,9 @@ loadElfImage(SharedFilePtr file, VmContext *vmContext, uintptr_t base) {
 	phdrBuffer.resize(ehdr.e_phnum * ehdr.e_phentsize);
 	FRG_CO_TRY(co_await file->seek(ehdr.e_phoff, VfsSeek::absolute));
 	FRG_CO_TRY(co_await file->readExactly(
-	  nullptr,
-	  phdrBuffer.data(),
-	  ehdr.e_phnum * size_t(ehdr.e_phentsize)
+		nullptr,
+		phdrBuffer.data(),
+		ehdr.e_phnum * size_t(ehdr.e_phentsize)
 	));
 
 	for (int i = 0; i < ehdr.e_phnum; i++) {
@@ -96,13 +96,13 @@ loadElfImage(SharedFilePtr file, VmContext *vmContext, uintptr_t base) {
 			size_t misalign = phdr->p_vaddr & (kPageSize - 1);
 			uintptr_t mapAddress = base + phdr->p_vaddr - misalign;
 			size_t mapLength =
-			  (phdr->p_memsz + misalign + kPageSize - 1) & ~(kPageSize - 1);
+				(phdr->p_memsz + misalign + kPageSize - 1) & ~(kPageSize - 1);
 
 			// Check if we can share the segment.
 			if (!(phdr->p_flags & PF_W)) {
 				if (misalign) {
 					std::cout << "posix: ELF file with misaligned segments."
-					          << std::endl;
+						  << std::endl;
 					co_return Error::badExecutable;
 				}
 				if ((phdr->p_offset & (kPageSize - 1))) {
@@ -110,31 +110,31 @@ loadElfImage(SharedFilePtr file, VmContext *vmContext, uintptr_t base) {
 					// are
 					//       "equally misaligned".
 					std::cout << "posix: ELF file with misaligned p_offset."
-					          << std::endl;
+						  << std::endl;
 					co_return Error::badExecutable;
 				}
 
 				// Map the segment with correct permissions into the process.
 				if ((phdr->p_flags & (PF_R | PF_W | PF_X)) == (PF_R | PF_X)) {
 					HEL_CHECK(helLoadahead(
-					  fileMemory.getHandle(),
-					  phdr->p_offset,
-					  mapLength
+						fileMemory.getHandle(),
+						phdr->p_offset,
+						mapLength
 					));
 
 					co_await vmContext->mapFile(
-					  mapAddress,
-					  fileMemory.dup(),
-					  file,
-					  phdr->p_offset,
-					  mapLength,
-					  true,
-					  kHelMapProtRead | kHelMapProtExecute
+						mapAddress,
+						fileMemory.dup(),
+						file,
+						phdr->p_offset,
+						mapLength,
+						true,
+						kHelMapProtRead | kHelMapProtExecute
 					);
 				} else {
 					std::cout << "posix: Illegal combination of segment "
-					             "permissions"
-					          << std::endl;
+						     "permissions"
+						  << std::endl;
 					co_return Error::badExecutable;
 				}
 			} else {
@@ -144,30 +144,30 @@ loadElfImage(SharedFilePtr file, VmContext *vmContext, uintptr_t base) {
 
 				void *window;
 				HEL_CHECK(helMapMemory(
-				  segmentHandle,
-				  kHelNullHandle,
-				  nullptr,
-				  0,
-				  mapLength,
-				  kHelMapProtRead | kHelMapProtWrite,
-				  &window
+					segmentHandle,
+					kHelNullHandle,
+					nullptr,
+					0,
+					mapLength,
+					kHelMapProtRead | kHelMapProtWrite,
+					&window
 				));
 
 				// Map the segment with correct permissions into the process.
 				if ((phdr->p_flags & (PF_R | PF_W | PF_X)) == (PF_R | PF_W)) {
 					co_await vmContext->mapFile(
-					  mapAddress,
-					  helix::UniqueDescriptor {segmentHandle},
-					  file,
-					  0,
-					  mapLength,
-					  true,
-					  kHelMapProtRead | kHelMapProtWrite
+						mapAddress,
+						helix::UniqueDescriptor {segmentHandle},
+						file,
+						0,
+						mapLength,
+						true,
+						kHelMapProtRead | kHelMapProtWrite
 					);
 				} else {
 					std::cout << "posix: Illegal combination of segment "
-					             "permissions"
-					          << std::endl;
+						     "permissions"
+						  << std::endl;
 					co_return Error::badExecutable;
 				}
 
@@ -175,9 +175,9 @@ loadElfImage(SharedFilePtr file, VmContext *vmContext, uintptr_t base) {
 				memset(window, 0, mapLength);
 				FRG_CO_TRY(co_await file->seek(phdr->p_offset, VfsSeek::absolute));
 				FRG_CO_TRY(co_await file->readExactly(
-				  nullptr,
-				  (char *) window + misalign,
-				  phdr->p_filesz
+					nullptr,
+					(char *) window + misalign,
+					phdr->p_filesz
 				));
 				HEL_CHECK(helUnmapMemory(kHelNullHandle, window, mapLength));
 			}
@@ -204,17 +204,16 @@ void *copyArrayToStack(void *window, size_t &d, const T (&value)[N]) {
 	return ptr;
 }
 
-async::result<frg::expected<Error, ExecuteResult>> execute(
-  ViewPath root,
-  ViewPath workdir,
-  std::string path,
-  std::vector<std::string> args,
-  std::vector<std::string> env,
-  std::shared_ptr<VmContext> vmContext,
-  helix::BorrowedDescriptor universe,
-  HelHandle mbusHandle,
-  Process *self
-) {
+async::result<frg::expected<Error, ExecuteResult>>
+execute(ViewPath root,
+	ViewPath workdir,
+	std::string path,
+	std::vector<std::string> args,
+	std::vector<std::string> env,
+	std::shared_ptr<VmContext> vmContext,
+	helix::BorrowedDescriptor universe,
+	HelHandle mbusHandle,
+	Process *self) {
 	auto execFile = FRG_CO_TRY(co_await open(root, workdir, path, self));
 	assert(execFile);  // If open() succeeds, it must return a non-null file.
 
@@ -263,12 +262,12 @@ async::result<frg::expected<Error, ExecuteResult>> execute(
 		// Trim space from the argument, too.
 		auto beginArg = std::find_if_not(endPath, shebangStr.end(), isspace);
 		auto endArg =
-		  std::find_if_not(shebangStr.rbegin(), shebangStr.rend(), isspace).base();
+			std::find_if_not(shebangStr.rbegin(), shebangStr.rend(), isspace).base();
 
 		// Linux looks up the interpreter in the current working directory.
 		std::string interpreterPath {beginPath, endPath};
 		auto interpreterFile =
-		  FRG_CO_TRY(co_await open(root, workdir, interpreterPath, self));
+			FRG_CO_TRY(co_await open(root, workdir, interpreterPath, self));
 		assert(interpreterFile);  // If open() succeeds, it must return a non-null file.
 
 		if (!args.empty())  // Handle exec() without arguments.
@@ -304,24 +303,24 @@ async::result<frg::expected<Error, ExecuteResult>> execute(
 
 	void *window;
 	HEL_CHECK(helMapMemory(
-	  stackHandle,
-	  kHelNullHandle,
-	  nullptr,
-	  0,
-	  stackSize,
-	  kHelMapProtRead | kHelMapProtWrite,
-	  &window
+		stackHandle,
+		kHelNullHandle,
+		nullptr,
+		0,
+		stackSize,
+		kHelMapProtRead | kHelMapProtWrite,
+		&window
 	));
 
 	// Map the stack into the new process and set it up.
 	void *stackBase = co_await vmContext->mapFile(
-	  0,
-	  helix::UniqueDescriptor {stackHandle},
-	  nullptr,
-	  0,
-	  stackSize,
-	  true,
-	  kHelMapProtRead | kHelMapProtWrite
+		0,
+		helix::UniqueDescriptor {stackHandle},
+		nullptr,
+		0,
+		stackSize,
+		true,
+		kHelMapProtRead | kHelMapProtWrite
 	);
 
 	// the offset at which the stack image starts.
@@ -354,29 +353,29 @@ async::result<frg::expected<Error, ExecuteResult>> execute(
 	};
 
 	size_t wordParity = 1 + argsPtrs.size() + 1  // Words representing argc and args.
-	                  + envPtrs.size() + 1;  // Words representing the environment.
+			  + envPtrs.size() + 1;  // Words representing the environment.
 	if (wordParity & 1)
 		pushWord(0);
 
 	void *auxEnd = reinterpret_cast<std::byte *>(stackBase) + d;
 	copyArrayToStack(
-	  window,
-	  d,
-	  (uintptr_t[]) {
-	    AT_ENTRY,
-	    uintptr_t(execInfo.entryIp),
-	    AT_PHDR,
-	    uintptr_t(execInfo.phdrPtr),
-	    AT_PHENT,
-	    execInfo.phdrEntrySize,
-	    AT_PHNUM,
-	    execInfo.phdrCount,
-	    AT_EXECFN,
-	    execfn,
-	    AT_SECURE,
-	    0,
-	    AT_NULL,
-	    0}
+		window,
+		d,
+		(uintptr_t[]
+		) {AT_ENTRY,
+		   uintptr_t(execInfo.entryIp),
+		   AT_PHDR,
+		   uintptr_t(execInfo.phdrPtr),
+		   AT_PHENT,
+		   execInfo.phdrEntrySize,
+		   AT_PHNUM,
+		   execInfo.phdrCount,
+		   AT_EXECFN,
+		   execfn,
+		   AT_SECURE,
+		   0,
+		   AT_NULL,
+		   0}
 	);
 	void *auxBegin = reinterpret_cast<std::byte *>(stackBase) + d;
 
@@ -397,17 +396,17 @@ async::result<frg::expected<Error, ExecuteResult>> execute(
 
 	HelHandle thread;
 	HEL_CHECK(helCreateThread(
-	  universe.getHandle(),
-	  vmContext->getSpace().getHandle(),
-	  kHelAbiSystemV,
-	  (void *) ldsoInfo.entryIp,
-	  (char *) stackBase + d,
-	  kHelThreadStopped,
-	  &thread
+		universe.getHandle(),
+		vmContext->getSpace().getHandle(),
+		kHelAbiSystemV,
+		(void *) ldsoInfo.entryIp,
+		(char *) stackBase + d,
+		kHelThreadStopped,
+		&thread
 	));
 
 	co_return ExecuteResult {
-	  .thread = helix::UniqueDescriptor {thread},
-	  .auxBegin = auxBegin,
-	  .auxEnd = auxEnd};
+		.thread = helix::UniqueDescriptor {thread},
+		.auxBegin = auxBegin,
+		.auxEnd = auxEnd};
 }
