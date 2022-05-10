@@ -71,33 +71,34 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        smarter::shared_ptr<File> { file },
-		        &File::fileOperations,
-		        file->_cancelServe
+		  std::move(lane),
+		  smarter::shared_ptr<File> {file},
+		  &File::fileOperations,
+		  file->_cancelServe
 		));
 	}
 
 	OpenFile(Process *process = nullptr, bool nonBlock = false)
-	        : File { StructName::get("un-socket"), File::defaultPipeLikeSeek }
-	        , _currentState { State::null }
-	        , _currentSeq { 1 }
-	        , _inSeq { 0 }
-	        , _ownerPid { 0 }
-	        , _remote { nullptr }
-	        , _passCreds { false }
-	        , nonBlock_ { nonBlock }
-	        , _sockpath {}
-	        , _nameType { NameType::unnamed }
-	        , _isInherited { false } {
+	: File {StructName::get("un-socket"), File::defaultPipeLikeSeek}
+	, _currentState {State::null}
+	, _currentSeq {1}
+	, _inSeq {0}
+	, _ownerPid {0}
+	, _remote {nullptr}
+	, _passCreds {false}
+	, nonBlock_ {nonBlock}
+	, _sockpath {}
+	, _nameType {NameType::unnamed}
+	, _isInherited {false} {
 		if (process)
 			_ownerPid = process->pid();
 	}
 
 	void handleClose() override {
 		if (!_isInherited && _nameType == NameType::abstract) {
-			assert(abstractSocketsBindMap.find(_sockpath)
-			       != abstractSocketsBindMap.end());
+			assert(
+			  abstractSocketsBindMap.find(_sockpath) != abstractSocketsBindMap.end()
+			);
 			abstractSocketsBindMap.erase(_sockpath);
 		}
 
@@ -163,20 +164,19 @@ public:
 		co_return length;
 	}
 
-	async::result<protocols::fs::RecvResult>
-	recvMsg(Process *process,
-	        uint32_t flags,
-	        void *data,
-	        size_t max_length,
-	        void *,
-	        size_t,
-	        size_t max_ctrl_length) override {
+	async::result<protocols::fs::RecvResult> recvMsg(
+	  Process *process,
+	  uint32_t flags,
+	  void *data,
+	  size_t max_length,
+	  void *,
+	  size_t,
+	  size_t max_ctrl_length
+	) override {
 		assert(!(flags & ~(MSG_DONTWAIT | MSG_CMSG_CLOEXEC)));
 
 		if (_currentState == State::remoteShutDown)
-			co_return protocols::fs::RecvResult {
-				protocols::fs::RecvData { 0, 0, {} }
-			};
+			co_return protocols::fs::RecvResult {protocols::fs::RecvData {0, 0, {}}};
 
 		if (_currentState != State::connected)
 			co_return protocols::fs::Error::notConnected;
@@ -187,7 +187,7 @@ public:
 		if (_recvQueue.empty() && ((flags & MSG_DONTWAIT) || nonBlock_)) {
 			if (logSockets)
 				std::cout << "posix: UNIX socket would block" << std::endl;
-			co_return protocols::fs::RecvResult { protocols::fs::Error::wouldBlock };
+			co_return protocols::fs::RecvResult {protocols::fs::Error::wouldBlock};
 		}
 
 		while (_recvQueue.empty())
@@ -195,7 +195,7 @@ public:
 
 		auto packet = &_recvQueue.front();
 
-		CtrlBuilder ctrl { max_ctrl_length };
+		CtrlBuilder ctrl {max_ctrl_length};
 
 		if (_passCreds) {
 			struct ucred creds;
@@ -209,14 +209,14 @@ public:
 
 		if (!packet->files.empty()) {
 			if (ctrl.message(
-			            SOL_SOCKET,
-			            SCM_RIGHTS,
-			            sizeof(int) * packet->files.size()
+			      SOL_SOCKET,
+			      SCM_RIGHTS,
+			      sizeof(int) * packet->files.size()
 			    )) {
 				for (auto &file : packet->files)
 					ctrl.write<int>(process->fileContext()->attachFile(
-					        std::move(file),
-					        flags & MSG_CMSG_CLOEXEC
+					  std::move(file),
+					  flags & MSG_CMSG_CLOEXEC
 					));
 			} else {
 				throw std::runtime_error("posix: CMSG truncation is not implemented"
@@ -234,18 +234,18 @@ public:
 		if (packet->offset == packet->buffer.size())
 			_recvQueue.pop_front();
 		co_return protocols::fs::RecvResult {
-			protocols::fs::RecvData { chunk, 0, ctrl.buffer() }
-		};
+		  protocols::fs::RecvData {chunk, 0, ctrl.buffer()}};
 	}
 
-	async::result<frg::expected<protocols::fs::Error, size_t>>
-	sendMsg(Process *process,
-	        uint32_t flags,
-	        const void *data,
-	        size_t max_length,
-	        const void *,
-	        size_t,
-	        std::vector<smarter::shared_ptr<File, FileHandle>> files) override {
+	async::result<frg::expected<protocols::fs::Error, size_t>> sendMsg(
+	  Process *process,
+	  uint32_t flags,
+	  const void *data,
+	  size_t max_length,
+	  const void *,
+	  size_t,
+	  std::vector<smarter::shared_ptr<File, FileHandle>> files
+	) override {
 		assert(!(flags & ~(MSG_DONTWAIT)));
 
 		if (_currentState == State::remoteShutDown)
@@ -313,7 +313,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t past_seq, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		(void) mask;  // TODO: utilize mask.
 		if (_currentState == State::closed)
 			co_return Error::fileClosed;
@@ -337,7 +337,7 @@ public:
 		//				<< " returns (" << _currentSeq
 		//				<< ", " << edges << ")" << std::endl;
 
-		co_return PollWaitResult { _currentSeq, edges };
+		co_return PollWaitResult {_currentSeq, edges};
 	}
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *) override {
@@ -347,7 +347,7 @@ public:
 		if (!_acceptQueue.empty() || !_recvQueue.empty())
 			events |= EPOLLIN;
 
-		co_return PollStatusResult { _currentSeq, events };
+		co_return PollStatusResult {_currentSeq, events};
 	}
 
 	async::result<protocols::fs::Error>
@@ -360,16 +360,21 @@ public:
 
 		if (sa.sun_path[0] == '\0') {
 			path.resize(addr_length - sizeof(sa.sun_family) - 1);
-			memcpy(path.data(), sa.sun_path + 1, addr_length - sizeof(sa.sun_family) - 1
+			memcpy(
+			  path.data(),
+			  sa.sun_path + 1,
+			  addr_length - sizeof(sa.sun_family) - 1
 			);
 			_nameType = NameType::abstract;
 		} else {
 			path.resize(
-			        strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path))
+			  strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path))
 			);
-			memcpy(path.data(),
-			       sa.sun_path,
-			       strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path)));
+			memcpy(
+			  path.data(),
+			  sa.sun_path,
+			  strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path))
+			);
 			_nameType = NameType::path;
 		}
 		_sockpath = path;
@@ -384,13 +389,13 @@ public:
 		} else {
 			PathResolver resolver;
 			resolver.setup(
-			        process->fsContext()->getRoot(),
-			        process->fsContext()->getWorkingDirectory(),
-			        std::move(path),
-			        process
+			  process->fsContext()->getRoot(),
+			  process->fsContext()->getWorkingDirectory(),
+			  std::move(path),
+			  process
 			);
 			auto resolveResult =
-			        co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
+			  co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
 			if (!resolveResult) {
 				co_return resolveResult.error();
 			}
@@ -407,8 +412,7 @@ public:
 			auto node = nodeResult.value();
 			// Associate the current socket with the node.
 			auto res =
-			        globalBindMap.insert({ std::weak_ptr<FsNode> { node->getTarget() },
-			                               this });
+			  globalBindMap.insert({std::weak_ptr<FsNode> {node->getTarget()}, this});
 			if (!res.second)
 				co_return protocols::fs::Error::addressInUse;
 			co_return protocols::fs::Error::none;
@@ -425,15 +429,20 @@ public:
 
 		if (sa.sun_path[0] == '\0') {
 			path.resize(addr_length - sizeof(sa.sun_family) - 1);
-			memcpy(path.data(), sa.sun_path + 1, addr_length - sizeof(sa.sun_family) - 1
+			memcpy(
+			  path.data(),
+			  sa.sun_path + 1,
+			  addr_length - sizeof(sa.sun_family) - 1
 			);
 		} else {
 			path.resize(
-			        strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path))
+			  strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path))
 			);
-			memcpy(path.data(),
-			       sa.sun_path,
-			       strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path)));
+			memcpy(
+			  path.data(),
+			  sa.sun_path,
+			  strnlen(sa.sun_path, addr_length - offsetof(sockaddr_un, sun_path))
+			);
 		}
 
 		if (logSockets)
@@ -455,10 +464,10 @@ public:
 		} else {
 			PathResolver resolver;
 			resolver.setup(
-			        process->fsContext()->getRoot(),
-			        process->fsContext()->getWorkingDirectory(),
-			        std::move(path),
-			        process
+			  process->fsContext()->getRoot(),
+			  process->fsContext()->getWorkingDirectory(),
+			  std::move(path),
+			  process
 			);
 			auto resolveResult = co_await resolver.resolve();
 			if (!resolveResult) {
@@ -507,8 +516,8 @@ public:
 	}
 
 	async::result<void>
-	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation
-	) override {
+	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation)
+	  override {
 		managarm::fs::SvrResponse resp;
 
 		switch (req.command()) {
@@ -534,8 +543,8 @@ public:
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 		co_return;
@@ -555,9 +564,11 @@ private:
 			break;
 		case NameType::abstract:
 			sa.sun_path[0] = '\0';
-			memcpy(sa.sun_path + 1,
-			       sock->_sockpath.data(),
-			       std::min(sizeof(sa.sun_path) - 1, sock->_sockpath.size()));
+			memcpy(
+			  sa.sun_path + 1,
+			  sock->_sockpath.data(),
+			  std::min(sizeof(sa.sun_path) - 1, sock->_sockpath.size())
+			);
 			break;
 		case NameType::path:
 			strncpy(sa.sun_path, sock->_sockpath.data(), sizeof(sa.sun_path));
@@ -633,7 +644,7 @@ std::array<smarter::shared_ptr<File, FileHandle>, 2> createSocketPair(Process *p
 	OpenFile::serve(file0);
 	OpenFile::serve(file1);
 	OpenFile::connectPair(file0.get(), file1.get());
-	return { File::constructHandle(std::move(file0)), File::constructHandle(std::move(file1)) };
+	return {File::constructHandle(std::move(file0)), File::constructHandle(std::move(file1))};
 }
 
 }  // namespace un_socket

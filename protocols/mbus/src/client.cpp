@@ -31,7 +31,7 @@ static Instance makeGlobal() {
 }
 
 Instance Instance::global() {
-	static Instance instance { makeGlobal() };
+	static Instance instance {makeGlobal()};
 
 	if (::recreateInstance)
 		instance = makeGlobal();
@@ -50,11 +50,11 @@ async::result<Entity> Instance::getRoot() {
 	auto ser = req.SerializeAsString();
 	uint8_t buffer[1024];
 	auto &&transmit = helix::submitAsync(
-	        _connection->lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&offer, kHelItemAncillary),
-	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	        helix::action(&recv_resp, buffer, 1024)
+	  _connection->lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&offer, kHelItemAncillary),
+	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	  helix::action(&recv_resp, buffer, 1024)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -65,17 +65,17 @@ async::result<Entity> Instance::getRoot() {
 	resp.ParseFromArray(buffer, recv_resp.actualLength());
 	assert(resp.error() == managarm::mbus::Error::SUCCESS);
 
-	co_return Entity { _connection, resp.id() };
+	co_return Entity {_connection, resp.id()};
 }
 
 async::result<Entity> Instance::getEntity(int64_t id) {
-	co_return Entity { _connection, id };
+	co_return Entity {_connection, id};
 }
 
 async::detached handleObject(
-        std::shared_ptr<Connection> connection,
-        ObjectHandler handler,
-        helix::UniqueLane lane
+  std::shared_ptr<Connection> connection,
+  ObjectHandler handler,
+  helix::UniqueLane lane
 ) {
 	while (true) {
 		helix::Accept accept;
@@ -83,10 +83,10 @@ async::detached handleObject(
 
 		char buffer[1024];
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&accept, kHelItemAncillary),
-		        helix::action(&recv_req, buffer, 1024)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&accept, kHelItemAncillary),
+		  helix::action(&recv_req, buffer, 1024)
 		);
 		co_await header.async_wait();
 		HEL_CHECK(accept.error());
@@ -107,10 +107,10 @@ async::detached handleObject(
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&push_desc, descriptor)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&push_desc, descriptor)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -133,11 +133,11 @@ async::result<Properties> Entity::getProperties() const {
 	auto ser = req.SerializeAsString();
 	uint8_t buffer[1024];
 	auto &&transmit = helix::submitAsync(
-	        _connection->lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&offer, kHelItemAncillary),
-	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	        helix::action(&recv_resp, buffer, 1024)
+	  _connection->lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&offer, kHelItemAncillary),
+	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	  helix::action(&recv_resp, buffer, 1024)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -150,7 +150,7 @@ async::result<Properties> Entity::getProperties() const {
 
 	Properties properties;
 	for (auto &kv : resp.properties())
-		properties.insert({ kv.name(), StringItem { kv.item().string_item().value() } });
+		properties.insert({kv.name(), StringItem {kv.item().string_item().value()}});
 	co_return properties;
 }
 
@@ -168,19 +168,19 @@ Entity::createObject(std::string name, const Properties &properties, ObjectHandl
 		auto entry = req.add_properties();
 		entry->set_name(kv.first);
 		entry->mutable_item()->mutable_string_item()->set_value(
-		        std::get<StringItem>(kv.second).value
+		  std::get<StringItem>(kv.second).value
 		);
 	}
 
 	auto ser = req.SerializeAsString();
 	uint8_t buffer[1024];
 	auto &&transmit = helix::submitAsync(
-	        _connection->lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&offer, kHelItemAncillary),
-	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	        helix::action(&recv_resp, buffer, 1024, kHelItemChain),
-	        helix::action(&pull_lane)
+	  _connection->lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&offer, kHelItemAncillary),
+	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	  helix::action(&recv_resp, buffer, 1024, kHelItemChain),
+	  helix::action(&pull_lane)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -194,22 +194,22 @@ Entity::createObject(std::string name, const Properties &properties, ObjectHandl
 
 	handleObject(_connection, handler, helix::UniqueLane(pull_lane.descriptor()));
 
-	co_return Entity { _connection, resp.id() };
+	co_return Entity {_connection, resp.id()};
 }
 
 async::detached handleObserver(
-        std::shared_ptr<Connection> connection,
-        ObserverHandler handler,
-        helix::UniqueLane lane
+  std::shared_ptr<Connection> connection,
+  ObserverHandler handler,
+  helix::UniqueLane lane
 ) {
 	while (true) {
 		helix::RecvBuffer recv_req;
 
 		char buffer[1024];
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&recv_req, buffer, 1024)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&recv_req, buffer, 1024)
 		);
 		co_await header.async_wait();
 		HEL_CHECK(recv_req.error());
@@ -219,11 +219,11 @@ async::detached handleObserver(
 		if (req.req_type() == managarm::mbus::SvrReqType::ATTACH) {
 			Properties properties;
 			for (auto &kv : req.properties())
-				properties.insert({ kv.name(),
-				                    StringItem { kv.item().string_item().value() } }
+				properties.insert(
+				  {kv.name(), StringItem {kv.item().string_item().value()}}
 				);
 
-			handler.attach(Entity { connection, req.id() }, std::move(properties));
+			handler.attach(Entity {connection, req.id()}, std::move(properties));
 		} else {
 			throw std::runtime_error("Unexpected request type");
 		}
@@ -259,12 +259,12 @@ Entity::linkObserver(const AnyFilter &filter, ObserverHandler handler) const {
 	auto ser = req.SerializeAsString();
 	uint8_t buffer[1024];
 	auto &&transmit = helix::submitAsync(
-	        _connection->lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&offer, kHelItemAncillary),
-	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	        helix::action(&recv_resp, buffer, 1024, kHelItemChain),
-	        helix::action(&pull_lane)
+	  _connection->lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&offer, kHelItemAncillary),
+	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	  helix::action(&recv_resp, buffer, 1024, kHelItemChain),
+	  helix::action(&pull_lane)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -294,12 +294,12 @@ async::result<helix::UniqueDescriptor> Entity::bind() const {
 	auto ser = req.SerializeAsString();
 	uint8_t buffer[1024];
 	auto &&transmit = helix::submitAsync(
-	        _connection->lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&offer, kHelItemAncillary),
-	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	        helix::action(&recv_resp, buffer, 1024, kHelItemChain),
-	        helix::action(&pull_desc)
+	  _connection->lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&offer, kHelItemAncillary),
+	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	  helix::action(&recv_resp, buffer, 1024, kHelItemChain),
+	  helix::action(&pull_desc)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());

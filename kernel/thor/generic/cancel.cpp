@@ -3,11 +3,11 @@
 
 namespace thor {
 
-CancelNode::CancelNode() : _registry {}, _asyncId { 0 }, _cancelCalled { false } {}
+CancelNode::CancelNode() : _registry {}, _asyncId {0}, _cancelCalled {false} {}
 
 CancelRegistry::CancelRegistry()
-        : _nodeMap { frg::hash<uint64_t> {}, *kernelAlloc }
-        , _nextAsyncId { 1 } {}
+: _nodeMap {frg::hash<uint64_t> {}, *kernelAlloc}
+, _nextAsyncId {1} {}
 
 void CancelRegistry::registerNode(CancelNode *node) {
 	assert(!node->_registry && !node->_asyncId);

@@ -5,13 +5,13 @@
 #include <inttypes.h>
 
 namespace regs {
-constexpr arch::scalar_register<uint32_t> cap { 0x0 };
-constexpr arch::scalar_register<uint32_t> ghc { 0x4 };
-constexpr arch::scalar_register<uint32_t> interruptStatus { 0x8 };
-constexpr arch::scalar_register<uint32_t> portsImpl { 0xC };
-constexpr arch::scalar_register<uint32_t> version { 0x10 };
-constexpr arch::scalar_register<uint32_t> cap2 { 0x24 };
-constexpr arch::scalar_register<uint32_t> biosHandoff { 0x28 };
+constexpr arch::scalar_register<uint32_t> cap {0x0};
+constexpr arch::scalar_register<uint32_t> ghc {0x4};
+constexpr arch::scalar_register<uint32_t> interruptStatus {0x8};
+constexpr arch::scalar_register<uint32_t> portsImpl {0xC};
+constexpr arch::scalar_register<uint32_t> version {0x10};
+constexpr arch::scalar_register<uint32_t> cap2 {0x24};
+constexpr arch::scalar_register<uint32_t> biosHandoff {0x28};
 }  // namespace regs
 
 namespace flags {
@@ -42,17 +42,17 @@ constexpr bool logCommands = false;
 }  // namespace
 
 Controller::Controller(
-        int64_t parentId,
-        protocols::hw::Device hwDevice,
-        helix::Mapping hbaRegs,
-        helix::UniqueDescriptor,
-        helix::UniqueDescriptor irq
+  int64_t parentId,
+  protocols::hw::Device hwDevice,
+  helix::Mapping hbaRegs,
+  helix::UniqueDescriptor,
+  helix::UniqueDescriptor irq
 )
-        : hwDevice_ { std::move(hwDevice) }
-        , regsMapping_ { std::move(hbaRegs) }
-        , regs_ { regsMapping_.get() }
-        , irq_ { std::move(irq) }
-        , parentId_ { parentId } {}
+: hwDevice_ {std::move(hwDevice)}
+, regsMapping_ {std::move(hbaRegs)}
+, regs_ {regsMapping_.get()}
+, irq_ {std::move(irq)}
+, parentId_ {parentId} {}
 
 async::detached Controller::run() {
 	// Enable AHCI
@@ -75,11 +75,10 @@ async::detached Controller::run() {
 			// If BB is now set, we wait on BOS = 0 for 2 seconds.
 			if (regs_.load(regs::biosHandoff) & flags::bohc::biosBusy) {
 				std::cout
-				        << "block/ahci: BIOS handoff timed out once, retrying...\n";
+				  << "block/ahci: BIOS handoff timed out once, retrying...\n";
 				success = co_await helix::kindaBusyWait(2'000'000'000, [&] {
 					return !(
-					        regs_.load(regs::biosHandoff)
-					        & flags::bohc::biosOwnership
+					  regs_.load(regs::biosHandoff) & flags::bohc::biosOwnership
 					);
 				});
 				assert(success && "block/ahci: BIOS handoff timed out twice");
@@ -116,14 +115,16 @@ async::detached Controller::run() {
 	bool s64a = cap & flags::cap::supports64Bit;
 	assert(s64a);  // TODO: We aren't allowed to read some fields if no 64-bit support
 
-	printf("block/ahci: Initialised controller: version %x, %d active ports, "
-	       "%d slots, Gen %d, SS %s, 64-bit %s\n",
-	       version,
-	       std::popcount(portsImpl_),
-	       numCommandSlots,
-	       iss,
-	       ss ? "yes" : "no",
-	       s64a ? "yes" : "no");
+	printf(
+	  "block/ahci: Initialised controller: version %x, %d active ports, "
+	  "%d slots, Gen %d, SS %s, 64-bit %s\n",
+	  version,
+	  std::popcount(portsImpl_),
+	  numCommandSlots,
+	  iss,
+	  ss ? "yes" : "no",
+	  s64a ? "yes" : "no"
+	);
 
 	if (!(co_await initPorts_(numCommandSlots, ss))) {
 		std::cout << "\e[31mblock/ahci: No ports found, exiting\e[39m\n";
@@ -147,9 +148,11 @@ async::detached Controller::handleIrqs_() {
 
 	while (true) {
 		if (logCommands) {
-			printf("block/ahci: Awaiting IRQ, seq %" PRIu64 ", status %x\n",
-			       irqSequence_,
-			       regs_.load(regs::interruptStatus));
+			printf(
+			  "block/ahci: Awaiting IRQ, seq %" PRIu64 ", status %x\n",
+			  irqSequence_,
+			  regs_.load(regs::interruptStatus)
+			);
 		}
 
 		auto await = co_await helix_ng::awaitEvent(irq_, irqSequence_);
@@ -157,9 +160,11 @@ async::detached Controller::handleIrqs_() {
 		irqSequence_ = await.sequence();
 
 		if (logCommands) {
-			printf("block/ahci: Received IRQ, seq %" PRIu64 ", status %x\n",
-			       irqSequence_,
-			       regs_.load(regs::interruptStatus));
+			printf(
+			  "block/ahci: Received IRQ, seq %" PRIu64 ", status %x\n",
+			  irqSequence_,
+			  regs_.load(regs::interruptStatus)
+			);
 		}
 
 		auto intStatus = regs_.load(regs::interruptStatus) & portsImpl_;
@@ -171,11 +176,9 @@ async::detached Controller::handleIrqs_() {
 			}
 
 			regs_.store(regs::interruptStatus, ~0);
-			HEL_CHECK(helAcknowledgeIrq(
-			        irq_.getHandle(),
-			        kHelAckAcknowledge,
-			        irqSequence_
-			));
+			HEL_CHECK(
+			  helAcknowledgeIrq(irq_.getHandle(), kHelAckAcknowledge, irqSequence_)
+			);
 		} else {
 			HEL_CHECK(helAcknowledgeIrq(irq_.getHandle(), kHelAckNack, irqSequence_));
 		}
@@ -187,11 +190,11 @@ async::result<bool> Controller::initPorts_(size_t numCommandSlots, bool ss) {
 		if (portsImpl_ & (1 << i)) {
 			auto offset = 0x100 + i * 0x80;
 			auto port = std::make_unique<Port>(
-			        parentId_,
-			        i,
-			        numCommandSlots,
-			        ss,
-			        regs_.subspace(offset)
+			  parentId_,
+			  i,
+			  numCommandSlots,
+			  ss,
+			  regs_.subspace(offset)
 			);
 
 			if (co_await port->init())

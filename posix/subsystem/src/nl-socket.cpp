@@ -45,21 +45,21 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        file,
-		        &File::fileOperations,
-		        file->_cancelServe
+		  std::move(lane),
+		  file,
+		  &File::fileOperations,
+		  file->_cancelServe
 		));
 	}
 
 	OpenFile(int protocol, bool nonBlock = false)
-	        : File { StructName::get("nl-socket"), File::defaultPipeLikeSeek }
-	        , _protocol { protocol }
-	        , _currentSeq { 1 }
-	        , _inSeq { 0 }
-	        , _socketPort { 0 }
-	        , _passCreds { false }
-	        , nonBlock_ { nonBlock } {}
+	: File {StructName::get("nl-socket"), File::defaultPipeLikeSeek}
+	, _protocol {protocol}
+	, _currentSeq {1}
+	, _inSeq {0}
+	, _socketPort {0}
+	, _passCreds {false}
+	, nonBlock_ {nonBlock} {}
 
 	void deliver(Packet packet) {
 		_recvQueue.push_back(std::move(packet));
@@ -114,14 +114,15 @@ public:
 		co_return {};
 	}
 
-	async::result<protocols::fs::RecvResult>
-	recvMsg(Process *process,
-	        uint32_t flags,
-	        void *data,
-	        size_t max_length,
-	        void *addr_ptr,
-	        size_t max_addr_length,
-	        size_t max_ctrl_length) override {
+	async::result<protocols::fs::RecvResult> recvMsg(
+	  Process *process,
+	  uint32_t flags,
+	  void *data,
+	  size_t max_length,
+	  void *addr_ptr,
+	  size_t max_addr_length,
+	  size_t max_ctrl_length
+	) override {
 		using namespace protocols::fs;
 		if (logSockets)
 			std::cout << "posix: Recv from socket \e[1;34m" << structName() << "\e[0m"
@@ -133,7 +134,7 @@ public:
 		if (_recvQueue.empty() && ((flags & MSG_DONTWAIT) || nonBlock_)) {
 			if (logSockets)
 				std::cout << "posix: netlink socket would block" << std::endl;
-			co_return RecvResult { protocols::fs::Error::wouldBlock };
+			co_return RecvResult {protocols::fs::Error::wouldBlock};
 		}
 
 		while (_recvQueue.empty())
@@ -153,7 +154,7 @@ public:
 		sa.nl_groups = packet->group ? (1 << (packet->group - 1)) : 0;
 		memcpy(addr_ptr, &sa, sizeof(struct sockaddr_nl));
 
-		CtrlBuilder ctrl { max_ctrl_length };
+		CtrlBuilder ctrl {max_ctrl_length};
 
 		if (_passCreds) {
 			struct ucred creds;
@@ -166,19 +167,18 @@ public:
 		}
 
 		_recvQueue.pop_front();
-		co_return RecvResult {
-			RecvData { size, sizeof(struct sockaddr_nl), ctrl.buffer() }
-		};
+		co_return RecvResult {RecvData {size, sizeof(struct sockaddr_nl), ctrl.buffer()}};
 	}
 
-	async::result<frg::expected<protocols::fs::Error, size_t>>
-	sendMsg(Process *process,
-	        uint32_t flags,
-	        const void *data,
-	        size_t max_length,
-	        const void *addr_ptr,
-	        size_t addr_length,
-	        std::vector<smarter::shared_ptr<File, FileHandle>> files) override;
+	async::result<frg::expected<protocols::fs::Error, size_t>> sendMsg(
+	  Process *process,
+	  uint32_t flags,
+	  const void *data,
+	  size_t max_length,
+	  const void *addr_ptr,
+	  size_t addr_length,
+	  std::vector<smarter::shared_ptr<File, FileHandle>> files
+	) override;
 
 	async::result<void> setOption(int option, int value) override {
 		assert(option == SO_PASSCRED);
@@ -188,7 +188,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t past_seq, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		(void) mask;  // TODO: utilize mask.
 		if (_isClosed)
 			co_return Error::fileClosed;
@@ -250,7 +250,7 @@ private:
 	void _associatePort() {
 		assert(!_socketPort);
 		_socketPort = nextPort--;
-		auto res = globalPortMap.insert({ _socketPort, this });
+		auto res = globalPortMap.insert({_socketPort, this});
 		assert(res.second);
 	}
 
@@ -289,13 +289,13 @@ private:
 // ----------------------------------------------------------------------------
 
 async::result<frg::expected<protocols::fs::Error, size_t>> OpenFile::sendMsg(
-        Process *process,
-        uint32_t flags,
-        const void *data,
-        size_t max_length,
-        const void *addr_ptr,
-        size_t addr_length,
-        std::vector<smarter::shared_ptr<File, FileHandle>> files
+  Process *process,
+  uint32_t flags,
+  const void *data,
+  size_t max_length,
+  const void *addr_ptr,
+  size_t addr_length,
+  std::vector<smarter::shared_ptr<File, FileHandle>> files
 ) {
 	if (logSockets)
 		std::cout << "posix: Send to socket \e[1;34m" << structName() << "\e[0m"
@@ -326,7 +326,7 @@ async::result<frg::expected<protocols::fs::Error, size_t>> OpenFile::sendMsg(
 
 	// Carbon-copy to the message to a group.
 	if (grp_idx) {
-		auto it = globalGroupMap.find({ _protocol, grp_idx });
+		auto it = globalGroupMap.find({_protocol, grp_idx});
 		assert(it != globalGroupMap.end());
 		auto group = it->second.get();
 		group->carbonCopy(packet);
@@ -363,7 +363,7 @@ OpenFile::bind(Process *, const void *addr_ptr, size_t addr_length) {
 			std::cout << "posix: Join netlink group " << _protocol << "." << (i + 1)
 			          << std::endl;
 
-			auto it = globalGroupMap.find({ _protocol, i + 1 });
+			auto it = globalGroupMap.find({_protocol, i + 1});
 			assert(it != globalGroupMap.end());
 			auto group = it->second.get();
 			group->_subscriptions.push_back(this);
@@ -402,7 +402,7 @@ void Group::carbonCopy(const Packet &packet) {
 
 void configure(int protocol, int num_groups) {
 	for (int i = 0; i < num_groups; i++) {
-		std::pair<int, int> idx { protocol, i + 1 };
+		std::pair<int, int> idx {protocol, i + 1};
 		auto res = globalGroupMap.insert(std::make_pair(idx, std::make_unique<Group>()));
 		assert(res.second);
 	}
@@ -416,7 +416,7 @@ void broadcast(int proto_idx, int grp_idx, std::string buffer) {
 	packet.buffer.resize(buffer.size());
 	memcpy(packet.buffer.data(), buffer.data(), buffer.size());
 
-	auto it = globalGroupMap.find({ proto_idx, grp_idx });
+	auto it = globalGroupMap.find({proto_idx, grp_idx});
 	assert(it != globalGroupMap.end());
 	auto group = it->second.get();
 	group->carbonCopy(packet);

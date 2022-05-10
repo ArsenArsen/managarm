@@ -56,10 +56,10 @@ void *laihost_map(size_t physical, size_t length) {
 	auto ptr = KernelVirtualMemory::global().allocate(msize);
 	for (size_t pg = 0; pg < vsize; pg += kPageSize)
 		KernelPageSpace::global().mapSingle4k(
-		        (VirtualAddr) ptr + pg,
-		        paddr + pg,
-		        page_access::write,
-		        CachingMode::null
+		  (VirtualAddr) ptr + pg,
+		  paddr + pg,
+		  page_access::write,
+		  CachingMode::null
 		);
 	return reinterpret_cast<char *>(ptr) + (physical & (kPageSize - 1));
 }
@@ -95,7 +95,7 @@ static void *scanRsdt(const char *name, size_t index) {
 		int numPtrs = (rsdt->header.length - sizeof(acpi_header_t)) / sizeof(uint32_t);
 		for (int i = 0; i < numPtrs; i++) {
 			auto tableWindow =
-			        reinterpret_cast<acpi_header_t *>(mapTable(rsdt->tables[i]));
+			  reinterpret_cast<acpi_header_t *>(mapTable(rsdt->tables[i]));
 			char sig[5];
 			sig[4] = 0;
 			memcpy(sig, tableWindow->signature, 4);
@@ -113,7 +113,7 @@ static void *scanRsdt(const char *name, size_t index) {
 		int numPtrs = (xsdt->header.length - sizeof(acpi_header_t)) / sizeof(uint64_t);
 		for (int i = 0; i < numPtrs; i++) {
 			auto tableWindow =
-			        reinterpret_cast<acpi_header_t *>(mapTable(xsdt->tables[i]));
+			  reinterpret_cast<acpi_header_t *>(mapTable(xsdt->tables[i]));
 			char sig[5];
 			sig[4] = 0;
 			memcpy(sig, tableWindow->signature, 4);
@@ -175,34 +175,34 @@ uint32_t laihost_ind(uint16_t p) {
 #endif
 
 void laihost_pci_writeb(
-        uint16_t seg,
-        uint8_t bus,
-        uint8_t slot,
-        uint8_t fn,
-        uint16_t offset,
-        uint8_t v
+  uint16_t seg,
+  uint8_t bus,
+  uint8_t slot,
+  uint8_t fn,
+  uint16_t offset,
+  uint8_t v
 ) {
 	pci::writeConfigByte(seg, bus, slot, fn, offset, v);
 }
 
 void laihost_pci_writew(
-        uint16_t seg,
-        uint8_t bus,
-        uint8_t slot,
-        uint8_t fn,
-        uint16_t offset,
-        uint16_t v
+  uint16_t seg,
+  uint8_t bus,
+  uint8_t slot,
+  uint8_t fn,
+  uint16_t offset,
+  uint16_t v
 ) {
 	pci::writeConfigHalf(seg, bus, slot, fn, offset, v);
 }
 
 void laihost_pci_writed(
-        uint16_t seg,
-        uint8_t bus,
-        uint8_t slot,
-        uint8_t fn,
-        uint16_t offset,
-        uint32_t v
+  uint16_t seg,
+  uint8_t bus,
+  uint8_t slot,
+  uint8_t fn,
+  uint16_t offset,
+  uint32_t v
 ) {
 	pci::writeConfigWord(seg, bus, slot, fn, offset, v);
 }

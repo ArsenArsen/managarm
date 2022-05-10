@@ -22,11 +22,11 @@
 async::detached bindDevice(mbus::Entity entity) {
 	protocols::hw::Device hw_device(co_await entity.bind());
 	auto transport = co_await virtio_core::discover(
-	        std::move(hw_device),
-	        virtio_core::DiscoverMode::transitional
+	  std::move(hw_device),
+	  virtio_core::DiscoverMode::transitional
 	);
 
-	auto device = new block::virtio::Device { std::move(transport), entity.getId() };
+	auto device = new block::virtio::Device {std::move(transport), entity.getId()};
 	device->runDevice();
 
 	/*
@@ -46,16 +46,16 @@ async::detached observeDevices() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
 	auto filter = mbus::Conjunction({
-	        mbus::EqualsFilter("pci-vendor", "1af4"),
-	        mbus::EqualsFilter("pci-device", "1001")
-	        //		mbus::EqualsFilter("pci-device", "1042")
+	  mbus::EqualsFilter("pci-vendor", "1af4"),
+	  mbus::EqualsFilter("pci-device", "1001")
+	  //		mbus::EqualsFilter("pci-device", "1042")
 	});
 
 	auto handler =
-	        mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		        std::cout << "virtio: Detected block device" << std::endl;
-		        bindDevice(std::move(entity));
-	        });
+	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		  std::cout << "virtio: Detected block device" << std::endl;
+		  bindDevice(std::move(entity));
+	  });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

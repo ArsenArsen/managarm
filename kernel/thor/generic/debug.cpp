@@ -18,9 +18,9 @@ constinit LogMessage logQueue[1024] {};
 constinit size_t logHead = 0;
 
 frg::manual_box<frg::intrusive_list<
-        LogHandler,
-        frg::locate_member<LogHandler, frg::default_list_hook<LogHandler>, &LogHandler::hook>>>
-        globalLogList;
+  LogHandler,
+  frg::locate_member<LogHandler, frg::default_list_hook<LogHandler>, &LogHandler::hook>>>
+  globalLogList;
 }  // anonymous namespace
 
 size_t currentLogSequence() {

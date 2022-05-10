@@ -13,7 +13,7 @@ namespace svrctl {
 
 static_assert(static_cast<int>(Error::success) == managarm::svrctl::Error::SUCCESS);
 static_assert(
-        static_cast<int>(Error::deviceNotSupported) == managarm::svrctl::Error::DEVICE_NOT_SUPPORTED
+  static_cast<int>(Error::deviceNotSupported) == managarm::svrctl::Error::DEVICE_NOT_SUPPORTED
 );
 
 struct ManagarmServerData {
@@ -23,13 +23,11 @@ struct ManagarmServerData {
 async::result<void> serveControl(const ControlOperations *ops) {
 	ManagarmServerData sd;
 	HEL_CHECK(helSyscall1(kHelCallSuper + 64, reinterpret_cast<HelWord>(&sd)));
-	helix::UniqueLane lane { sd.controlLane };
+	helix::UniqueLane lane {sd.controlLane};
 
 	while (true) {
-		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
-		        lane,
-		        helix_ng::accept(helix_ng::recvInline())
-		);
+		auto [accept, recv_req] =
+		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
 		if (accept.error() == kHelErrEndOfLane)
 			co_return;
 		HEL_CHECK(accept.error());
@@ -49,8 +47,8 @@ async::result<void> serveControl(const ControlOperations *ops) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		} else {
@@ -59,8 +57,8 @@ async::result<void> serveControl(const ControlOperations *ops) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		}

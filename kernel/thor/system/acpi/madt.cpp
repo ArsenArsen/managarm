@@ -91,7 +91,7 @@ GlobalIrqInfo resolveIsaIrq(unsigned int irq) {
 	assert(irq < 16);
 	if ((*isaIrqOverrides[irq]))
 		return *(*isaIrqOverrides[irq]);
-	return GlobalIrqInfo { irq, IrqConfiguration { TriggerMode::edge, Polarity::high } };
+	return GlobalIrqInfo {irq, IrqConfiguration {TriggerMode::edge, Polarity::high}};
 }
 
 // Same as resolveIsaIrq(irq) but allows to set more specific configuration options.
@@ -100,7 +100,7 @@ GlobalIrqInfo resolveIsaIrq(unsigned int irq, IrqConfiguration desired) {
 		assert(desired.compatible((*isaIrqOverrides[irq])->configuration));
 		return *(*isaIrqOverrides[irq]);
 	}
-	return GlobalIrqInfo { irq, desired };
+	return GlobalIrqInfo {irq, desired};
 }
 
 // --------------------------------------------------------
@@ -121,7 +121,7 @@ namespace thor {
 namespace acpi {
 
 struct SciDevice final : IrqSink {
-	SciDevice() : IrqSink { frg::string<KernelAlloc> { *kernelAlloc, "acpi-sci" } } {}
+	SciDevice() : IrqSink {frg::string<KernelAlloc> {*kernelAlloc, "acpi-sci"}} {}
 
 	IrqStatus raise() override {
 		auto isr = lai_get_sci_event();
@@ -152,8 +152,10 @@ void bootOtherProcessors() {
 		if (generic->type == 0) {  // local APIC
 			auto entry = (MadtLocalEntry *) generic;
 			// TODO: Support BSPs with APIC ID != 0.
-			if ((entry->flags & local_flags::enabled)
-			    && entry->localApicId)  // We ignore the BSP here.
+			if ((entry->flags & local_flags::enabled) && entry->localApicId)  // We
+			                                                                  // ignore
+			                                                                  // the BSP
+			                                                                  // here.
 				bootSecondary(entry->localApicId);
 		}
 		offset += generic->length;
@@ -189,12 +191,11 @@ void dumpMadt() {
 			if (entry->bus == 0) {
 				bus = "ISA";
 			} else {
-				panicLogger() << "Unexpected bus in MADT interrupt override"
-				              << frg::endlog;
+				panicLogger()
+				  << "Unexpected bus in MADT interrupt override" << frg::endlog;
 			}
 
-			if ((entry->flags & OverrideFlags::polarityMask)
-			    == OverrideFlags::polarityDefault) {
+			if ((entry->flags & OverrideFlags::polarityMask) == OverrideFlags::polarityDefault) {
 				polarity = "default";
 			} else if ((entry->flags & OverrideFlags::polarityMask) == OverrideFlags::polarityHigh) {
 				polarity = "high";
@@ -205,8 +206,7 @@ void dumpMadt() {
 				              << frg::endlog;
 			}
 
-			if ((entry->flags & OverrideFlags::triggerMask)
-			    == OverrideFlags::triggerDefault) {
+			if ((entry->flags & OverrideFlags::triggerMask) == OverrideFlags::triggerDefault) {
 				trigger = "default";
 			} else if ((entry->flags & OverrideFlags::triggerMask) == OverrideFlags::triggerEdge) {
 				trigger = "edge";
@@ -214,21 +214,21 @@ void dumpMadt() {
 				trigger = "level";
 			} else {
 				panicLogger()
-				        << "Unexpected trigger mode in MADT interrupt override"
-				        << frg::endlog;
+				  << "Unexpected trigger mode in MADT interrupt override"
+				  << frg::endlog;
 			}
 
-			infoLogger() << "    Int override: " << bus << " IRQ "
-			             << (int) entry->sourceIrq << " is mapped to GSI "
-			             << entry->systemInt << " (Polarity: " << polarity
-			             << ", trigger mode: " << trigger << ")" << frg::endlog;
+			infoLogger()
+			  << "    Int override: " << bus << " IRQ " << (int) entry->sourceIrq
+			  << " is mapped to GSI " << entry->systemInt << " (Polarity: " << polarity
+			  << ", trigger mode: " << trigger << ")" << frg::endlog;
 		} else if (generic->type == 4) {  // local APIC NMI source
 			auto entry = (MadtLocalNmiEntry *) generic;
 			infoLogger() << "    Local APIC NMI: processor " << (int) entry->processorId
 			             << ", lint: " << (int) entry->localInt << frg::endlog;
 		} else {
-			infoLogger() << "    Unexpected MADT entry of type " << generic->type
-			             << frg::endlog;
+			infoLogger()
+			  << "    Unexpected MADT entry of type " << generic->type << frg::endlog;
 		}
 		offset += generic->length;
 	}
@@ -240,195 +240,191 @@ int globalRsdtVersion;
 extern "C" EirInfo *thorBootInfoPtr;
 
 initgraph::Stage *getTablesDiscoveredStage() {
-	static initgraph::Stage s { &globalInitEngine, "acpi.tables-discovered" };
+	static initgraph::Stage s {&globalInitEngine, "acpi.tables-discovered"};
 	return &s;
 }
 
 initgraph::Stage *getNsAvailableStage() {
-	static initgraph::Stage s { &globalInitEngine, "acpi.ns-available" };
+	static initgraph::Stage s {&globalInitEngine, "acpi.ns-available"};
 	return &s;
 }
 
 static initgraph::Task initTablesTask {
-	&globalInitEngine,
-	"acpi.init-tables",
-	initgraph::Entails { getTablesDiscoveredStage() },
-	[] {
-	        lai_rsdp_info rsdp_info;
-	        if (thorBootInfoPtr->acpiRsdt) {
-		        if (thorBootInfoPtr->acpiRevision == 1) {
-			        rsdp_info.acpi_version = 1;
-			        rsdp_info.rsdt_address = thorBootInfoPtr->acpiRsdt;
-			        rsdp_info.xsdt_address = 0;
-		        } else if (thorBootInfoPtr->acpiRevision == 2) {
-			        rsdp_info.acpi_version = 2;
-			        rsdp_info.rsdt_address = 0;
-			        rsdp_info.xsdt_address = thorBootInfoPtr->acpiRsdt;
-		        } else {
-			        panicLogger() << "thor: Got unknown acpi version from multiboot2: "
-			                      << thorBootInfoPtr->acpiRevision << frg::endlog;
-		        }
-	        } else {
-		        if (lai_bios_detect_rsdp(&rsdp_info))
-			        panicLogger() << "thor: Could not detect ACPI" << frg::endlog;
-	        }
+  &globalInitEngine,
+  "acpi.init-tables",
+  initgraph::Entails {getTablesDiscoveredStage()},
+  [] {
+	  lai_rsdp_info rsdp_info;
+	  if (thorBootInfoPtr->acpiRsdt) {
+		  if (thorBootInfoPtr->acpiRevision == 1) {
+			  rsdp_info.acpi_version = 1;
+			  rsdp_info.rsdt_address = thorBootInfoPtr->acpiRsdt;
+			  rsdp_info.xsdt_address = 0;
+		  } else if (thorBootInfoPtr->acpiRevision == 2) {
+			  rsdp_info.acpi_version = 2;
+			  rsdp_info.rsdt_address = 0;
+			  rsdp_info.xsdt_address = thorBootInfoPtr->acpiRsdt;
+		  } else {
+			  panicLogger() << "thor: Got unknown acpi version from multiboot2: "
+			                << thorBootInfoPtr->acpiRevision << frg::endlog;
+		  }
+	  } else {
+		  if (lai_bios_detect_rsdp(&rsdp_info))
+			  panicLogger() << "thor: Could not detect ACPI" << frg::endlog;
+	  }
 
-	        assert((rsdp_info.acpi_version == 1 || rsdp_info.acpi_version == 2)
-	               && "Got unknown acpi version from lai");
-	        globalRsdtVersion = rsdp_info.acpi_version;
-	        if (rsdp_info.acpi_version == 2) {
-		        globalRsdtWindow = laihost_map(rsdp_info.xsdt_address, 0x1000);
-		        auto xsdt = reinterpret_cast<acpi_rsdt_t *>(globalRsdtWindow);
-		        globalRsdtWindow = laihost_map(rsdp_info.xsdt_address, xsdt->header.length);
-	        } else if (rsdp_info.acpi_version == 1) {
-		        globalRsdtWindow = laihost_map(rsdp_info.rsdt_address, 0x1000);
-		        auto rsdt = reinterpret_cast<acpi_rsdt_t *>(globalRsdtWindow);
-		        globalRsdtWindow = laihost_map(rsdp_info.rsdt_address, rsdt->header.length);
-	        }
-	}
-};
+	  assert(
+	    (rsdp_info.acpi_version == 1 || rsdp_info.acpi_version == 2)
+	    && "Got unknown acpi version from lai"
+	  );
+	  globalRsdtVersion = rsdp_info.acpi_version;
+	  if (rsdp_info.acpi_version == 2) {
+		  globalRsdtWindow = laihost_map(rsdp_info.xsdt_address, 0x1000);
+		  auto xsdt = reinterpret_cast<acpi_rsdt_t *>(globalRsdtWindow);
+		  globalRsdtWindow = laihost_map(rsdp_info.xsdt_address, xsdt->header.length);
+	  } else if (rsdp_info.acpi_version == 1) {
+		  globalRsdtWindow = laihost_map(rsdp_info.rsdt_address, 0x1000);
+		  auto rsdt = reinterpret_cast<acpi_rsdt_t *>(globalRsdtWindow);
+		  globalRsdtWindow = laihost_map(rsdp_info.rsdt_address, rsdt->header.length);
+	  }
+  }};
 
 static initgraph::Task discoverIoApicsTask {
-	&globalInitEngine,
-	"acpi.discover-ioapics",
-	initgraph::Requires { getTablesDiscoveredStage(), getFibersAvailableStage() },
-	initgraph::Entails { getTaskingAvailableStage() },
-	[] {
-	        dumpMadt();
+  &globalInitEngine,
+  "acpi.discover-ioapics",
+  initgraph::Requires {getTablesDiscoveredStage(), getFibersAvailableStage()},
+  initgraph::Entails {getTaskingAvailableStage()},
+  [] {
+	  dumpMadt();
 
-	        void *madtWindow = laihost_scan("APIC", 0);
-	        assert(madtWindow);
-	        auto madt = reinterpret_cast<acpi_header_t *>(madtWindow);
+	  void *madtWindow = laihost_scan("APIC", 0);
+	  assert(madtWindow);
+	  auto madt = reinterpret_cast<acpi_header_t *>(madtWindow);
 
-	        // Configure all interrupt controllers.
-	        // TODO: This should be done during thor's initialization in order to avoid races.
-	        infoLogger() << "thor: Configuring I/O APICs." << frg::endlog;
+	  // Configure all interrupt controllers.
+	  // TODO: This should be done during thor's initialization in order to avoid races.
+	  infoLogger() << "thor: Configuring I/O APICs." << frg::endlog;
 
-	        size_t offset = sizeof(acpi_header_t) + sizeof(MadtHeader);
-	        while (offset < madt->length) {
-		        auto generic = (MadtGenericEntry *) ((uint8_t *) madtWindow + offset);
-		        if (generic->type == 1) {  // I/O APIC
-			        auto entry = (MadtIoEntry *) generic;
+	  size_t offset = sizeof(acpi_header_t) + sizeof(MadtHeader);
+	  while (offset < madt->length) {
+		  auto generic = (MadtGenericEntry *) ((uint8_t *) madtWindow + offset);
+		  if (generic->type == 1) {  // I/O APIC
+			  auto entry = (MadtIoEntry *) generic;
 #ifdef __x86_64__
-			        setupIoApic(
-			                entry->ioApicId,
-			                entry->systemIntBase,
-			                entry->mmioAddress
-			        );
+			  setupIoApic(entry->ioApicId, entry->systemIntBase, entry->mmioAddress);
 #endif
-		        }
-		        offset += generic->length;
-	        }
+		  }
+		  offset += generic->length;
+	  }
 
-	        // Determine IRQ override configuration.
-	        for (int i = 0; i < 16; i++)
-		        isaIrqOverrides[i].initialize();
+	  // Determine IRQ override configuration.
+	  for (int i = 0; i < 16; i++)
+		  isaIrqOverrides[i].initialize();
 
-	        offset = sizeof(acpi_header_t) + sizeof(MadtHeader);
-	        while (offset < madt->length) {
-		        auto generic = (MadtGenericEntry *) ((uint8_t *) madtWindow + offset);
-		        if (generic->type == 2) {  // interrupt source override
-			        auto entry = (MadtIntOverrideEntry *) generic;
+	  offset = sizeof(acpi_header_t) + sizeof(MadtHeader);
+	  while (offset < madt->length) {
+		  auto generic = (MadtGenericEntry *) ((uint8_t *) madtWindow + offset);
+		  if (generic->type == 2) {  // interrupt source override
+			  auto entry = (MadtIntOverrideEntry *) generic;
 
-			        // ACPI defines only ISA IRQ overrides.
-			        assert(entry->bus == 0);
-			        assert(entry->sourceIrq < 16);
+			  // ACPI defines only ISA IRQ overrides.
+			  assert(entry->bus == 0);
+			  assert(entry->sourceIrq < 16);
 
-			        GlobalIrqInfo line;
-			        line.gsi = entry->systemInt;
+			  GlobalIrqInfo line;
+			  line.gsi = entry->systemInt;
 
-			        auto trigger = entry->flags & OverrideFlags::triggerMask;
-			        auto polarity = entry->flags & OverrideFlags::polarityMask;
-			        if (trigger == OverrideFlags::triggerDefault
-			            && polarity == OverrideFlags::polarityDefault) {
-				        line.configuration.trigger = TriggerMode::edge;
-				        line.configuration.polarity = Polarity::high;
-			        } else {
-				        assert(trigger != OverrideFlags::triggerDefault);
-				        assert(polarity != OverrideFlags::polarityDefault);
+			  auto trigger = entry->flags & OverrideFlags::triggerMask;
+			  auto polarity = entry->flags & OverrideFlags::polarityMask;
+			  if (trigger == OverrideFlags::triggerDefault && polarity == OverrideFlags::polarityDefault) {
+				  line.configuration.trigger = TriggerMode::edge;
+				  line.configuration.polarity = Polarity::high;
+			  } else {
+				  assert(trigger != OverrideFlags::triggerDefault);
+				  assert(polarity != OverrideFlags::polarityDefault);
 
-				        switch (trigger) {
-				        case OverrideFlags::triggerEdge:
-					        line.configuration.trigger = TriggerMode::edge;
-					        break;
-				        case OverrideFlags::triggerLevel:
-					        line.configuration.trigger = TriggerMode::level;
-					        break;
-				        default:
-					        panicLogger() << "Illegal IRQ trigger mode in MADT"
-					                      << frg::endlog;
-				        }
+				  switch (trigger) {
+				  case OverrideFlags::triggerEdge:
+					  line.configuration.trigger = TriggerMode::edge;
+					  break;
+				  case OverrideFlags::triggerLevel:
+					  line.configuration.trigger = TriggerMode::level;
+					  break;
+				  default:
+					  panicLogger()
+					    << "Illegal IRQ trigger mode in MADT" << frg::endlog;
+				  }
 
-				        switch (polarity) {
-				        case OverrideFlags::polarityHigh:
-					        line.configuration.polarity = Polarity::high;
-					        break;
-				        case OverrideFlags::polarityLow:
-					        line.configuration.polarity = Polarity::low;
-					        break;
-				        default:
-					        panicLogger() << "Illegal IRQ polarity in MADT"
-					                      << frg::endlog;
-				        }
-			        }
+				  switch (polarity) {
+				  case OverrideFlags::polarityHigh:
+					  line.configuration.polarity = Polarity::high;
+					  break;
+				  case OverrideFlags::polarityLow:
+					  line.configuration.polarity = Polarity::low;
+					  break;
+				  default:
+					  panicLogger()
+					    << "Illegal IRQ polarity in MADT" << frg::endlog;
+				  }
+			  }
 
-			        assert(!(*isaIrqOverrides[entry->sourceIrq]));
-			        *isaIrqOverrides[entry->sourceIrq] = line;
-		        }
-		        offset += generic->length;
-	        }
-	}
-};
+			  assert(!(*isaIrqOverrides[entry->sourceIrq]));
+			  *isaIrqOverrides[entry->sourceIrq] = line;
+		  }
+		  offset += generic->length;
+	  }
+  }};
 
 static initgraph::Task enterAcpiModeTask {
-	&globalInitEngine,
-	"acpi.enter-acpi-mode",
-	initgraph::Requires { getTaskingAvailableStage(), pci::getBus0AvailableStage() },
-	initgraph::Entails { getNsAvailableStage() },
-	[] {
-	        lai_create_namespace();
-	        // Configure the ISA IRQs.
-	        // TODO: This is a hack. We assume that HPET will use legacy replacement.
-	        infoLogger() << "thor: Configuring ISA IRQs." << frg::endlog;
-	        configureIrq(resolveIsaIrq(0));
-	        configureIrq(resolveIsaIrq(1));
-	        configureIrq(resolveIsaIrq(4));
-	        configureIrq(resolveIsaIrq(12));
-	        configureIrq(resolveIsaIrq(14));
+  &globalInitEngine,
+  "acpi.enter-acpi-mode",
+  initgraph::Requires {getTaskingAvailableStage(), pci::getBus0AvailableStage()},
+  initgraph::Entails {getNsAvailableStage()},
+  [] {
+	  lai_create_namespace();
+	  // Configure the ISA IRQs.
+	  // TODO: This is a hack. We assume that HPET will use legacy replacement.
+	  infoLogger() << "thor: Configuring ISA IRQs." << frg::endlog;
+	  configureIrq(resolveIsaIrq(0));
+	  configureIrq(resolveIsaIrq(1));
+	  configureIrq(resolveIsaIrq(4));
+	  configureIrq(resolveIsaIrq(12));
+	  configureIrq(resolveIsaIrq(14));
 
-	        // Install the SCI before enabling ACPI.
-	        void *fadtWindow = laihost_scan("FACP", 0);
-	        assert(fadtWindow);
-	        auto fadt = reinterpret_cast<acpi_fadt_t *>(fadtWindow);
+	  // Install the SCI before enabling ACPI.
+	  void *fadtWindow = laihost_scan("FACP", 0);
+	  assert(fadtWindow);
+	  auto fadt = reinterpret_cast<acpi_fadt_t *>(fadtWindow);
 
-	        auto sciOverride = resolveIsaIrq(fadt->sci_irq);
-	        configureIrq(sciOverride);
-	        sciDevice.initialize();
-	        lai_set_sci_event(ACPI_POWER_BUTTON);
+	  auto sciOverride = resolveIsaIrq(fadt->sci_irq);
+	  configureIrq(sciOverride);
+	  sciDevice.initialize();
+	  lai_set_sci_event(ACPI_POWER_BUTTON);
 #ifdef __x86_64__
-	        IrqPin::attachSink(getGlobalSystemIrq(sciOverride.gsi), sciDevice.get());
+	  IrqPin::attachSink(getGlobalSystemIrq(sciOverride.gsi), sciDevice.get());
 #endif
 
-	        // Enable ACPI.
-	        infoLogger() << "thor: Entering ACPI mode." << frg::endlog;
-	        lai_enable_acpi(1);
-	        infoLogger() << "thor: ACPI configuration complete." << frg::endlog;
-	}
-};
+	  // Enable ACPI.
+	  infoLogger() << "thor: Entering ACPI mode." << frg::endlog;
+	  lai_enable_acpi(1);
+	  infoLogger() << "thor: ACPI configuration complete." << frg::endlog;
+  }};
 
-static initgraph::Task bootApsTask { &globalInitEngine,
-	                             "acpi.boot-aps",
-	                             initgraph::Requires { &enterAcpiModeTask },
-	                             [] {
-	                                     bootOtherProcessors();
-	                             } };
+static initgraph::Task bootApsTask {
+  &globalInitEngine,
+  "acpi.boot-aps",
+  initgraph::Requires {&enterAcpiModeTask},
+  [] {
+	  bootOtherProcessors();
+  }};
 
-static initgraph::Task initPmInterfaceTask { &globalInitEngine,
-	                                     "acpi.init-pm-interface",
-	                                     initgraph::Requires { &enterAcpiModeTask },
-	                                     [] {
-	                                             initializePmInterface();
-	                                     } };
+static initgraph::Task initPmInterfaceTask {
+  &globalInitEngine,
+  "acpi.init-pm-interface",
+  initgraph::Requires {&enterAcpiModeTask},
+  [] {
+	  initializePmInterface();
+  }};
 
 }  // namespace acpi
 }  // namespace thor

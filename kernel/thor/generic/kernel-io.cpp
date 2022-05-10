@@ -6,15 +6,15 @@ namespace thor {
 
 namespace {
 frg::eternal<frg::hash_map<
-        frg::string_view,
-        smarter::shared_ptr<KernelIoChannel>,
-        frg::hash<frg::string_view>,
-        Allocator>>
-        globalChannelMap { frg::hash<frg::string_view> {} };
+  frg::string_view,
+  smarter::shared_ptr<KernelIoChannel>,
+  frg::hash<frg::string_view>,
+  Allocator>>
+  globalChannelMap {frg::hash<frg::string_view> {}};
 }  // namespace
 
 initgraph::Stage *getIoChannelsDiscoveredStage() {
-	static initgraph::Stage s { &globalInitEngine, "general.iochannels-discovered" };
+	static initgraph::Stage s {&globalInitEngine, "general.iochannels-discovered"};
 	return &s;
 }
 
@@ -31,16 +31,16 @@ smarter::shared_ptr<KernelIoChannel> solicitIoChannel(frg::string_view tag) {
 
 // Packets larger than packetSize may be truncated.
 coroutine<void> dumpRingToChannel(
-        LogRingBuffer *ringBuffer,
-        smarter::shared_ptr<KernelIoChannel> channel,
-        size_t packetSize
+  LogRingBuffer *ringBuffer,
+  smarter::shared_ptr<KernelIoChannel> channel,
+  size_t packetSize
 ) {
 	uint64_t currentPtr = 0;
 	while (true) {
 		auto span = channel->writableSpan();
 		if (span.size() < packetSize) {
 			auto ioOutcome =
-			        co_await channel->issueIo(KernelIoChannel::ioProgressOutput);
+			  co_await channel->issueIo(KernelIoChannel::ioProgressOutput);
 			assert(ioOutcome);
 			continue;
 		}
@@ -48,9 +48,9 @@ coroutine<void> dumpRingToChannel(
 		size_t progress = 0;
 		while (progress < span.size()) {
 			auto [success, recordPtr, nextPtr, actualSize] = ringBuffer->dequeueAt(
-			        currentPtr,
-			        span.data() + progress,
-			        span.size() - progress
+			  currentPtr,
+			  span.data() + progress,
+			  span.size() - progress
 			);
 			if (!success) {
 				if (progress)

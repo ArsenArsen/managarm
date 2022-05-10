@@ -4,19 +4,19 @@
 #include <helix/timer.hpp>
 
 namespace regs {
-constexpr arch::bit_register<uint64_t> cap { 0x0 };
-constexpr arch::scalar_register<uint32_t> vs { 0x4 };
-constexpr arch::bit_register<uint32_t> cc { 0x14 };
-constexpr arch::scalar_register<uint32_t> csts { 0x1c };
-constexpr arch::scalar_register<uint32_t> aqa { 0x24 };
-constexpr arch::scalar_register<uint64_t> asq { 0x28 };
-constexpr arch::scalar_register<uint64_t> acq { 0x30 };
+constexpr arch::bit_register<uint64_t> cap {0x0};
+constexpr arch::scalar_register<uint32_t> vs {0x4};
+constexpr arch::bit_register<uint32_t> cc {0x14};
+constexpr arch::scalar_register<uint32_t> csts {0x1c};
+constexpr arch::scalar_register<uint32_t> aqa {0x24};
+constexpr arch::scalar_register<uint64_t> asq {0x28};
+constexpr arch::scalar_register<uint64_t> acq {0x30};
 }  // namespace regs
 
 namespace flags {
 namespace cap {
-constexpr arch::field<uint64_t, uint16_t> mqes { 0, 16 };
-constexpr arch::field<uint64_t, uint8_t> dstrd { 32, 4 };
+constexpr arch::field<uint64_t, uint16_t> mqes {0, 16};
+constexpr arch::field<uint64_t, uint8_t> dstrd {32, 4};
 }  // namespace cap
 
 namespace vs {
@@ -26,9 +26,9 @@ inline static uint32_t version(uint16_t major, uint8_t minor, uint8_t tertiary) 
 }  // namespace vs
 
 namespace cc {
-constexpr arch::field<uint32_t, uint8_t> iocqes { 20, 4 };
-constexpr arch::field<uint32_t, uint8_t> iosqes { 16, 4 };
-constexpr arch::field<uint32_t, bool> enable { 0, 1 };
+constexpr arch::field<uint32_t, uint8_t> iocqes {20, 4};
+constexpr arch::field<uint32_t, uint8_t> iosqes {16, 4};
+constexpr arch::field<uint32_t, bool> enable {0, 1};
 }  // namespace cc
 
 namespace csts {
@@ -37,17 +37,17 @@ constexpr int ready = 1 << 0;
 }  // namespace flags
 
 Controller::Controller(
-        int64_t parentId,
-        protocols::hw::Device hwDevice,
-        helix::Mapping hbaRegs,
-        helix::UniqueDescriptor,
-        helix::UniqueDescriptor irq
+  int64_t parentId,
+  protocols::hw::Device hwDevice,
+  helix::Mapping hbaRegs,
+  helix::UniqueDescriptor,
+  helix::UniqueDescriptor irq
 )
-        : hwDevice_ { std::move(hwDevice) }
-        , regsMapping_ { std::move(hbaRegs) }
-        , regs_ { regsMapping_.get() }
-        , irq_ { std::move(irq) }
-        , parentId_ { parentId } {}
+: hwDevice_ {std::move(hwDevice)}
+, regsMapping_ {std::move(hbaRegs)}
+, regs_ {regsMapping_.get()}
+, irq_ {std::move(irq)}
+, parentId_ {parentId} {}
 
 async::detached Controller::run() {
 	co_await hwDevice_.enableBusIrq();
@@ -75,11 +75,9 @@ async::detached Controller::handleIrqs() {
 		}
 
 		if (found) {
-			HEL_CHECK(helAcknowledgeIrq(
-			        irq_.getHandle(),
-			        kHelAckAcknowledge,
-			        irqSequence_
-			));
+			HEL_CHECK(
+			  helAcknowledgeIrq(irq_.getHandle(), kHelAckAcknowledge, irqSequence_)
+			);
 		} else {
 			HEL_CHECK(helAcknowledgeIrq(irq_.getHandle(), kHelAckNack, irqSequence_));
 		}
@@ -135,9 +133,9 @@ async::result<void> Controller::reset() {
 	co_await enable();
 
 	auto ioQ = std::make_unique<Queue>(
-	        1,
-	        queueDepth_,
-	        regs_.subspace(doorbellsOffset + 1 * 8 * dbStride_)
+	  1,
+	  queueDepth_,
+	  regs_.subspace(doorbellsOffset + 1 * 8 * dbStride_)
 	);
 	ioQ->init();
 
@@ -175,7 +173,7 @@ async::result<Command::Result> Controller::createCQ(Queue *q) {
 	cmdBuf.prp1 = convert_endian<endian::little, endian::native>((uint64_t) q->getCqPhysAddr());
 	cmdBuf.cqid = convert_endian<endian::little, endian::native>((uint16_t) q->getQueueId());
 	cmdBuf.qSize =
-	        convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
+	  convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
 	cmdBuf.cqFlags = convert_endian<endian::little, endian::native>((uint16_t) flags);
 	cmdBuf.irqVector = 0;  // TODO: set to MSI vector
 
@@ -196,7 +194,7 @@ async::result<Command::Result> Controller::createSQ(Queue *q) {
 	cmdBuf.prp1 = convert_endian<endian::little, endian::native>((uint64_t) q->getSqPhysAddr());
 	cmdBuf.sqid = convert_endian<endian::little, endian::native>((uint16_t) q->getQueueId());
 	cmdBuf.qSize =
-	        convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
+	  convert_endian<endian::little, endian::native>((uint16_t) q->getQueueDepth() - 1);
 	cmdBuf.sqFlags = convert_endian<endian::little, endian::native>((uint16_t) flags);
 	cmdBuf.cqid = convert_endian<endian::little, endian::native>((uint16_t) q->getQueueId());
 
@@ -210,7 +208,7 @@ async::result<Command::Result> Controller::identifyController(spec::IdentifyCont
 
 	cmdBuf.opcode = spec::kIdentify;
 	cmdBuf.cns = spec::kIdentifyController;
-	cmd->setupBuffer(arch::dma_buffer_view { nullptr, &id, sizeof(id) });
+	cmd->setupBuffer(arch::dma_buffer_view {nullptr, &id, sizeof(id)});
 
 	return adminQ->submitCommand(std::move(cmd));
 }
@@ -227,7 +225,7 @@ Controller::identifyNamespaceList(unsigned int nsid, uint32_t *list) {
 	cmdBuf.opcode = spec::kIdentify;
 	cmdBuf.cns = spec::kIdentifyActiveList;
 	cmdBuf.nsid = convert_endian<endian::little, endian::native>(nsid);
-	cmd->setupBuffer(arch::dma_buffer_view { nullptr, list, 0x1000 });
+	cmd->setupBuffer(arch::dma_buffer_view {nullptr, list, 0x1000});
 
 	return adminQ->submitCommand(std::move(cmd));
 }
@@ -244,7 +242,7 @@ Controller::identifyNamespace(unsigned int nsid, spec::IdentifyNamespace &id) {
 	cmdBuf.opcode = spec::kIdentify;
 	cmdBuf.cns = spec::kIdentifyNamespace;
 	cmdBuf.nsid = convert_endian<endian::little, endian::native>(nsid);
-	cmd->setupBuffer(arch::dma_buffer_view { nullptr, &id, sizeof(id) });
+	cmd->setupBuffer(arch::dma_buffer_view {nullptr, &id, sizeof(id)});
 
 	return adminQ->submitCommand(std::move(cmd));
 }
@@ -262,7 +260,7 @@ async::result<void> Controller::scanNamespaces() {
 	nn = convert_endian<endian::little>(idCtrl.nn);
 
 	if (version_ >= flags::vs::version(1, 1, 0)) {
-		auto nsList = arch::dma_array<uint32_t> { nullptr, 1024 };
+		auto nsList = arch::dma_array<uint32_t> {nullptr, 1024};
 		int numLists = (nn + 1023) >> 10;
 		unsigned int prev = 0;
 		for (auto i = 0; i < numLists; i++) {

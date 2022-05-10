@@ -75,9 +75,8 @@ public:
 
 	async::result<Error>
 	utimensat(uint64_t atime_sec, uint64_t atime_nsec, uint64_t mtime_sec, uint64_t mtime_nsec)
-	        override {
-		if (atime_sec != UTIME_NOW || atime_nsec != UTIME_NOW || mtime_sec != UTIME_NOW
-		    || mtime_nsec != UTIME_NOW) {
+	  override {
+		if (atime_sec != UTIME_NOW || atime_nsec != UTIME_NOW || mtime_sec != UTIME_NOW || mtime_nsec != UTIME_NOW) {
 			std::cout << "\e[31m"
 			             "tmp_fs: utimensat() only supports setting atime and mtime to "
 			             "current time"
@@ -101,9 +100,9 @@ private:
 	mode_t _mode = 0;
 	uid_t _uid = 0;
 	gid_t _gid = 0;
-	timespec _atime = { 0, 0 };
-	timespec _mtime = { 0, 0 };
-	timespec _ctime = { 0, 0 };
+	timespec _atime = {0, 0};
+	timespec _mtime = {0, 0};
+	timespec _ctime = {0, 0};
 };
 
 struct SymlinkNode final : Node {
@@ -125,10 +124,11 @@ private:
 
 	DeviceId readDevice() override { return _id; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		return openDevice(_type, _id, std::move(mount), std::move(link), semantic_flags);
 	}
 
@@ -150,15 +150,16 @@ struct FifoNode final : Node {
 private:
 	VfsType getType() override { return VfsType::fifo; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		co_return co_await fifo::openNamedChannel(mount, link, this, semantic_flags);
 	}
 
 public:
-	FifoNode(Superblock *superblock, mode_t mode) : Node { superblock } {
+	FifoNode(Superblock *superblock, mode_t mode) : Node {superblock} {
 		fifo::createNamedChannel(this);
 		initializeMode(mode);
 	}
@@ -171,13 +172,13 @@ public:
 	explicit Link(std::shared_ptr<FsNode> target) : _target(std::move(target)) {}
 
 	explicit Link(
-	        std::shared_ptr<FsNode> owner,
-	        std::string name,
-	        std::shared_ptr<FsNode> target
+	  std::shared_ptr<FsNode> owner,
+	  std::string name,
+	  std::shared_ptr<FsNode> target
 	)
-	        : _owner(std::move(owner))
-	        , _name(std::move(name))
-	        , _target(std::move(target)) {
+	: _owner(std::move(owner))
+	, _name(std::move(name))
+	, _target(std::move(target)) {
 		assert(_owner);
 		assert(!_name.empty());
 	}
@@ -238,8 +239,8 @@ private:
 };
 
 struct DirectoryNode final
-        : Node
-        , std::enable_shared_from_this<DirectoryNode> {
+: Node
+, std::enable_shared_from_this<DirectoryNode> {
 	friend struct Superblock;
 	friend struct DirectoryFile;
 
@@ -250,10 +251,11 @@ private:
 
 	std::shared_ptr<FsLink> treeLink() override { return _treeLink; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
 			          << std::bitset<32>(semantic_flags)
@@ -281,11 +283,8 @@ private:
 	link(std::string name, std::shared_ptr<FsNode> target) override {
 		if (!(_entries.find(name) == _entries.end()))
 			co_return Error::alreadyExists;
-		auto link = std::make_shared<Link>(
-		        shared_from_this(),
-		        std::move(name),
-		        std::move(target)
-		);
+		auto link =
+		  std::make_shared<Link>(shared_from_this(), std::move(name), std::move(target));
 		_entries.insert(link);
 		co_return link;
 	}
@@ -338,10 +337,11 @@ struct InheritedNode final : Node {
 private:
 	VfsType getType() override { return VfsType::regular; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
 			          << std::bitset<32>(semantic_flags)
@@ -355,9 +355,9 @@ private:
 
 		helix::UniqueDescriptor passthrough(__mlibc_getPassthrough(fd));
 		co_return extern_fs::createFile(
-		        std::move(passthrough),
-		        std::move(mount),
-		        std::move(link)
+		  std::move(passthrough),
+		  std::move(mount),
+		  std::move(link)
 		);
 	}
 
@@ -376,16 +376,16 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        file,
-		        &fileOperations,
-		        file->_cancelServe
+		  std::move(lane),
+		  file,
+		  &fileOperations,
+		  file->_cancelServe
 		));
 	}
 
 	MemoryFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-	        : File { StructName::get("tmpfs.regular"), std::move(mount), std::move(link) }
-	        , _offset { 0 } {}
+	: File {StructName::get("tmpfs.regular"), std::move(mount), std::move(link)}
+	, _offset {0} {}
 
 	void handleClose() override;
 
@@ -423,10 +423,11 @@ struct MemoryNode final : Node {
 
 	VfsType getType() override { return VfsType::regular; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
 			          << std::bitset<32>(semantic_flags)
@@ -472,10 +473,10 @@ private:
 		} else {
 			HelHandle handle;
 			HEL_CHECK(helAllocateMemory(aligned_size, 0, nullptr, &handle));
-			_memory = helix::UniqueDescriptor { handle };
+			_memory = helix::UniqueDescriptor {handle};
 		}
 
-		_mapping = helix::Mapping { _memory, 0, aligned_size };
+		_mapping = helix::Mapping {_memory, 0, aligned_size};
 		_areaSize = aligned_size;
 	}
 
@@ -512,9 +513,9 @@ struct Superblock final : FsSuperblock {
 			dest_dir->_entries.erase(dest_it);
 
 		auto new_link = std::make_shared<Link>(
-		        dest_dir->shared_from_this(),
-		        std::move(dest_name),
-		        src_link->getTarget()
+		  dest_dir->shared_from_this(),
+		  std::move(dest_name),
+		  src_link->getTarget()
 		);
 		src_dir->_entries.erase(it);
 		dest_dir->_entries.insert(new_link);
@@ -531,10 +532,7 @@ private:
 // MemoryNode and MemoryFile implementation.
 // ----------------------------------------------------------------------------
 
-MemoryNode::MemoryNode(Superblock *superblock)
-        : Node { superblock }
-        , _areaSize { 0 }
-        , _fileSize { 0 } {}
+MemoryNode::MemoryNode(Superblock *superblock) : Node {superblock}, _areaSize {0}, _fileSize {0} {}
 
 void MemoryFile::handleClose() {
 	_cancelServe.cancel();
@@ -618,8 +616,8 @@ FutureMaybe<helix::UniqueDescriptor> MemoryFile::accessMemory() {
 // ----------------------------------------------------------------------------
 
 InheritedNode::InheritedNode(Superblock *superblock, std::string path)
-        : Node { superblock }
-        , _path { std::move(path) } {}
+: Node {superblock}
+, _path {std::move(path)} {}
 
 // ----------------------------------------------------------------------------
 // DirectoryNode and DirectoryFile implementation.
@@ -631,10 +629,10 @@ void DirectoryFile::serve(smarter::shared_ptr<DirectoryFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	        std::move(lane),
-	        file,
-	        &File::fileOperations,
-	        file->_cancelServe
+	  std::move(lane),
+	  file,
+	  &File::fileOperations,
+	  file->_cancelServe
 	));
 }
 
@@ -643,9 +641,9 @@ void DirectoryFile::handleClose() {
 }
 
 DirectoryFile::DirectoryFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-        : File { StructName::get("tmpfs.dir"), std::move(mount), std::move(link) }
-        , _node { static_cast<DirectoryNode *>(associatedLink()->getTarget().get()) }
-        , _iter { _node->_entries.begin() } {}
+: File {StructName::get("tmpfs.dir"), std::move(mount), std::move(link)}
+, _node {static_cast<DirectoryNode *>(associatedLink()->getTarget().get())}
+, _iter {_node->_entries.begin()} {}
 
 // TODO: This iteration mechanism only works as long as _iter is not concurrently deleted.
 async::result<ReadEntriesResult> DirectoryFile::readEntries() {
@@ -667,7 +665,7 @@ helix::BorrowedDescriptor DirectoryFile::getPassthroughLane() {
 // ----------------------------------------------------------------------------
 
 Node::Node(Superblock *superblock, FsNode::DefaultOps default_ops)
-        : FsNode { superblock, default_ops } {
+: FsNode {superblock, default_ops} {
 	_inodeNumber = superblock->allocateInode();
 }
 
@@ -676,17 +674,17 @@ Node::Node(Superblock *superblock, FsNode::DefaultOps default_ops)
 // ----------------------------------------------------------------------------
 
 SymlinkNode::SymlinkNode(Superblock *superblock, std::string link)
-        : Node { superblock }
-        , _link(std::move(link)) {}
+: Node {superblock}
+, _link(std::move(link)) {}
 
 // ----------------------------------------------------------------------------
 // DeviceNode implementation.
 // ----------------------------------------------------------------------------
 
 DeviceNode::DeviceNode(Superblock *superblock, VfsType type, DeviceId id)
-        : Node { superblock }
-        , _type(type)
-        , _id(id) {
+: Node {superblock}
+, _type(type)
+, _id(id) {
 	assert(type == VfsType::charDevice || type == VfsType::blockDevice);
 }
 
@@ -694,7 +692,7 @@ DeviceNode::DeviceNode(Superblock *superblock, VfsType type, DeviceId id)
 // SocketNode implementation.
 // ----------------------------------------------------------------------------
 
-SocketNode::SocketNode(Superblock *superblock) : Node { superblock } {}
+SocketNode::SocketNode(Superblock *superblock) : Node {superblock} {}
 
 // ----------------------------------------------------------------------------
 // DirectoryNode implementation.
@@ -709,7 +707,7 @@ std::shared_ptr<Link> DirectoryNode::createRootDirectory(Superblock *superblock)
 }
 
 DirectoryNode::DirectoryNode(Superblock *superblock)
-        : Node { superblock, FsNode::defaultSupportsObservers } {}
+: Node {superblock, FsNode::defaultSupportsObservers} {}
 
 async::result<std::variant<Error, std::shared_ptr<FsLink>>> DirectoryNode::mkdir(std::string name) {
 	if (!(_entries.find(name) == _entries.end()))
@@ -726,10 +724,8 @@ async::result<std::variant<Error, std::shared_ptr<FsLink>>>
 DirectoryNode::symlink(std::string name, std::string path) {
 	if (!(_entries.find(name) == _entries.end()))
 		co_return Error::alreadyExists;
-	auto node = std::make_shared<SymlinkNode>(
-	        static_cast<Superblock *>(superblock()),
-	        std::move(path)
-	);
+	auto node =
+	  std::make_shared<SymlinkNode>(static_cast<Superblock *>(superblock()), std::move(path));
 	auto link = std::make_shared<Link>(shared_from_this(), std::move(name), std::move(node));
 	_entries.insert(link);
 	co_return link;

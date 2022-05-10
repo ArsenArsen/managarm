@@ -53,15 +53,15 @@ void MemoryFile::_resizeFile(size_t new_size) {
 	} else {
 		HelHandle handle;
 		HEL_CHECK(helAllocateMemory(aligned_size, 0, nullptr, &handle));
-		_memory = helix::UniqueDescriptor { handle };
+		_memory = helix::UniqueDescriptor {handle};
 	}
 
-	_mapping = helix::Mapping { _memory, 0, aligned_size };
+	_mapping = helix::Mapping {_memory, 0, aligned_size};
 	_areaSize = aligned_size;
 }
 
 async::result<frg::expected<protocols::fs::Error, int>> MemoryFile::getSeals() {
-	co_return int { _seals };
+	co_return int {_seals};
 }
 
 async::result<frg::expected<protocols::fs::Error, int>> MemoryFile::addSeals(int seals) {
@@ -70,5 +70,5 @@ async::result<frg::expected<protocols::fs::Error, int>> MemoryFile::addSeals(int
 	}
 
 	_seals |= seals;
-	co_return int { _seals };
+	co_return int {_seals};
 }

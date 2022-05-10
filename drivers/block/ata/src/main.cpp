@@ -24,19 +24,19 @@ constexpr bool logRequests = false;
 // --------------------------------------------------------
 
 namespace regs {
-constexpr inline arch::scalar_register<uint16_t> ioData { 0 };
-constexpr inline arch::scalar_register<uint8_t> inStatus { 7 };
+constexpr inline arch::scalar_register<uint16_t> ioData {0};
+constexpr inline arch::scalar_register<uint8_t> inStatus {7};
 
-constexpr inline arch::scalar_register<uint8_t> outSectorCount { 2 };
-constexpr inline arch::scalar_register<uint8_t> outLba1 { 3 };
-constexpr inline arch::scalar_register<uint8_t> outLba2 { 4 };
-constexpr inline arch::scalar_register<uint8_t> outLba3 { 5 };
-constexpr inline arch::scalar_register<uint8_t> outDevice { 6 };
-constexpr inline arch::scalar_register<uint8_t> outCommand { 7 };
+constexpr inline arch::scalar_register<uint8_t> outSectorCount {2};
+constexpr inline arch::scalar_register<uint8_t> outLba1 {3};
+constexpr inline arch::scalar_register<uint8_t> outLba2 {4};
+constexpr inline arch::scalar_register<uint8_t> outLba3 {5};
+constexpr inline arch::scalar_register<uint8_t> outDevice {6};
+constexpr inline arch::scalar_register<uint8_t> outCommand {7};
 }  // namespace regs
 
 namespace alt_regs {
-constexpr inline arch::scalar_register<uint8_t> inStatus { 0 };
+constexpr inline arch::scalar_register<uint8_t> inStatus {0};
 }  // namespace alt_regs
 
 class Controller : public blockfs::BlockDevice {
@@ -50,12 +50,12 @@ class Controller : public blockfs::BlockDevice {
 
 public:
 	Controller(
-	        int64_t parentId,
-	        uint16_t mainOffset,
-	        uint16_t altOffset,
-	        helix::UniqueDescriptor mainBar,
-	        helix::UniqueDescriptor altBar,
-	        helix::UniqueDescriptor irq
+	  int64_t parentId,
+	  uint16_t mainOffset,
+	  uint16_t altOffset,
+	  helix::UniqueDescriptor mainBar,
+	  helix::UniqueDescriptor altBar,
+	  helix::UniqueDescriptor irq
 	);
 
 public:
@@ -119,18 +119,18 @@ private:
 };
 
 Controller::Controller(
-        int64_t parentId,
-        uint16_t mainOffset,
-        uint16_t altOffset,
-        helix::UniqueDescriptor mainBar,
-        helix::UniqueDescriptor altBar,
-        helix::UniqueDescriptor irq
+  int64_t parentId,
+  uint16_t mainOffset,
+  uint16_t altOffset,
+  helix::UniqueDescriptor mainBar,
+  helix::UniqueDescriptor altBar,
+  helix::UniqueDescriptor irq
 )
-        : BlockDevice { 512, parentId }
-        , _irq { std::move(irq) }
-        , _ioSpace { mainOffset }
-        , _altSpace { altOffset }
-        , _supportsLBA48 { false } {
+: BlockDevice {512, parentId}
+, _irq {std::move(irq)}
+, _ioSpace {mainOffset}
+, _altSpace {altOffset}
+, _supportsLBA48 {false} {
 	HEL_CHECK(helEnableIo(mainBar.getHandle()));
 	HEL_CHECK(helEnableIo(altBar.getHandle()));
 }
@@ -199,11 +199,9 @@ auto Controller::_waitForBsyIrq() -> async::result<IoResult> {
 			// TODO: Check the PCI registers if the IRQ is pending.
 			//       This is the only situation where we should loop.
 			if (false) {
-				HEL_CHECK(helAcknowledgeIrq(
-				        _irq.getHandle(),
-				        kHelAckNack,
-				        _irqSequence
-				));
+				HEL_CHECK(
+				  helAcknowledgeIrq(_irq.getHandle(), kHelAckNack, _irqSequence)
+				);
 				continue;
 			}
 			std::cout << "\e[31m"
@@ -312,9 +310,11 @@ async::result<bool> Controller::_detectDevice() {
 
 	_supportsLBA48 = (ident_data[167] & (1 << 2)) && (ident_data[173] & (1 << 2));
 
-	printf("block/ata: detected device, model: '%s', %s 48-bit LBA\n",
-	       model,
-	       _supportsLBA48 ? "supports" : "doesn't support");
+	printf(
+	  "block/ata: detected device, model: '%s', %s 48-bit LBA\n",
+	  model,
+	  _supportsLBA48 ? "supports" : "doesn't support"
+	);
 
 	co_return true;
 }
@@ -358,11 +358,8 @@ async::result<void> Controller::_performRequest(Request *request) {
 			auto chunk = reinterpret_cast<uint8_t *>(request->buffer) + k * 512;
 			// TODO: The following is a hack. Lock the page into memory instead!
 			*static_cast<volatile uint8_t *>(chunk);  // Fault in the page.
-			_ioSpace.load_iterative(
-			        regs::ioData,
-			        reinterpret_cast<uint16_t *>(chunk),
-			        256
-			);
+			_ioSpace
+			  .load_iterative(regs::ioData, reinterpret_cast<uint16_t *>(chunk), 256);
 		}
 	} else {
 		if (_supportsLBA48)
@@ -381,11 +378,8 @@ async::result<void> Controller::_performRequest(Request *request) {
 			auto chunk = reinterpret_cast<uint8_t *>(request->buffer) + k * 512;
 			// TODO: The following is a hack. Lock the page into memory instead!
 			*static_cast<volatile uint8_t *>(chunk);  // Fault in the page.
-			_ioSpace.store_iterative(
-			        regs::ioData,
-			        reinterpret_cast<uint16_t *>(chunk),
-			        256
-			);
+			_ioSpace
+			  .store_iterative(regs::ioData, reinterpret_cast<uint16_t *>(chunk), 256);
 
 			// Wait for the device to process the sector.
 			auto ioRes = co_await _waitForBsyIrq();
@@ -418,12 +412,12 @@ async::detached bindController(mbus::Entity entity) {
 	auto irq = co_await device.accessIrq();
 
 	auto controller = std::make_shared<Controller>(
-	        entity.getId(),
-	        info.barInfo[0].address,
-	        info.barInfo[1].address,
-	        std::move(mainBar),
-	        std::move(altBar),
-	        std::move(irq)
+	  entity.getId(),
+	  info.barInfo[0].address,
+	  info.barInfo[1].address,
+	  std::move(mainBar),
+	  std::move(altBar),
+	  std::move(irq)
 	);
 	controller->run();
 	globalControllers.push_back(std::move(controller));
@@ -432,13 +426,13 @@ async::detached bindController(mbus::Entity entity) {
 async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("legacy", "ata") });
+	auto filter = mbus::Conjunction({mbus::EqualsFilter("legacy", "ata")});
 
 	auto handler =
-	        mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		        printf("block/ata: detected controller\n");
-		        bindController(std::move(entity));
-	        });
+	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		  printf("block/ata: detected controller\n");
+		  bindController(std::move(entity));
+	  });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

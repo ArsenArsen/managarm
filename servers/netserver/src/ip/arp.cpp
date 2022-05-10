@@ -25,7 +25,7 @@ sendArp(uint16_t op, uint32_t sender, nic::MacAddress targetHw, uint32_t targetP
 		using namespace arch;
 		x = convert_endian<endian::big, endian::native>(x);
 	};
-	ArpHeader leader { 1, static_cast<uint16_t>(nic::ETHER_TYPE_IP4), 6, 4, op };
+	ArpHeader leader {1, static_cast<uint16_t>(nic::ETHER_TYPE_IP4), 6, 4, op};
 
 	auto link = ip4().getLink(sender);
 	if (!link) {
@@ -45,11 +45,11 @@ sendArp(uint16_t op, uint32_t sender, nic::MacAddress targetHw, uint32_t targetP
 	ensureEndian(targetProto);
 
 	auto buffer = link->allocateFrame(
-	        targetMac,
-	        nic::ETHER_TYPE_ARP,
-	        sizeof(leader) + 2 * sizeof(nic::MacAddress) + 2 * sizeof(uint32_t)
+	  targetMac,
+	  nic::ETHER_TYPE_ARP,
+	  sizeof(leader) + 2 * sizeof(nic::MacAddress) + 2 * sizeof(uint32_t)
 	);
-	arch::dma_buffer_view bufv { buffer.payload };
+	arch::dma_buffer_view bufv {buffer.payload};
 	auto appendData = [&bufv](auto data) {
 		std::memcpy(bufv.data(), &data, sizeof(data));
 		bufv = bufv.subview(sizeof(data));
@@ -138,8 +138,8 @@ Neighbours::Entry &Neighbours::getEntry(uint32_t ip) {
 		return f->second;
 	}
 	auto &entry =
-	        table_.emplace(std::piecewise_construct, std::make_tuple(ip), std::make_tuple())
-	                .first->second;
+	  table_.emplace(std::piecewise_construct, std::make_tuple(ip), std::make_tuple())
+	    .first->second;
 	entry.mtime_ns = time;
 	return entry;
 }
@@ -159,7 +159,7 @@ async::detached entryProber(uint32_t ip, Neighbours::Entry &e, uint32_t sender) 
 		std::cout << "netserver: sent arp req" << std::endl;
 
 		async::cancellation_event ev;
-		helix::TimeoutCancellation timer { 1'000'000'000, ev };
+		helix::TimeoutCancellation timer {1'000'000'000, ev};
 		co_await e.change.async_wait(ev);
 		co_await timer.retire();
 

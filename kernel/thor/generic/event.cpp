@@ -53,7 +53,7 @@ void OneshotEvent::submitAwait(AwaitEventNode *node, uint64_t sequence) {
 // BitsetEvent implementation.
 //---------------------------------------------------------------------------------------
 
-BitsetEvent::BitsetEvent() : _currentSequence { 1 } {
+BitsetEvent::BitsetEvent() : _currentSequence {1} {
 	for (int i = 0; i < 32; i++)
 		_lastTrigger[i] = 0;
 }

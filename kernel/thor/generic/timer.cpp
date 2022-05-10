@@ -11,8 +11,8 @@ ClockSource *globalClockSource;
 PrecisionTimerEngine *globalTimerEngine;
 
 PrecisionTimerEngine::PrecisionTimerEngine(ClockSource *clock, AlarmTracker *alarm)
-        : _clock { clock }
-        , _alarm { alarm } {
+: _clock {clock}
+, _alarm {alarm} {
 	_alarm->setSink(this);
 }
 

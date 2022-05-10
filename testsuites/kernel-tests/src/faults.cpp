@@ -19,6 +19,6 @@ DEFINE_TEST(helLog_fault, ([] {
 
 DEFINE_TEST(helGetCredentials_fault, ([] {
 	            HelError ret =
-	                    helGetCredentials(kHelThisThread, 0, static_cast<char *>(illegalPtr));
+	              helGetCredentials(kHelThisThread, 0, static_cast<char *>(illegalPtr));
 	            assert(ret == kHelErrFault);
             }))

@@ -74,11 +74,11 @@ ColumnLimit: 100
 # namespace A { namespace B { ... would be silly to do in new c++ versions
 CompactNamespaces: false
 
-# add some extra indentation when splitting these onto new lines
-ConstructorInitializerIndentWidth: 8
-ContinuationIndentWidth: 8
-# we treat braced lists like blocks, rather than function calls
-Cpp11BracedListStyle: false
+# same level as class name
+ConstructorInitializerIndentWidth: 0
+ContinuationIndentWidth: 2
+# we treat braced lists like function calls, rather than blocks
+Cpp11BracedListStyle: true
 
 # no need to guess, be consistent instead
 DeriveLineEnding: false

@@ -68,8 +68,8 @@ uint8_t computeCsum(frg::span<uint8_t> s) {
 
 struct GdbServer {
 	GdbServer(Process *process, smarter::shared_ptr<File, FileHandle> file)
-	        : process_ { std::move(process) }
-	        , file_ { std::move(file) } {
+	: process_ {std::move(process)}
+	, file_ {std::move(file)} {
 		path_ = process_->path();
 	}
 
@@ -124,7 +124,7 @@ private:
 struct ParseView {
 	ParseView() = default;
 
-	ParseView(frg::span<uint8_t> bs) : bs_ { bs } {}
+	ParseView(frg::span<uint8_t> bs) : bs_ {bs} {}
 
 	bool matchString(const char *s) {
 		size_t n;
@@ -144,7 +144,7 @@ struct ParseView {
 		for (size_t n = 0; n < bs_.size(); ++n) {
 			if (bs_[n] != c)
 				continue;
-			out = frg::span<uint8_t> { bs_.data(), n };
+			out = frg::span<uint8_t> {bs_.data(), n};
 			bs_ = bs_.subspan(n + 1);
 			return true;
 		}
@@ -181,7 +181,7 @@ private:
 };
 
 struct EmitOverlay {
-	EmitOverlay(std::vector<uint8_t> *buf) : buf_ { buf } {}
+	EmitOverlay(std::vector<uint8_t> *buf) : buf_ {buf} {}
 
 	void appendString(const char *s) {
 		for (size_t n = 0; s[n]; ++n)
@@ -236,10 +236,10 @@ async::result<void> GdbServer::run() {
 	while (true) {
 		if (responseStage_ == ResponseStage::responseReady) {
 			// Send the packet.
-			auto csum = computeCsum({ outBuffer_.data(), outBuffer_.size() });
+			auto csum = computeCsum({outBuffer_.data(), outBuffer_.size()});
 			co_await sendByte('$');
-			co_await sendSpan({ outBuffer_.data(), outBuffer_.size() });
-			co_await sendBytes<3>({ '#', int2hex(csum >> 4), int2hex(csum & 0xF) });
+			co_await sendSpan({outBuffer_.data(), outBuffer_.size()});
+			co_await sendBytes<3>({'#', int2hex(csum >> 4), int2hex(csum & 0xF)});
 			responseStage_ = ResponseStage::responseSent;
 		}
 
@@ -273,7 +273,7 @@ async::result<void> GdbServer::run() {
 				continue;
 			}
 			auto csum = (hex2int(csumByte1) << 4) | hex2int(csumByte2);
-			auto expectedCsum = computeCsum({ inBuffer_.data(), inBuffer_.size() });
+			auto expectedCsum = computeCsum({inBuffer_.data(), inBuffer_.size()});
 			if (csum != expectedCsum) {
 				std::cout << "posix, gdbserver: NACK due to checksum mismatch"
 				          << std::endl;
@@ -297,7 +297,7 @@ async::result<void> GdbServer::run() {
 					             " dumping:"
 					          << std::endl;
 				}
-				hexdump({ inBuffer_.data(), inBuffer_.size() });
+				hexdump({inBuffer_.data(), inBuffer_.size()});
 			}
 
 			responseStage_ = ResponseStage::responseReady;
@@ -324,8 +324,8 @@ async::result<void> GdbServer::run() {
 
 async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 	assert(outBuffer_.empty());
-	ParseView req { { inBuffer_.data(), inBuffer_.size() } };
-	EmitOverlay resp { &outBuffer_ };
+	ParseView req {{inBuffer_.data(), inBuffer_.size()}};
+	EmitOverlay resp {&outBuffer_};
 
 	if (req.matchString("H")) {  // Set thread.
 		// TODO: consider the argument (= thread ID).
@@ -342,16 +342,12 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 		uintptr_t pcrs[2];
 		uintptr_t gprs[kHelNumGprs];
 
-		HEL_CHECK(helLoadRegisters(
-		        process_->threadDescriptor().getHandle(),
-		        kHelRegsProgram,
-		        pcrs
-		));
-		HEL_CHECK(helLoadRegisters(
-		        process_->threadDescriptor().getHandle(),
-		        kHelRegsGeneral,
-		        gprs
-		));
+		HEL_CHECK(
+		  helLoadRegisters(process_->threadDescriptor().getHandle(), kHelRegsProgram, pcrs)
+		);
+		HEL_CHECK(
+		  helLoadRegisters(process_->threadDescriptor().getHandle(), kHelRegsGeneral, gprs)
+		);
 
 #if defined(__x86_64__)
 		resp.appendLeHex64(gprs[0]);  // RAX.
@@ -401,10 +397,10 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 			// We load the memory byte for byte until we fail, readMemory does not
 			// support partial reads yet.
 			auto loadMemory = co_await helix_ng::readMemory(
-			        process_->vmContext()->getSpace(),
-			        address + i,
-			        1,
-			        mem.data() + i
+			  process_->vmContext()->getSpace(),
+			  address + i,
+			  1,
+			  mem.data() + i
 			);
 			if (loadMemory.error())
 				break;
@@ -432,44 +428,42 @@ async::result<frg::expected<ProtocolError>> GdbServer::handleRequest_() {
 
 			if (object.matchFullString("auxv") && annex.fullyConsumed()) {
 				auto begin =
-				        reinterpret_cast<std::byte *>(process_->clientAuxBegin());
+				  reinterpret_cast<std::byte *>(process_->clientAuxBegin());
 				auto end = reinterpret_cast<std::byte *>(process_->clientAuxEnd());
 				for (auto it = begin; it != end; ++it) {
 					// We load the memory byte for byte until we fail,
 					// readMemory does not support partial reads yet.
 					std::byte b;
 					auto loadMemory = co_await helix_ng::readMemory(
-					        process_->vmContext()->getSpace(),
-					        reinterpret_cast<uintptr_t>(it),
-					        1,
-					        &b
+					  process_->vmContext()->getSpace(),
+					  reinterpret_cast<uintptr_t>(it),
+					  1,
+					  &b
 					);
 					if (loadMemory.error())
 						break;
 					buffer.push_back(b);
 				}
-				s = { buffer.data(), buffer.size() };
+				s = {buffer.data(), buffer.size()};
 			} else if (object.matchFullString("exec-file")) {
 				// TODO: consider the annex (= process ID).
 				s = frg::span<const std::byte> {
-					reinterpret_cast<const std::byte *>(path_.data()),
-					path_.size()
-				};
+				  reinterpret_cast<const std::byte *>(path_.data()),
+				  path_.size()};
 			} else if (object.matchFullString("features") && annex.matchFullString("target.xml")) {
 				const char *xml =
-				        "<target version=\"1.0\">"
+				  "<target version=\"1.0\">"
 #if defined(__x86_64__)
-				        "<architecture>i386:x86-64</architecture>"
+				  "<architecture>i386:x86-64</architecture>"
 #elif defined(__aarch64__)
-				        "<architecture>aarch64</architecture>"
+				  "<architecture>aarch64</architecture>"
 #else
 #	error Unknown architecture
 #endif
-				        "</target>";
+				  "</target>";
 				s = frg::span<const std::byte> {
-					reinterpret_cast<const std::byte *>(xml),
-					strlen(xml)
-				};
+				  reinterpret_cast<const std::byte *>(xml),
+				  strlen(xml)};
 			}
 
 			if (s) {
@@ -516,7 +510,7 @@ void launchGdbServer(Process *process) {
 			co_return;
 		}
 
-		GdbServer server { process, fileOrError.value() };
+		GdbServer server {process, fileOrError.value()};
 		co_await server.run();
 	}(process));
 }

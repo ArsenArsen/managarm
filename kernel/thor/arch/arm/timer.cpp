@@ -26,11 +26,10 @@ uint64_t getVirtualTimestampCounter() {
 }
 
 struct PhysicalGenericTimer
-        : IrqSink
-        , ClockSource {
+: IrqSink
+, ClockSource {
 	PhysicalGenericTimer()
-	        : IrqSink { frg::string<KernelAlloc> { *kernelAlloc,
-		                                       "physical-generic-timer-irq" } } {}
+	: IrqSink {frg::string<KernelAlloc> {*kernelAlloc, "physical-generic-timer-irq"}} {}
 
 	virtual ~PhysicalGenericTimer() = default;
 
@@ -48,11 +47,10 @@ extern ClockSource *globalClockSource;
 extern PrecisionTimerEngine *globalTimerEngine;
 
 struct VirtualGenericTimer
-        : IrqSink
-        , AlarmTracker {
+: IrqSink
+, AlarmTracker {
 	VirtualGenericTimer()
-	        : IrqSink { frg::string<KernelAlloc> { *kernelAlloc,
-		                                       "virtual-generic-timer-irq" } } {}
+	: IrqSink {frg::string<KernelAlloc> {*kernelAlloc, "virtual-generic-timer-irq"}} {}
 
 	virtual ~VirtualGenericTimer() = default;
 
@@ -78,7 +76,7 @@ struct VirtualGenericTimer
 		}
 
 		uint64_t compare =
-		        getVirtualTimestampCounter() + ticksPerSecond * diff / 1000000000;
+		  getVirtualTimestampCounter() + ticksPerSecond * diff / 1000000000;
 
 		asm volatile("msr cntv_cval_el0, %0" ::"r"(compare));
 	}
@@ -95,9 +93,9 @@ void initializeTimers() {
 
 	// enable and unmask generic timers
 	asm volatile("msr cntp_cval_el0, %0" ::"r"(0xFFFFFFFFFFFFFFFF));
-	asm volatile("msr cntp_ctl_el0, %0" ::"r"(uint64_t { 1 }));
+	asm volatile("msr cntp_ctl_el0, %0" ::"r"(uint64_t {1}));
 	asm volatile("msr cntv_cval_el0, %0" ::"r"(0xFFFFFFFFFFFFFFFF));
-	asm volatile("msr cntv_ctl_el0, %0" ::"r"(uint64_t { 1 }));
+	asm volatile("msr cntv_ctl_el0, %0" ::"r"(uint64_t {1}));
 }
 
 void armPreemption(uint64_t nanos) {
@@ -122,45 +120,44 @@ extern frg::manual_box<GicDistributor> dist;
 static DeviceTreeNode *timerNode = nullptr;
 
 static initgraph::Task initTimerIrq {
-	&globalInitEngine,
-	"arm.init-timer-irq",
-	initgraph::Requires { getIrqControllerReadyStage() },
-	initgraph::Entails { getTaskingAvailableStage() },
-	[] {
-	        globalPGTInstance.initialize();
-	        globalClockSource = globalPGTInstance.get();
+  &globalInitEngine,
+  "arm.init-timer-irq",
+  initgraph::Requires {getIrqControllerReadyStage()},
+  initgraph::Entails {getTaskingAvailableStage()},
+  [] {
+	  globalPGTInstance.initialize();
+	  globalClockSource = globalPGTInstance.get();
 
-	        globalVGTInstance.initialize();
-	        globalTimerEngine = frg::construct<PrecisionTimerEngine>(
-	                *kernelAlloc,
-	                globalClockSource,
-	                globalVGTInstance.get()
-	        );
+	  globalVGTInstance.initialize();
+	  globalTimerEngine = frg::construct<PrecisionTimerEngine>(
+	    *kernelAlloc,
+	    globalClockSource,
+	    globalVGTInstance.get()
+	  );
 
-	        getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
-		        if (node->isCompatible<1>({ "arm,armv8-timer" })) {
-			        timerNode = node;
-			        return true;
-		        }
+	  getDeviceTreeRoot()->forEach([&](DeviceTreeNode *node) -> bool {
+		  if (node->isCompatible<1>({"arm,armv8-timer"})) {
+			  timerNode = node;
+			  return true;
+		  }
 
-		        return false;
-	        });
+		  return false;
+	  });
 
-	        assert(timerNode && "Failed to find timer");
+	  assert(timerNode && "Failed to find timer");
 
-	        // These offsets are defined in the Linux DTB binding for compatible nodes
-	        auto irqPhys = timerNode->irqs()[1];
-	        auto irqVirt = timerNode->irqs()[2];
+	  // These offsets are defined in the Linux DTB binding for compatible nodes
+	  auto irqPhys = timerNode->irqs()[1];
+	  auto irqVirt = timerNode->irqs()[2];
 
-	        auto ppin = dist->setupIrq(irqPhys.id, irqPhys.trigger);
-	        IrqPin::attachSink(ppin, globalPGTInstance.get());
+	  auto ppin = dist->setupIrq(irqPhys.id, irqPhys.trigger);
+	  IrqPin::attachSink(ppin, globalPGTInstance.get());
 
-	        auto vpin = dist->setupIrq(irqVirt.id, irqVirt.trigger);
-	        IrqPin::attachSink(vpin, globalVGTInstance.get());
+	  auto vpin = dist->setupIrq(irqVirt.id, irqVirt.trigger);
+	  IrqPin::attachSink(vpin, globalVGTInstance.get());
 
-	        timersFound = true;
-	}
-};
+	  timersFound = true;
+  }};
 
 bool haveTimer() {
 	return timersFound;

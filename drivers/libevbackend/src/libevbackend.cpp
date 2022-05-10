@@ -35,13 +35,13 @@ helix::UniqueLane pmLane;
 async::detached issueReset() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("class", "pm-interface") });
+	auto filter = mbus::Conjunction({mbus::EqualsFilter("class", "pm-interface")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	        [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		        pmLane = helix::UniqueLane(co_await entity.bind());
-		        pmFound.raise();
-	        }
+	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+		  pmLane = helix::UniqueLane(co_await entity.bind());
+		  pmFound.raise();
+	  }
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
@@ -50,12 +50,12 @@ async::detached issueReset() {
 	managarm::hw::PmResetRequest req;
 
 	auto [offer, send_req, recv_head] = co_await helix_ng::exchangeMsgs(
-	        pmLane,
-	        helix_ng::offer(
-	                helix_ng::want_lane,
-	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	                helix_ng::recvInline()
-	        )
+	  pmLane,
+	  helix_ng::offer(
+	    helix_ng::want_lane,
+	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	    helix_ng::recvInline()
+	  )
 	);
 
 	HEL_CHECK(offer.error());
@@ -67,8 +67,8 @@ async::detached issueReset() {
 
 	std::vector<std::byte> tailBuffer(preamble.tail_size());
 	auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-	        offer.descriptor(),
-	        helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
+	  offer.descriptor(),
+	  helix_ng::recvBuffer(tailBuffer.data(), tailBuffer.size())
 	);
 
 	HEL_CHECK(recv_tail.error());
@@ -132,7 +132,10 @@ File::read(void *object, const char *, void *buffer, size_t max_size) {
 			uev.type = evt.type;
 			uev.code = evt.code;
 			uev.value = evt.value;
-			memcpy(reinterpret_cast<char *>(buffer) + written, &uev, sizeof(input_event)
+			memcpy(
+			  reinterpret_cast<char *>(buffer) + written,
+			  &uev,
+			  sizeof(input_event)
 			);
 			written += sizeof(input_event);
 		}
@@ -150,16 +153,18 @@ File::pollWait(void *object, uint64_t past_seq, int mask, async::cancellation_to
 	while (self->_currentSeq == past_seq)
 		co_await self->_statusBell.async_wait();
 
-	co_return protocols::fs::PollWaitResult { self->_currentSeq,
-		                                  self->_currentSeq > 0 ? EPOLLIN : 0 };
+	co_return protocols::fs::PollWaitResult {
+	  self->_currentSeq,
+	  self->_currentSeq > 0 ? EPOLLIN : 0};
 }
 
 async::result<frg::expected<protocols::fs::Error, protocols::fs::PollStatusResult>>
 File::pollStatus(void *object) {
 	auto self = static_cast<File *>(object);
 
-	co_return protocols::fs::PollStatusResult { self->_currentSeq,
-		                                    self->_pending.empty() ? 0 : EPOLLIN };
+	co_return protocols::fs::PollStatusResult {
+	  self->_currentSeq,
+	  self->_pending.empty() ? 0 : EPOLLIN};
 }
 
 async::result<void>
@@ -177,9 +182,9 @@ File::ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conver
 		auto ser = resp.SerializeAsString();
 		auto chunk = std::min(size_t(req.size()), self->_device->_typeBits.size());
 		auto [send_resp, send_data] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size()),
-		        helix_ng::sendBuffer(self->_device->_typeBits.data(), chunk)
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size()),
+		  helix_ng::sendBuffer(self->_device->_typeBits.data(), chunk)
 		);
 		HEL_CHECK(send_resp.error());
 		HEL_CHECK(send_data.error());
@@ -193,24 +198,24 @@ File::ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conver
 		std::pair<const uint8_t *, size_t> p;
 		if (req.input_type() == EV_KEY) {
 			resp.set_error(managarm::fs::Errors::SUCCESS);
-			p = { self->_device->_keyBits.data(), self->_device->_keyBits.size() };
+			p = {self->_device->_keyBits.data(), self->_device->_keyBits.size()};
 		} else if (req.input_type() == EV_REL) {
 			resp.set_error(managarm::fs::Errors::SUCCESS);
-			p = { self->_device->_relBits.data(), self->_device->_relBits.size() };
+			p = {self->_device->_relBits.data(), self->_device->_relBits.size()};
 		} else if (req.input_type() == EV_ABS) {
 			resp.set_error(managarm::fs::Errors::SUCCESS);
-			p = { self->_device->_absBits.data(), self->_device->_absBits.size() };
+			p = {self->_device->_absBits.data(), self->_device->_absBits.size()};
 		} else {
 			resp.set_error(managarm::fs::Errors::SUCCESS);
-			p = { nullptr, 0 };
+			p = {nullptr, 0};
 		}
 
 		auto ser = resp.SerializeAsString();
 		auto chunk = std::min(size_t(req.size()), p.second);
 		auto [send_resp, send_data] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size()),
-		        helix_ng::sendBuffer(p.first, chunk)
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size()),
+		  helix_ng::sendBuffer(p.first, chunk)
 		);
 		HEL_CHECK(send_resp.error());
 		HEL_CHECK(send_data.error());
@@ -230,8 +235,8 @@ File::ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conver
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == EVIOCGABS(0)) {
@@ -239,7 +244,8 @@ File::ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conver
 		if (logRequests)
 			std::cout << "EVIOCGABS(" << req.input_type() << ")" << std::endl;
 
-		assert(static_cast<size_t>(req.input_type()) < self->_device->_absoluteSlots.size()
+		assert(
+		  static_cast<size_t>(req.input_type()) < self->_device->_absoluteSlots.size()
 		);
 		auto slot = &self->_device->_absoluteSlots[req.input_type()];
 		resp.set_input_value(slot->value);
@@ -251,8 +257,8 @@ File::ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conver
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else {
@@ -263,10 +269,11 @@ File::ioctl(void *object, managarm::fs::CntRequest req, helix::UniqueLane conver
 	}
 }
 
-constexpr auto fileOperations = protocols::fs::FileOperations { .read = &File::read,
-	                                                        .ioctl = &File::ioctl,
-	                                                        .pollWait = &File::pollWait,
-	                                                        .pollStatus = &File::pollStatus };
+constexpr auto fileOperations = protocols::fs::FileOperations {
+  .read = &File::read,
+  .ioctl = &File::ioctl,
+  .pollWait = &File::pollWait,
+  .pollStatus = &File::pollStatus};
 
 helix::UniqueLane File::serve(smarter::shared_ptr<File> file) {
 	helix::UniqueLane local_lane, remote_lane;
@@ -277,10 +284,10 @@ helix::UniqueLane File::serve(smarter::shared_ptr<File> file) {
 }
 
 File::File(EventDevice *device, bool non_block)
-        : _device { device }
-        , _currentSeq { 1 }
-        , _nonBlock { non_block }
-        , _clockId { CLOCK_MONOTONIC } {
+: _device {device}
+, _currentSeq {1}
+, _nonBlock {non_block}
+, _clockId {CLOCK_MONOTONIC} {
 	_statusPage.update(_currentSeq, 0);
 }
 
@@ -297,10 +304,8 @@ async::detached serveDevice(std::shared_ptr<EventDevice> device, helix::UniqueLa
 	std::cout << "unix device: Connection" << std::endl;
 
 	while (true) {
-		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
-		        lane,
-		        helix_ng::accept(helix_ng::recvInline())
-		);
+		auto [accept, recv_req] =
+		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_req.error());
 
@@ -309,8 +314,8 @@ async::detached serveDevice(std::shared_ptr<EventDevice> device, helix::UniqueLa
 		req.ParseFromArray(recv_req.data(), recv_req.length());
 		if (req.req_type() == managarm::fs::CntReqType::DEV_OPEN) {
 			auto file = smarter::make_shared<File>(
-			        device.get(),
-			        req.flags() & managarm::fs::OpenFlags::OF_NONBLOCK
+			  device.get(),
+			  req.flags() & managarm::fs::OpenFlags::OF_NONBLOCK
 			);
 			device->_files.push_back(*file.get());
 			auto remote_lane = File::serve(file);
@@ -321,10 +326,10 @@ async::detached serveDevice(std::shared_ptr<EventDevice> device, helix::UniqueLa
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_pt, push_page] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size()),
-			        helix_ng::pushDescriptor(remote_lane),
-			        helix_ng::pushDescriptor(file->_statusPage.getMemory())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size()),
+			  helix_ng::pushDescriptor(remote_lane),
+			  helix_ng::pushDescriptor(file->_statusPage.getMemory())
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_pt.error());
@@ -409,7 +414,7 @@ void EventDevice::emitEvent(int type, int code, int value) {
 		resetSent = true;
 	}
 
-	_staged.push_back(StagedEvent { type, code, value });
+	_staged.push_back(StagedEvent {type, code, value});
 }
 
 void EventDevice::notify() {
@@ -436,8 +441,7 @@ void EventDevice::notify() {
 				          << ", value: " << evt.value << std::endl;
 
 		for (StagedEvent evt : _staged)
-			file._pending.push_back(PendingEvent { evt.type, evt.code, evt.value, now }
-			);
+			file._pending.push_back(PendingEvent {evt.type, evt.code, evt.value, now});
 		file._currentSeq++;
 		file._statusPage.update(file._currentSeq, EPOLLIN);
 		file._statusBell.raise();

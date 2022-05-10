@@ -6,7 +6,7 @@ namespace {
 constexpr bool logCleanup = false;
 }  // namespace
 
-Universe::Universe() : _descriptorMap { frg::hash<Handle> {}, *kernelAlloc }, _nextHandle { 1 } {}
+Universe::Universe() : _descriptorMap {frg::hash<Handle> {}, *kernelAlloc}, _nextHandle {1} {}
 
 Universe::~Universe() {
 	if (logCleanup)

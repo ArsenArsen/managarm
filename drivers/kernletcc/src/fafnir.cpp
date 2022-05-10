@@ -46,13 +46,13 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 	comp->activeScopes.push_back(initial_scope);
 
 	auto argument_phi =
-	        initial_scope->insertBb->attachPhi(std::make_unique<lewis::ArgumentPhi>());
+	  initial_scope->insertBb->attachPhi(std::make_unique<lewis::ArgumentPhi>());
 	initial_scope->instance = argument_phi->value.setNew<lewis::LocalValue>();
 	initial_scope->instance->setType(lewis::globalPointerType());
 
 	size_t sizeof_bindings = 0;
 	for (auto bt : bind_types) {
-		comp->bindings.push_back({ bt, sizeof_bindings });
+		comp->bindings.push_back({bt, sizeof_bindings});
 		sizeof_bindings += 8;
 	}
 
@@ -95,9 +95,8 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			auto operand = extractUint();
 
 			auto inst =
-			        scope->insertBb->insertNewInstruction<lewis::LoadConstInstruction>(
-			                operand
-			        );
+			  scope->insertBb->insertNewInstruction<lewis::LoadConstInstruction>(operand
+			  );
 			auto result = inst->result.setNew<lewis::LocalValue>();
 			result->setType(lewis::globalInt32Type());
 			comp->opstack.push_back(result);
@@ -106,29 +105,29 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			assert(index < comp->bindings.size());
 
 			if (comp->bindings[index].type == BindType::offset) {
-				auto inst = scope->insertBb->insertNewInstruction<
-				        lewis::LoadOffsetInstruction>(
-				        scope->instance,
-				        comp->bindings[index].disp
-				);
+				auto inst = scope->insertBb
+				              ->insertNewInstruction<lewis::LoadOffsetInstruction>(
+				                scope->instance,
+				                comp->bindings[index].disp
+				              );
 				auto result = inst->result.setNew<lewis::LocalValue>();
 				result->setType(lewis::globalInt32Type());
 				comp->opstack.push_back(result);
 			} else if (comp->bindings[index].type == BindType::memoryView) {
-				auto inst = scope->insertBb->insertNewInstruction<
-				        lewis::LoadOffsetInstruction>(
-				        scope->instance,
-				        comp->bindings[index].disp
-				);
+				auto inst = scope->insertBb
+				              ->insertNewInstruction<lewis::LoadOffsetInstruction>(
+				                scope->instance,
+				                comp->bindings[index].disp
+				              );
 				auto result = inst->result.setNew<lewis::LocalValue>();
 				result->setType(lewis::globalPointerType());
 				comp->opstack.push_back(result);
 			} else if (comp->bindings[index].type == BindType::bitsetEvent) {
-				auto inst = scope->insertBb->insertNewInstruction<
-				        lewis::LoadOffsetInstruction>(
-				        scope->instance,
-				        comp->bindings[index].disp
-				);
+				auto inst = scope->insertBb
+				              ->insertNewInstruction<lewis::LoadOffsetInstruction>(
+				                scope->instance,
+				                comp->bindings[index].disp
+				              );
 				auto result = inst->result.setNew<lewis::LocalValue>();
 				result->setType(lewis::globalPointerType());
 				comp->opstack.push_back(result);
@@ -157,9 +156,8 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			auto operand = comp->opstack.back();
 			comp->opstack.pop_back();
 
-			auto branch = outer->insertBb->setBranch(
-			        std::make_unique<lewis::ConditionalBranch>()
-			);
+			auto branch =
+			  outer->insertBb->setBranch(std::make_unique<lewis::ConditionalBranch>());
 			branch->operand = operand;
 
 			// Setup the scope with a new BB.
@@ -169,11 +167,11 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 			// Setup the instance value.
 			auto instance_phi =
-			        inner->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>());
+			  inner->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>());
 			auto instance_edge = lewis::DataFlowEdge::attach(
-			        std::make_unique<lewis::DataFlowEdge>(),
-			        outer->insertBb->source,
-			        instance_phi->sink
+			  std::make_unique<lewis::DataFlowEdge>(),
+			  outer->insertBb->source,
+			  instance_phi->sink
 			);
 			instance_edge->alias = outer->instance;
 
@@ -182,13 +180,13 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 			// Setup the sstack values.
 			for (size_t i = 0; i < outer->sstack.size(); i++) {
-				auto phi = inner->insertBb->attachPhi(
-				        std::make_unique<lewis::DataFlowPhi>()
-				);
+				auto phi =
+				  inner->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>()
+				  );
 				auto edge = lewis::DataFlowEdge::attach(
-				        std::make_unique<lewis::DataFlowEdge>(),
-				        outer->insertBb->source,
-				        phi->sink
+				  std::make_unique<lewis::DataFlowEdge>(),
+				  outer->insertBb->source,
+				  phi->sink
 				);
 				edge->alias = outer->sstack[i];
 
@@ -208,7 +206,7 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			comp->activeScopes.pop_back();
 			auto outer = comp->activeScopes.back();
 			auto branch = lewis::hierarchy_cast<lewis::ConditionalBranch *>(
-			        outer->insertBb->branch()
+			  outer->insertBb->branch()
 			);
 
 			// Setup the scope with a new BB.
@@ -218,11 +216,11 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 			// Setup the instance value.
 			auto instance_phi =
-			        inner->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>());
+			  inner->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>());
 			auto instance_edge = lewis::DataFlowEdge::attach(
-			        std::make_unique<lewis::DataFlowEdge>(),
-			        outer->insertBb->source,
-			        instance_phi->sink
+			  std::make_unique<lewis::DataFlowEdge>(),
+			  outer->insertBb->source,
+			  instance_phi->sink
 			);
 			instance_edge->alias = outer->instance;
 
@@ -231,13 +229,13 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 			// Setup the sstack values.
 			for (size_t i = 0; i < outer->sstack.size(); i++) {
-				auto phi = inner->insertBb->attachPhi(
-				        std::make_unique<lewis::DataFlowPhi>()
-				);
+				auto phi =
+				  inner->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>()
+				  );
 				auto edge = lewis::DataFlowEdge::attach(
-				        std::make_unique<lewis::DataFlowEdge>(),
-				        outer->insertBb->source,
-				        phi->sink
+				  std::make_unique<lewis::DataFlowEdge>(),
+				  outer->insertBb->source,
+				  phi->sink
 				);
 				edge->alias = outer->sstack[i];
 
@@ -261,24 +259,24 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			// Set up a new BB for the existing scope.
 			outer->insertBb = comp->fn.addBlock(std::make_unique<lewis::BasicBlock>());
 			ite->ifScope->insertBb->setBranch(
-			        std::make_unique<lewis::UnconditionalBranch>(outer->insertBb)
+			  std::make_unique<lewis::UnconditionalBranch>(outer->insertBb)
 			);
 			ite->elseScope->insertBb->setBranch(
-			        std::make_unique<lewis::UnconditionalBranch>(outer->insertBb)
+			  std::make_unique<lewis::UnconditionalBranch>(outer->insertBb)
 			);
 
 			// Reset the instance value.
 			auto instance_phi =
-			        outer->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>());
+			  outer->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>());
 			auto instance_if_edge = lewis::DataFlowEdge::attach(
-			        std::make_unique<lewis::DataFlowEdge>(),
-			        ite->ifScope->insertBb->source,
-			        instance_phi->sink
+			  std::make_unique<lewis::DataFlowEdge>(),
+			  ite->ifScope->insertBb->source,
+			  instance_phi->sink
 			);
 			auto instance_else_edge = lewis::DataFlowEdge::attach(
-			        std::make_unique<lewis::DataFlowEdge>(),
-			        ite->elseScope->insertBb->source,
-			        instance_phi->sink
+			  std::make_unique<lewis::DataFlowEdge>(),
+			  ite->elseScope->insertBb->source,
+			  instance_phi->sink
 			);
 			instance_if_edge->alias = ite->ifScope->instance;
 			instance_else_edge->alias = ite->elseScope->instance;
@@ -288,18 +286,18 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 			// Reset all sstack values.
 			for (size_t i = 0; i < outer->sstack.size(); i++) {
-				auto phi = outer->insertBb->attachPhi(
-				        std::make_unique<lewis::DataFlowPhi>()
-				);
+				auto phi =
+				  outer->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>()
+				  );
 				auto if_edge = lewis::DataFlowEdge::attach(
-				        std::make_unique<lewis::DataFlowEdge>(),
-				        ite->ifScope->insertBb->source,
-				        phi->sink
+				  std::make_unique<lewis::DataFlowEdge>(),
+				  ite->ifScope->insertBb->source,
+				  phi->sink
 				);
 				auto else_edge = lewis::DataFlowEdge::attach(
-				        std::make_unique<lewis::DataFlowEdge>(),
-				        ite->elseScope->insertBb->source,
-				        phi->sink
+				  std::make_unique<lewis::DataFlowEdge>(),
+				  ite->elseScope->insertBb->source,
+				  phi->sink
 				);
 				if_edge->alias = ite->ifScope->sstack[i];
 				else_edge->alias = ite->elseScope->sstack[i];
@@ -315,18 +313,18 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 			// Push items from the inner sstack to the opstack.
 			for (size_t i = outer->sstack.size(); i < n; i++) {
-				auto phi = outer->insertBb->attachPhi(
-				        std::make_unique<lewis::DataFlowPhi>()
-				);
+				auto phi =
+				  outer->insertBb->attachPhi(std::make_unique<lewis::DataFlowPhi>()
+				  );
 				auto if_edge = lewis::DataFlowEdge::attach(
-				        std::make_unique<lewis::DataFlowEdge>(),
-				        ite->ifScope->insertBb->source,
-				        phi->sink
+				  std::make_unique<lewis::DataFlowEdge>(),
+				  ite->ifScope->insertBb->source,
+				  phi->sink
 				);
 				auto else_edge = lewis::DataFlowEdge::attach(
-				        std::make_unique<lewis::DataFlowEdge>(),
-				        ite->elseScope->insertBb->source,
-				        phi->sink
+				  std::make_unique<lewis::DataFlowEdge>(),
+				  ite->elseScope->insertBb->source,
+				  phi->sink
 				);
 				if_edge->alias = ite->ifScope->sstack[i];
 				else_edge->alias = ite->elseScope->sstack[i];
@@ -345,11 +343,11 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			comp->opstack.pop_back();
 
 			auto inst =
-			        scope->insertBb->insertNewInstruction<lewis::BinaryMathInstruction>(
-			                lewis::BinaryMathOpcode::bitwiseAnd,
-			                left,
-			                right
-			        );
+			  scope->insertBb->insertNewInstruction<lewis::BinaryMathInstruction>(
+			    lewis::BinaryMathOpcode::bitwiseAnd,
+			    left,
+			    right
+			  );
 			auto result = inst->result.setNew<lewis::LocalValue>();
 			result->setType(lewis::globalInt32Type());
 			comp->opstack.push_back(result);
@@ -361,11 +359,11 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			comp->opstack.pop_back();
 
 			auto inst =
-			        scope->insertBb->insertNewInstruction<lewis::BinaryMathInstruction>(
-			                lewis::BinaryMathOpcode::add,
-			                left,
-			                right
-			        );
+			  scope->insertBb->insertNewInstruction<lewis::BinaryMathInstruction>(
+			    lewis::BinaryMathOpcode::add,
+			    left,
+			    right
+			  );
 			auto result = inst->result.setNew<lewis::LocalValue>();
 			result->setType(lewis::globalInt32Type());
 			comp->opstack.push_back(result);
@@ -376,9 +374,9 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 			assert(comp->opstack.size() >= static_cast<size_t>(nargs));
 
 			auto inst = scope->insertBb->insertNewInstruction<lewis::InvokeInstruction>(
-			        std::move(function),
-			        nargs,
-			        nrvs
+			  std::move(function),
+			  nargs,
+			  nrvs
 			);
 			for (int i = nargs - 1; i >= 0; i--) {
 				inst->operand(i) = comp->opstack.back();
@@ -401,7 +399,7 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 
 	assert(comp->opstack.size() == 1);
 	auto branch =
-	        final_scope->insertBb->setBranch(std::make_unique<lewis::FunctionReturnBranch>(1));
+	  final_scope->insertBb->setBranch(std::make_unique<lewis::FunctionReturnBranch>(1));
 	branch->operand(0) = comp->opstack.back();
 	comp->opstack.pop_back();
 	assert(comp->opstack.empty());
@@ -416,7 +414,7 @@ compileFafnir(const uint8_t *code, size_t size, const std::vector<BindType> &bin
 	ra->run();
 
 	lewis::elf::Object elf;
-	lewis::targets::x86_64::MachineCodeEmitter mce { &comp->fn, &elf };
+	lewis::targets::x86_64::MachineCodeEmitter mce {&comp->fn, &elf};
 	mce.run();
 
 	// Create headers and layout the file.

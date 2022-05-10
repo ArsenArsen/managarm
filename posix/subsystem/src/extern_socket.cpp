@@ -6,12 +6,12 @@
 namespace {
 struct Socket : File {
 	Socket(helix::UniqueLane sockLane)
-	        : File { StructName::get("extern-socket") }
-	        , _file { std::move(sockLane) } {}
+	: File {StructName::get("extern-socket")}
+	, _file {std::move(sockLane)} {}
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		auto resultOrError = co_await _file.pollWait(sequence, mask, cancellation);
 		assert(resultOrError);
 		co_return resultOrError.value();
@@ -45,12 +45,12 @@ createSocket(helix::BorrowedLane lane, int domain, int type, int proto, int flag
 	char buffer[128];
 
 	auto [offer, send_req, recv_resp, recv_lane] = co_await helix_ng::exchangeMsgs(
-	        lane,
-	        helix_ng::offer(
-	                helix_ng::sendBuffer(req_data.data(), req_data.size()),
-	                helix_ng::recvBuffer(buffer, sizeof(buffer)),
-	                helix_ng::pullDescriptor()
-	        )
+	  lane,
+	  helix_ng::offer(
+	    helix_ng::sendBuffer(req_data.data(), req_data.size()),
+	    helix_ng::recvBuffer(buffer, sizeof(buffer)),
+	    helix_ng::pullDescriptor()
+	  )
 	);
 	HEL_CHECK(offer.error());
 	HEL_CHECK(send_req.error());

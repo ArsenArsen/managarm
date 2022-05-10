@@ -50,7 +50,7 @@ async::detached StorageDevice::run(int config_num, int intf_num) {
 	auto intf = (co_await config.useInterface(intf_num, 0)).unwrap();
 	auto endp_in = (co_await intf.getEndpoint(PipeType::in, in_endp_number.value())).unwrap();
 	auto endp_out =
-	        (co_await intf.getEndpoint(PipeType::out, out_endp_number.value())).unwrap();
+	  (co_await intf.getEndpoint(PipeType::out, out_endp_number.value())).unwrap();
 
 	if (logSteps)
 		std::cout << "block-usb: Device is ready" << std::endl;
@@ -79,8 +79,7 @@ async::detached StorageDevice::run(int config_num, int intf_num) {
 			cbw.lun = 0;
 
 			if (!req->isWrite) {
-				if (enableRead6 && req->sector <= 0x1FFFFF
-				    && req->numSectors <= 0xFF) {
+				if (enableRead6 && req->sector <= 0x1FFFFF && req->numSectors <= 0xFF) {
 					scsi::Read6 command;
 					memset(&command, 0, sizeof(scsi::Read6));
 					command.opCode = 0x08;
@@ -106,7 +105,7 @@ async::detached StorageDevice::run(int config_num, int intf_num) {
 					memcpy(cbw.cmdData, &command, sizeof(scsi::Read10));
 				} else {
 					throw std::logic_error(
-					        "USB storage does not currently support high LBAs!"
+					  "USB storage does not currently support high LBAs!"
 					);
 				}
 			} else {
@@ -125,7 +124,7 @@ async::detached StorageDevice::run(int config_num, int intf_num) {
 					memcpy(cbw.cmdData, &command, sizeof(scsi::Write10));
 				} else {
 					throw std::logic_error(
-					        "USB storage does not currently support high LBAs!"
+					  "USB storage does not currently support high LBAs!"
 					);
 				}
 			}
@@ -140,40 +139,38 @@ async::detached StorageDevice::run(int config_num, int intf_num) {
 			if (logSteps)
 				std::cout << "block-usb: Sending CBW" << std::endl;
 			(co_await endp_out.transfer(BulkTransfer {
-			         XferFlags::kXferToDevice,
-			         arch::dma_buffer_view { nullptr,
-			                                 &cbw,
-			                                 sizeof(CommandBlockWrapper) } })
+			   XferFlags::kXferToDevice,
+			   arch::dma_buffer_view {nullptr, &cbw, sizeof(CommandBlockWrapper)}})
 			).unwrap();
 
 			if (logSteps)
 				std::cout << "block-usb: Waiting for data" << std::endl;
 			if (!req->isWrite) {
-				BulkTransfer data_info { XferFlags::kXferToHost,
-					                 arch::dma_buffer_view { nullptr,
-					                                         req->buffer,
-					                                         req->numSectors
-					                                                 * 512 } };
+				BulkTransfer data_info {
+				  XferFlags::kXferToHost,
+				  arch::dma_buffer_view {
+				    nullptr,
+				    req->buffer,
+				    req->numSectors * 512}};
 				// TODO: We want this to be lazy but that only works if can ensure
 				// that the next transaction is also posted to the queue.
 				//			data_info.lazyNotification = true;
 				(co_await endp_in.transfer(data_info)).unwrap();
 			} else {
 				(co_await endp_out.transfer(BulkTransfer {
-				         XferFlags::kXferToDevice,
-				         arch::dma_buffer_view { nullptr,
-				                                 req->buffer,
-				                                 req->numSectors * 512 } })
+				   XferFlags::kXferToDevice,
+				   arch::dma_buffer_view {
+				     nullptr,
+				     req->buffer,
+				     req->numSectors * 512}})
 				).unwrap();
 			}
 
 			if (logSteps)
 				std::cout << "block-usb: Waiting for CSW" << std::endl;
 			(co_await endp_in.transfer(BulkTransfer {
-			         XferFlags::kXferToHost,
-			         arch::dma_buffer_view { nullptr,
-			                                 &csw,
-			                                 sizeof(CommandStatusWrapper) } })
+			   XferFlags::kXferToHost,
+			   arch::dma_buffer_view {nullptr, &csw, sizeof(CommandStatusWrapper)}})
 			).unwrap();
 
 			if (logSteps)
@@ -196,7 +193,7 @@ async::detached StorageDevice::run(int config_num, int intf_num) {
 }
 
 async::result<void> StorageDevice::readSectors(uint64_t sector, void *buffer, size_t numSectors) {
-	Request req { false, sector, buffer, numSectors };
+	Request req {false, sector, buffer, numSectors};
 	_queue.push_back(req);
 	_doorbell.raise();
 	co_await req.event.wait();
@@ -204,7 +201,7 @@ async::result<void> StorageDevice::readSectors(uint64_t sector, void *buffer, si
 
 async::result<void>
 StorageDevice::writeSectors(uint64_t sector, const void *buffer, size_t numSectors) {
-	Request req { true, sector, const_cast<void *>(buffer), numSectors };
+	Request req {true, sector, const_cast<void *>(buffer), numSectors};
 	_queue.push_back(req);
 	_doorbell.raise();
 	co_await req.event.wait();
@@ -235,41 +232,39 @@ async::detached bindDevice(mbus::Entity entity) {
 	}
 
 	walkConfiguration(
-	        descriptorOrError.value(),
-	        [&](int type, size_t, void *p, const auto &info) {
-		        if (type == descriptor_type::configuration) {
-			        assert(!config_number);
-			        config_number = info.configNumber.value();
-		        } else if (type == descriptor_type::interface) {
-			        if (intf_number) {
-				        std::cout << "block-usb: Ignoring interface "
-				                  << info.interfaceNumber.value() << std::endl;
-				        return;
-			        }
-			        if (logEnumeration)
-				        std::cout << "block-usb: Found interface: "
-				                  << info.interfaceNumber.value()
-				                  << ", alternative: "
-				                  << info.interfaceAlternative.value() << std::endl;
-			        intf_number = info.interfaceNumber.value();
+	  descriptorOrError.value(),
+	  [&](int type, size_t, void *p, const auto &info) {
+		  if (type == descriptor_type::configuration) {
+			  assert(!config_number);
+			  config_number = info.configNumber.value();
+		  } else if (type == descriptor_type::interface) {
+			  if (intf_number) {
+				  std::cout << "block-usb: Ignoring interface "
+				            << info.interfaceNumber.value() << std::endl;
+				  return;
+			  }
+			  if (logEnumeration)
+				  std::cout << "block-usb: Found interface: "
+				            << info.interfaceNumber.value() << ", alternative: "
+				            << info.interfaceAlternative.value() << std::endl;
+			  intf_number = info.interfaceNumber.value();
 
-			        assert(!intf_class);
-			        assert(!intf_subclass);
-			        assert(!intf_protocol);
-			        auto desc = (InterfaceDescriptor *) p;
-			        intf_class = desc->interfaceClass;
-			        intf_subclass = desc->interfaceSubClass;
-			        intf_protocol = desc->interfaceProtocoll;
-		        }
-	        }
+			  assert(!intf_class);
+			  assert(!intf_subclass);
+			  assert(!intf_protocol);
+			  auto desc = (InterfaceDescriptor *) p;
+			  intf_class = desc->interfaceClass;
+			  intf_subclass = desc->interfaceSubClass;
+			  intf_protocol = desc->interfaceProtocoll;
+		  }
+	  }
 	);
 
 	if (logEnumeration)
 		std::cout << "block-usb: Device class: 0x" << std::hex << intf_class.value()
 		          << ", subclass: 0x" << intf_subclass.value() << ", protocol: 0x"
 		          << intf_protocol.value() << std::dec << std::endl;
-	if (intf_class.value() != 0x08 || intf_subclass.value() != 0x06
-	    || intf_protocol.value() != 0x50)
+	if (intf_class.value() != 0x08 || intf_subclass.value() != 0x06 || intf_protocol.value() != 0x50)
 		co_return;
 
 	if (logEnumeration)
@@ -283,11 +278,14 @@ async::detached bindDevice(mbus::Entity entity) {
 async::detached observeDevices() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("usb.type", "device"),
-	                                  mbus::EqualsFilter("usb.class", "00") });
+	auto filter = mbus::Conjunction(
+	  {mbus::EqualsFilter("usb.type", "device"), mbus::EqualsFilter("usb.class", "00")}
+	);
 
-	auto handler = mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties
-	                                                   ) { bindDevice(std::move(entity)); });
+	auto handler =
+	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		  bindDevice(std::move(entity));
+	  });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

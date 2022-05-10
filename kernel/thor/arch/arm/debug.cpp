@@ -12,15 +12,15 @@ void setupDebugging() {
 
 namespace {
 namespace reg {
-constexpr static arch::scalar_register<uint32_t> data { 0x00 };
-constexpr static arch::bit_register<uint32_t> status { 0x18 };
+constexpr static arch::scalar_register<uint32_t> data {0x00};
+constexpr static arch::bit_register<uint32_t> status {0x18};
 }  // namespace reg
 
 namespace status {
-constexpr static arch::field<uint32_t, bool> tx_full { 5, 1 };
+constexpr static arch::field<uint32_t, bool> tx_full {5, 1};
 };  // namespace status
 
-constexpr static arch::mem_space space { 0xFFFF000000000000 };
+constexpr static arch::mem_space space {0xFFFF000000000000};
 
 }  // namespace
 

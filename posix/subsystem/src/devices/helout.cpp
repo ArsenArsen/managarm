@@ -23,7 +23,7 @@ private:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		(void) mask;
 
 		if (sequence > 1)
@@ -31,11 +31,11 @@ private:
 
 		if (sequence)
 			co_await async::suspend_indefinitely(cancellation);
-		co_return PollWaitResult { 1, EPOLLOUT };
+		co_return PollWaitResult {1, EPOLLOUT};
 	}
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *) override {
-		co_return PollStatusResult { 1, EPOLLOUT };
+		co_return PollStatusResult {1, EPOLLOUT};
 	}
 
 	helix::BorrowedDescriptor getPassthroughLane() override {
@@ -44,23 +44,25 @@ private:
 
 public:
 	HeloutFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-	        : File { StructName::get("helout"),
-		         std::move(mount),
-		         std::move(link),
-		         File::defaultIsTerminal } {}
+	: File {
+	  StructName::get("helout"),
+	  std::move(mount),
+	  std::move(link),
+	  File::defaultIsTerminal} {}
 };
 
 struct HeloutDevice final : UnixDevice {
 	HeloutDevice() : UnixDevice(VfsType::charDevice) {
-		assignId({ 1, 255 });  // This minor is not used by Linux.
+		assignId({1, 255});  // This minor is not used by Linux.
 	}
 
 	std::string nodePath() override { return "helout"; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
 			          << std::bitset<32>(semantic_flags)

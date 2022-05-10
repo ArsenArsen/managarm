@@ -72,7 +72,7 @@ bool updatePageAccess(FaultImageAccessor image, Word error) {
 		// Check if it's just a writable page that's not dirty yet
 		smarter::borrowed_ptr<Thread> this_thread = getCurrentThread();
 		return this_thread->getAddressSpace()->updatePageAccess(
-		        *image.faultAddr() & ~(kPageSize - 1)
+		  *image.faultAddr() & ~(kPageSize - 1)
 		);
 	}
 
@@ -157,15 +157,20 @@ extern "C" void onPlatformAsyncFault(FaultImageAccessor image) {
 		bool ea = code & (1 << 9);
 		uint8_t dfsc = code & 0x3F;
 
-		constexpr const char *aet_str[] = { "Uncontainable",     "Unrecoverable state",
-			                            "Restartable state", "Recoverable state",
-			                            "Reserved",          "Reserved",
-			                            "Corrected",         "Reserved" };
+		constexpr const char *aet_str[] = {
+		  "Uncontainable",
+		  "Unrecoverable state",
+		  "Restartable state",
+		  "Recoverable state",
+		  "Reserved",
+		  "Reserved",
+		  "Corrected",
+		  "Reserved"};
 
 		if (ids) {
 			urgentLogger()
-			        << "thor: SError with implementation defined information: ESR = 0x"
-			        << frg::hex_fmt { code } << frg::endlog;
+			  << "thor: SError with implementation defined information: ESR = 0x"
+			  << frg::hex_fmt {code} << frg::endlog;
 		} else {
 			auto log = urgentLogger();
 			log << "thor: ";
@@ -188,11 +193,11 @@ extern "C" void onPlatformAsyncFault(FaultImageAccessor image) {
 		}
 	} else {
 		urgentLogger() << "thor: unexpectec EC " << ec << " (ESR = 0x"
-		               << frg::hex_fmt { code } << ")" << frg::endlog;
+		               << frg::hex_fmt {code} << ")" << frg::endlog;
 	}
 
-	urgentLogger() << "thor: IP = 0x" << frg::hex_fmt { *image.ip() } << ", SP = 0x"
-	               << frg::hex_fmt { *image.sp() } << frg::endlog;
+	urgentLogger() << "thor: IP = 0x" << frg::hex_fmt {*image.ip()} << ", SP = 0x"
+	               << frg::hex_fmt {*image.sp()} << frg::endlog;
 
 	if (!recoverable)
 		panicLogger() << "thor: Panic due to unrecoverable error" << frg::endlog;

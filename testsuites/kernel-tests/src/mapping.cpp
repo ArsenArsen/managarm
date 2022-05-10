@@ -11,13 +11,13 @@ DEFINE_TEST(unmapPartialPfs, ([] {
 	            HEL_CHECK(helAllocateMemory(0x3000, 0, nullptr, &handle));
 	            void *window;
 	            HEL_CHECK(helMapMemory(
-	                    handle,
-	                    kHelNullHandle,
-	                    nullptr,
-	                    0,
-	                    0x3000,
-	                    kHelMapProtRead | kHelMapProtWrite,
-	                    &window
+	              handle,
+	              kHelNullHandle,
+	              nullptr,
+	              0,
+	              0x3000,
+	              kHelMapProtRead | kHelMapProtWrite,
+	              &window
 	            ));
 
 	            // Do the partial unmap.
@@ -38,13 +38,13 @@ DEFINE_TEST(unmapPartialPreserve, ([] {
 	            HEL_CHECK(helAllocateMemory(0x3000, 0, nullptr, &handle));
 	            void *window;
 	            HEL_CHECK(helMapMemory(
-	                    handle,
-	                    kHelNullHandle,
-	                    nullptr,
-	                    0,
-	                    0x3000,
-	                    kHelMapProtRead | kHelMapProtWrite,
-	                    &window
+	              handle,
+	              kHelNullHandle,
+	              nullptr,
+	              0,
+	              0x3000,
+	              kHelMapProtRead | kHelMapProtWrite,
+	              &window
 	            ));
 
 	            auto p = reinterpret_cast<std::byte *>(window);

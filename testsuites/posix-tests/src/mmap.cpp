@@ -97,350 +97,330 @@ void runChecks(Func &&f) {
 const size_t pageSize = sysconf(_SC_PAGESIZE);
 }  // namespace
 
-DEFINE_TEST(mmap_fixed_replace_middle, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 3,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            void *newPtr =
-	                    mmap(offsetBy(mem, pageSize),
-	                         pageSize,
-	                         PROT_READ,
-	                         MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", newPtr != MAP_FAILED);
-	            assert(newPtr == offsetBy(mem, pageSize));
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize * 2)));
-		            assert(ensureWritable(offsetBy(mem, pageSize * 2)));
-	            });
-
-	            int ret = munmap(mem, pageSize * 3);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize * 2)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize * 2)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_fixed_replace_left, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 2,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            void *newPtr =
-	                    mmap(mem,
-	                         pageSize,
-	                         PROT_READ,
-	                         MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", newPtr != MAP_FAILED);
-	            assert(newPtr == mem);
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureWritable(offsetBy(mem, pageSize)));
-	            });
-
-	            int ret = munmap(mem, pageSize * 2);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_fixed_replace_right, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 2,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            void *newPtr =
-	                    mmap(offsetBy(mem, pageSize),
-	                         pageSize,
-	                         PROT_READ,
-	                         MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", newPtr != MAP_FAILED);
-	            assert(newPtr == offsetBy(mem, pageSize));
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-
-	            int ret = munmap(mem, pageSize * 2);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_partial_protect_middle, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 3,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            int ret = mprotect(offsetBy(mem, pageSize), pageSize, PROT_READ);
-	            assert_errno("mprotect", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize * 2)));
-		            assert(ensureWritable(offsetBy(mem, pageSize * 2)));
-	            });
-
-	            ret = munmap(mem, pageSize * 3);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize * 2)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize * 2)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_partial_protect_left, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 2,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            int ret = mprotect(mem, pageSize, PROT_READ);
-	            assert_errno("mprotect", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureWritable(offsetBy(mem, pageSize)));
-	            });
-
-	            ret = munmap(mem, pageSize * 2);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_partial_protect_right, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 2,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            int ret = mprotect(offsetBy(mem, pageSize), pageSize, PROT_READ);
-	            assert_errno("mprotect", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-
-	            ret = munmap(mem, pageSize * 2);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_partial_unmap_middle, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 3,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            int ret = munmap(offsetBy(mem, pageSize), pageSize);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize * 2)));
-		            assert(ensureWritable(offsetBy(mem, pageSize * 2)));
-	            });
-
-	            ret = munmap(mem, pageSize * 3);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize * 2)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize * 2)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_partial_unmap_left, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 2,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            int ret = munmap(mem, pageSize);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureReadable(offsetBy(mem, pageSize)));
-		            assert(ensureWritable(offsetBy(mem, pageSize)));
-	            });
-
-	            ret = munmap(mem, pageSize * 2);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-            }))
-
-DEFINE_TEST(mmap_partial_unmap_right, ([] {
-	            void *mem =
-	                    mmap(nullptr,
-	                         pageSize * 2,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
-	            assert_errno("mmap", mem != MAP_FAILED);
-
-	            int ret = munmap(offsetBy(mem, pageSize), pageSize);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureReadable(mem));
-		            assert(ensureWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-
-	            ret = munmap(mem, pageSize * 2);
-	            assert_errno("munmap", ret != -1);
-
-	            runChecks([&] {
-		            assert(ensureNotReadable(mem));
-		            assert(ensureNotWritable(mem));
-
-		            assert(ensureNotReadable(offsetBy(mem, pageSize)));
-		            assert(ensureNotWritable(offsetBy(mem, pageSize)));
-	            });
-            }))
+DEFINE_TEST(
+  mmap_fixed_replace_middle,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 3, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  void *newPtr = mmap(
+	    offsetBy(mem, pageSize),
+	    pageSize,
+	    PROT_READ,
+	    MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED,
+	    -1,
+	    0
+	  );
+	  assert_errno("mmap", newPtr != MAP_FAILED);
+	  assert(newPtr == offsetBy(mem, pageSize));
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize * 2)));
+		  assert(ensureWritable(offsetBy(mem, pageSize * 2)));
+	  });
+
+	  int ret = munmap(mem, pageSize * 3);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize * 2)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize * 2)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_fixed_replace_left,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  void *newPtr =
+	    mmap(mem, pageSize, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
+	  assert_errno("mmap", newPtr != MAP_FAILED);
+	  assert(newPtr == mem);
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureWritable(offsetBy(mem, pageSize)));
+	  });
+
+	  int ret = munmap(mem, pageSize * 2);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_fixed_replace_right,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  void *newPtr = mmap(
+	    offsetBy(mem, pageSize),
+	    pageSize,
+	    PROT_READ,
+	    MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED,
+	    -1,
+	    0
+	  );
+	  assert_errno("mmap", newPtr != MAP_FAILED);
+	  assert(newPtr == offsetBy(mem, pageSize));
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+
+	  int ret = munmap(mem, pageSize * 2);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_partial_protect_middle,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 3, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  int ret = mprotect(offsetBy(mem, pageSize), pageSize, PROT_READ);
+	  assert_errno("mprotect", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize * 2)));
+		  assert(ensureWritable(offsetBy(mem, pageSize * 2)));
+	  });
+
+	  ret = munmap(mem, pageSize * 3);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize * 2)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize * 2)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_partial_protect_left,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  int ret = mprotect(mem, pageSize, PROT_READ);
+	  assert_errno("mprotect", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureWritable(offsetBy(mem, pageSize)));
+	  });
+
+	  ret = munmap(mem, pageSize * 2);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_partial_protect_right,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  int ret = mprotect(offsetBy(mem, pageSize), pageSize, PROT_READ);
+	  assert_errno("mprotect", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+
+	  ret = munmap(mem, pageSize * 2);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_partial_unmap_middle,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 3, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  int ret = munmap(offsetBy(mem, pageSize), pageSize);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize * 2)));
+		  assert(ensureWritable(offsetBy(mem, pageSize * 2)));
+	  });
+
+	  ret = munmap(mem, pageSize * 3);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize * 2)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize * 2)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_partial_unmap_left,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  int ret = munmap(mem, pageSize);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureReadable(offsetBy(mem, pageSize)));
+		  assert(ensureWritable(offsetBy(mem, pageSize)));
+	  });
+
+	  ret = munmap(mem, pageSize * 2);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+  })
+)
+
+DEFINE_TEST(
+  mmap_partial_unmap_right,
+  ([] {
+	  void *mem =
+	    mmap(nullptr, pageSize * 2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	  assert_errno("mmap", mem != MAP_FAILED);
+
+	  int ret = munmap(offsetBy(mem, pageSize), pageSize);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureReadable(mem));
+		  assert(ensureWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+
+	  ret = munmap(mem, pageSize * 2);
+	  assert_errno("munmap", ret != -1);
+
+	  runChecks([&] {
+		  assert(ensureNotReadable(mem));
+		  assert(ensureNotWritable(mem));
+
+		  assert(ensureNotReadable(offsetBy(mem, pageSize)));
+		  assert(ensureNotWritable(offsetBy(mem, pageSize)));
+	  });
+  })
+)
 
 DEFINE_TEST(mmap_unmap_range_before_first, ([] {
-	            void *mem =
-	                    mmap(reinterpret_cast<void *>(0x100000 + pageSize * 2),
-	                         pageSize,
-	                         PROT_READ | PROT_WRITE,
-	                         MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE,
-	                         -1,
-	                         0);
+	            void *mem = mmap(
+	              reinterpret_cast<void *>(0x100000 + pageSize * 2),
+	              pageSize,
+	              PROT_READ | PROT_WRITE,
+	              MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE,
+	              -1,
+	              0
+	            );
 	            assert_errno("mmap", mem != MAP_FAILED);
 
 	            int ret = munmap(reinterpret_cast<void *>(0x100000 + pageSize), pageSize * 2);

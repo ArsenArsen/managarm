@@ -34,7 +34,7 @@ DEFINE_TEST(tcgetsid, ([] {
 		            int ret = ioctl(fd, TIOCSCTTY, 0);
 		            assert(ret == 0);
 		            int terminalsid =
-		                    tcgetsid(fd);  // Should be the same as sid and mysid now
+		              tcgetsid(fd);  // Should be the same as sid and mysid now
 		            assert(mysid == terminalsid);
 		            exit(0);
 	            } else {
@@ -74,7 +74,8 @@ DEFINE_TEST(setsid, ([] {
 		            assert(newsid != -1);  // -1 is the error return
 		            assert(newsid != sid);  // We should be in a new session now
 		            newsid = setsid();
-		            assert(newsid == -1
+		            assert(
+		              newsid == -1
 		            );  // As the session leader, we can't spawn another session
 		            exit(0);
 	            } else {

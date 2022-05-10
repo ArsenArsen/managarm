@@ -41,8 +41,8 @@ static_assert(sizeof(PseudoHeader) == 12);
 
 struct RingBuffer {
 	RingBuffer(int shift)
-	        : storage_ { reinterpret_cast<char *>(operator new(1 << shift)) }
-	        , shift_ { shift } {}
+	: storage_ {reinterpret_cast<char *>(operator new(1 << shift))}
+	, shift_ {shift} {}
 
 	RingBuffer(const RingBuffer &) = delete;
 
@@ -50,13 +50,13 @@ struct RingBuffer {
 
 	RingBuffer &operator=(const RingBuffer &) = delete;
 
-	size_t spaceForEnqueue() { return (size_t { 1 } << shift_) - (enqPtr_ - deqPtr_); }
+	size_t spaceForEnqueue() { return (size_t {1} << shift_) - (enqPtr_ - deqPtr_); }
 
 	size_t availableToDequeue() { return enqPtr_ - deqPtr_; }
 
 	void enqueue(void *data, size_t size) {
 		assert(size <= spaceForEnqueue());
-		size_t ringSize = size_t { 1 } << shift_;
+		size_t ringSize = size_t {1} << shift_;
 		auto wrappedPtr = enqPtr_ & (ringSize - 1);
 		auto p = reinterpret_cast<char *>(data);
 		size_t bytesUntilEnd = std::min(size, ringSize - wrappedPtr);
@@ -72,7 +72,7 @@ struct RingBuffer {
 
 	void dequeueLookahead(size_t offset, void *data, size_t size) {
 		assert(offset + size <= availableToDequeue());
-		size_t ringSize = size_t { 1 } << shift_;
+		size_t ringSize = size_t {1} << shift_;
 		auto wrappedPtr = deqPtr_ & (ringSize - 1);
 		auto p = reinterpret_cast<char *>(data);
 		size_t bytesUntilEnd = std::min(size, ringSize - wrappedPtr);
@@ -95,10 +95,10 @@ static std::mt19937 globalPrng;
 }  // namespace
 
 struct TcpHeader {
-	constexpr static arch::field<uint16_t, bool> finFlag { 0, 1 };
-	constexpr static arch::field<uint16_t, bool> synFlag { 1, 1 };
-	constexpr static arch::field<uint16_t, bool> ackFlag { 4, 1 };
-	constexpr static arch::field<uint16_t, unsigned int> headerWords { 12, 4 };
+	constexpr static arch::field<uint16_t, bool> finFlag {0, 1};
+	constexpr static arch::field<uint16_t, bool> synFlag {1, 1};
+	constexpr static arch::field<uint16_t, bool> ackFlag {4, 1};
+	constexpr static arch::field<uint16_t, unsigned int> headerWords {12, 4};
 
 	arch::scalar_storage<uint16_t, arch::big_endian> srcPort;
 	arch::scalar_storage<uint16_t, arch::big_endian> destPort;
@@ -131,10 +131,11 @@ struct TcpPacket {
 			return false;
 
 		if (header.checksum.load()) {
-			PseudoHeader pseudo { .src = packet->header.source,
-				              .dst = packet->header.destination,
-				              .proto = packet->header.protocol,
-				              .len = ipPayload.size() };
+			PseudoHeader pseudo {
+			  .src = packet->header.source,
+			  .dst = packet->header.destination,
+			  .proto = packet->header.protocol,
+			  .len = ipPayload.size()};
 			Checksum csum;
 			csum.update(&pseudo, sizeof(pseudo));
 			csum.update(ipPayload);
@@ -171,10 +172,10 @@ protocols::fs::Error checkAddress(const void *addrPtr, size_t addrLength, TcpEnd
 
 struct Tcp4Socket {
 	Tcp4Socket(Tcp4 *parent, bool nonBlock)
-	        : parent_(parent)
-	        , nonBlock_ { nonBlock }
-	        , recvRing_ { 14 }
-	        , sendRing_ { 14 } {}
+	: parent_(parent)
+	, nonBlock_ {nonBlock}
+	, recvRing_ {14}
+	, sendRing_ {14} {}
 
 	~Tcp4Socket() { parent_->unbind(localEp_); }
 
@@ -267,26 +268,27 @@ struct Tcp4Socket {
 	static async::result<frg::expected<protocols::fs::Error, size_t>>
 	write(void *object, const char *creds, const void *data, size_t size) {
 		co_return co_await sendMsg(
-		        object,
-		        creds,
-		        0,
-		        const_cast<void *>(data),
-		        size,
-		        nullptr,
-		        0,
-		        {}
+		  object,
+		  creds,
+		  0,
+		  const_cast<void *>(data),
+		  size,
+		  nullptr,
+		  0,
+		  {}
 		);
 	}
 
-	static async::result<protocols::fs::RecvResult>
-	recvMsg(void *object,
-	        const char *creds,
-	        uint32_t flags,
-	        void *data,
-	        size_t size,
-	        void *addrPtr,
-	        size_t addrLength,
-	        size_t max_ctrl_len) {
+	static async::result<protocols::fs::RecvResult> recvMsg(
+	  void *object,
+	  const char *creds,
+	  uint32_t flags,
+	  void *data,
+	  size_t size,
+	  void *addrPtr,
+	  size_t addrLength,
+	  size_t max_ctrl_len
+	) {
 		auto self = static_cast<Tcp4Socket *>(object);
 		auto p = reinterpret_cast<char *>(data);
 
@@ -319,21 +321,22 @@ struct Tcp4Socket {
 		memset(&sa, 0, sizeof(struct sockaddr_in));
 		sa.sin_port = arch::to_endian<arch::big_endian, uint16_t>(self->remoteEp_.port);
 		sa.sin_addr.s_addr =
-		        arch::to_endian<arch::big_endian, uint32_t>(self->remoteEp_.ipAddress);
+		  arch::to_endian<arch::big_endian, uint32_t>(self->remoteEp_.ipAddress);
 		memcpy(addrPtr, &sa, std::min(sizeof(struct sockaddr_in), addrLength));
 
-		co_return protocols::fs::RecvData { progress, sizeof(struct sockaddr_in), {} };
+		co_return protocols::fs::RecvData {progress, sizeof(struct sockaddr_in), {}};
 	}
 
-	static async::result<frg::expected<protocols::fs::Error, size_t>>
-	sendMsg(void *object,
-	        const char *creds,
-	        uint32_t flags,
-	        void *data,
-	        size_t size,
-	        void *addrPtr,
-	        size_t addrSize,
-	        std::vector<uint32_t> fds) {
+	static async::result<frg::expected<protocols::fs::Error, size_t>> sendMsg(
+	  void *object,
+	  const char *creds,
+	  uint32_t flags,
+	  void *data,
+	  size_t size,
+	  void *addrPtr,
+	  size_t addrSize,
+	  std::vector<uint32_t> fds
+	) {
 		auto self = static_cast<Tcp4Socket *>(object);
 		auto p = reinterpret_cast<char *>(data);
 
@@ -380,7 +383,7 @@ struct Tcp4Socket {
 		if (self->hupSeq_ > pastSeq)
 			edges |= EPOLLHUP;
 
-		co_return protocols::fs::PollWaitResult { self->currentSeq_, edges };
+		co_return protocols::fs::PollWaitResult {self->currentSeq_, edges};
 	}
 
 	static async::result<frg::expected<protocols::fs::Error, protocols::fs::PollStatusResult>>
@@ -395,7 +398,7 @@ struct Tcp4Socket {
 		if (self->remoteClosed_)
 			active |= EPOLLHUP;
 
-		co_return protocols::fs::PollStatusResult { self->currentSeq_, active };
+		co_return protocols::fs::PollStatusResult {self->currentSeq_, active};
 	}
 
 	static async::result<void> setFileFlags(void *object, int flags) {
@@ -422,26 +425,26 @@ struct Tcp4Socket {
 	}
 
 	constexpr static protocols::fs::FileOperations ops {
-		.read = &read,
-		.write = &write,
-		.pollWait = &pollWait,
-		.pollStatus = &pollStatus,
-		.bind = &bind,
-		.connect = &connect,
-		.getFileFlags = &getFileFlags,
-		.setFileFlags = &setFileFlags,
-		.recvMsg = &recvMsg,
-		.sendMsg = &sendMsg,
+	  .read = &read,
+	  .write = &write,
+	  .pollWait = &pollWait,
+	  .pollStatus = &pollStatus,
+	  .bind = &bind,
+	  .connect = &connect,
+	  .getFileFlags = &getFileFlags,
+	  .setFileFlags = &setFileFlags,
+	  .recvMsg = &recvMsg,
+	  .sendMsg = &sendMsg,
 	};
 
 	bool bindAvailable(uint32_t ipAddress = INADDR_ANY) {
-		static std::uniform_int_distribution<uint16_t> dist { 32768, 60999 };
+		static std::uniform_int_distribution<uint16_t> dist {32768, 60999};
 		auto number = dist(globalPrng);
 		auto range = dist.b() - dist.a();
 		auto self = holder_.lock();
 		for (int i = 0; i < range; i++) {
 			uint16_t port = dist.a() + ((number + i) % range);
-			if (parent_->tryBind(self, { ipAddress, port }))
+			if (parent_->tryBind(self, {ipAddress, port}))
 				return true;
 		}
 		return false;
@@ -529,22 +532,23 @@ async::result<void> Tcp4Socket::flushOutPackets_() {
 			std::vector<char> buf;
 			buf.resize(sizeof(TcpHeader));
 
-			auto header = new (buf.data()) TcpHeader { .srcPort = localEp_.port,
-				                                   .destPort = remoteEp_.port,
-				                                   .seqNumber = localFlushedSn_,
-				                                   .ackNumber = 0,
-				                                   .window = 0,
-				                                   .checksum = 0,
-				                                   .urgentPointer = 0 };
+			auto header = new (buf.data()) TcpHeader {
+			  .srcPort = localEp_.port,
+			  .destPort = remoteEp_.port,
+			  .seqNumber = localFlushedSn_,
+			  .ackNumber = 0,
+			  .window = 0,
+			  .checksum = 0,
+			  .urgentPointer = 0};
 			header->flags.store(
-			        TcpHeader::headerWords(sizeof(TcpHeader) / 4)
-			        | TcpHeader::synFlag(true)
+			  TcpHeader::headerWords(sizeof(TcpHeader) / 4) | TcpHeader::synFlag(true)
 			);
 
 			// Fill in the checksum.
-			PseudoHeader pseudo { .src = targetInfo->source,
-				              .dst = remoteEp_.ipAddress,
-				              .len = buf.size() };
+			PseudoHeader pseudo {
+			  .src = targetInfo->source,
+			  .dst = remoteEp_.ipAddress,
+			  .len = buf.size()};
 			Checksum csum;
 			csum.update(&pseudo, sizeof(PseudoHeader));
 			csum.update(buf.data(), buf.size());
@@ -555,10 +559,10 @@ async::result<void> Tcp4Socket::flushOutPackets_() {
 			if (debugTcp)
 				std::cout << "netserver: Sending TCP SYN" << std::endl;
 			auto error = co_await ip4().sendFrame(
-			        std::move(*targetInfo),
-			        buf.data(),
-			        buf.size(),
-			        static_cast<uint16_t>(IpProto::tcp)
+			  std::move(*targetInfo),
+			  buf.data(),
+			  buf.size(),
+			  static_cast<uint16_t>(IpProto::tcp)
 			);
 			if (error != protocols::fs::Error::none) {
 				// TODO: Return an error to users.
@@ -576,7 +580,7 @@ async::result<void> Tcp4Socket::flushOutPackets_() {
 			// Check whether we need to send a packet.
 			// TODO: Add retransmission here.
 			bool wantData =
-			        (bytesAvailable > flushPointer && windowPointer > flushPointer);
+			  (bytesAvailable > flushPointer && windowPointer > flushPointer);
 			bool wantAck = (remoteAckedSn_ != remoteKnownSn_);
 			bool wantWindowUpdate = (announcedWindow_ < recvRing_.spaceForEnqueue());
 
@@ -594,38 +598,34 @@ async::result<void> Tcp4Socket::flushOutPackets_() {
 			}
 
 			auto chunk = std::min({
-			        bytesAvailable - flushPointer,
-			        windowPointer - flushPointer,
-			        size_t { 1000 }  // TODO: Perform path MTU discovery.
+			  bytesAvailable - flushPointer,
+			  windowPointer - flushPointer,
+			  size_t {1000}  // TODO: Perform path MTU discovery.
 			});
 
 			std::vector<char> buf;
 			buf.resize(sizeof(TcpHeader) + chunk);
 
 			auto header = new (buf.data()) TcpHeader {
-				.srcPort = localEp_.port,
-				.destPort = remoteEp_.port,
-				.seqNumber = localFlushedSn_,
-				.ackNumber = remoteKnownSn_,
-				.window = std::min(recvRing_.spaceForEnqueue(), size_t { 0xFFFF }),
-				.checksum = 0,
-				.urgentPointer = 0
-			};
+			  .srcPort = localEp_.port,
+			  .destPort = remoteEp_.port,
+			  .seqNumber = localFlushedSn_,
+			  .ackNumber = remoteKnownSn_,
+			  .window = std::min(recvRing_.spaceForEnqueue(), size_t {0xFFFF}),
+			  .checksum = 0,
+			  .urgentPointer = 0};
 			header->flags.store(
-			        TcpHeader::headerWords(sizeof(TcpHeader) / 4)
-			        | TcpHeader::ackFlag(true)
+			  TcpHeader::headerWords(sizeof(TcpHeader) / 4) | TcpHeader::ackFlag(true)
 			);
 
-			sendRing_.dequeueLookahead(
-			        flushPointer,
-			        buf.data() + sizeof(TcpHeader),
-			        chunk
-			);
+			sendRing_
+			  .dequeueLookahead(flushPointer, buf.data() + sizeof(TcpHeader), chunk);
 
 			// Fill in the checksum.
-			PseudoHeader pseudo { .src = targetInfo->source,
-				              .dst = remoteEp_.ipAddress,
-				              .len = buf.size() };
+			PseudoHeader pseudo {
+			  .src = targetInfo->source,
+			  .dst = remoteEp_.ipAddress,
+			  .len = buf.size()};
 			Checksum csum;
 			csum.update(&pseudo, sizeof(PseudoHeader));
 			csum.update(buf.data(), buf.size());
@@ -639,10 +639,10 @@ async::result<void> Tcp4Socket::flushOutPackets_() {
 				std::cout << "netserver: Sending TCP data (" << chunk << " bytes)"
 				          << std::endl;
 			auto error = co_await ip4().sendFrame(
-			        std::move(*targetInfo),
-			        buf.data(),
-			        buf.size(),
-			        static_cast<uint16_t>(IpProto::tcp)
+			  std::move(*targetInfo),
+			  buf.data(),
+			  buf.size(),
+			  static_cast<uint16_t>(IpProto::tcp)
 			);
 			if (error != protocols::fs::Error::none) {
 				// TODO: Return an error to users.
@@ -730,8 +730,8 @@ void Tcp4Socket::handleInPacket_(TcpPacket packet) {
 				pollEvent_.raise();
 			} else {
 				std::cout
-				        << "netserver: Rejecting ack-number outside of valid window"
-				        << std::endl;
+				  << "netserver: Rejecting ack-number outside of valid window"
+				  << std::endl;
 			}
 		}
 	}
@@ -748,11 +748,10 @@ void Tcp4::feedDatagram(smarter::shared_ptr<const Ip4Packet> packet) {
 		std::cout << "netserver: Received TCP packet at port " << tcp.header.destPort.load()
 		          << " (" << tcp.payload().size() << " bytes)" << std::endl;
 
-	auto it = binds.lower_bound({ 0, tcp.header.destPort.load() });
+	auto it = binds.lower_bound({0, tcp.header.destPort.load()});
 	for (; it != binds.end() && it->first.port == tcp.header.destPort.load(); it++) {
 		auto existingEp = it->first;
-		if (existingEp.ipAddress == tcp.packet->header.destination
-		    || existingEp.ipAddress == INADDR_ANY) {
+		if (existingEp.ipAddress == tcp.packet->header.destination || existingEp.ipAddress == INADDR_ANY) {
 			it->second->handleInPacket_(std::move(tcp));
 			break;
 		}

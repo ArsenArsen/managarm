@@ -50,21 +50,23 @@ private:
 };
 
 VirtioNic::VirtioNic(std::unique_ptr<virtio_core::Transport> transport)
-        : nic::Link(1500, &dmaPool_)
-        , transport_ { std::move(transport) } {
+: nic::Link(1500, &dmaPool_)
+, transport_ {std::move(transport)} {
 	if (transport_->checkDeviceFeature(VIRTIO_NET_F_MAC)) {
 		for (int i = 0; i < 6; i++) {
 			mac_[i] = transport_->loadConfig8(i);
 		}
 		char ms[3 * 6 + 1];
-		sprintf(ms,
-		        "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",
-		        mac_[0],
-		        mac_[1],
-		        mac_[2],
-		        mac_[3],
-		        mac_[4],
-		        mac_[5]);
+		sprintf(
+		  ms,
+		  "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",
+		  mac_[0],
+		  mac_[1],
+		  mac_[2],
+		  mac_[3],
+		  mac_[4],
+		  mac_[5]
+		);
 		std::cout << "virtio-driver: Device has a hardware MAC: " << ms << std::endl;
 		transport_->acknowledgeDriverFeature(VIRTIO_NET_F_MAC);
 	}
@@ -78,13 +80,13 @@ VirtioNic::VirtioNic(std::unique_ptr<virtio_core::Transport> transport)
 }
 
 async::result<void> VirtioNic::receive(arch::dma_buffer_view frame) {
-	arch::dma_object<VirtHeader> header { &dmaPool_ };
+	arch::dma_object<VirtHeader> header {&dmaPool_};
 
 	virtio_core::Chain chain;
 	chain.append(co_await receiveVq_->obtainDescriptor());
 	chain.setupBuffer(
-	        virtio_core::deviceToHost,
-	        header.view_buffer().subview(0, legacyHeaderSize)
+	  virtio_core::deviceToHost,
+	  header.view_buffer().subview(0, legacyHeaderSize)
 	);
 	chain.append(co_await receiveVq_->obtainDescriptor());
 	chain.setupBuffer(virtio_core::deviceToHost, frame);
@@ -99,14 +101,14 @@ async::result<void> VirtioNic::send(const arch::dma_buffer_view payload) {
 		throw std::runtime_error("data exceeds mtu");
 	}
 
-	arch::dma_object<VirtHeader> header { &dmaPool_ };
+	arch::dma_object<VirtHeader> header {&dmaPool_};
 	memset(header.data(), 0, sizeof(VirtHeader));
 
 	virtio_core::Chain chain;
 	chain.append(co_await transmitVq_->obtainDescriptor());
 	chain.setupBuffer(
-	        virtio_core::hostToDevice,
-	        header.view_buffer().subview(0, legacyHeaderSize)
+	  virtio_core::hostToDevice,
+	  header.view_buffer().subview(0, legacyHeaderSize)
 	);
 	chain.append(co_await transmitVq_->obtainDescriptor());
 	chain.setupBuffer(virtio_core::hostToDevice, payload);

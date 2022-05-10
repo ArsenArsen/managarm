@@ -16,10 +16,9 @@ void setAmdPmc() {
 	// The manual recommends this to avoid races during the inital value update.
 	// Furthermore, KVM (but not real hardware) requires this to work!
 	common::x86::wrmsr(
-	        0xC001'0200,
-	        static_cast<uint64_t>(whichCounter & 0xFF)
-	                | (UINT64_C(3) << 16)  // Count all events
-	                | (UINT64_C(1) << 20)  // Enable LAPIC interrupt
+	  0xC001'0200,
+	  static_cast<uint64_t>(whichCounter & 0xFF) | (UINT64_C(3) << 16)  // Count all events
+	    | (UINT64_C(1) << 20)  // Enable LAPIC interrupt
 	);
 
 	// Program the initial value.
@@ -29,11 +28,10 @@ void setAmdPmc() {
 
 	// Re-enable the performance counter.
 	common::x86::wrmsr(
-	        0xC001'0200,
-	        static_cast<uint64_t>(whichCounter & 0xFF)
-	                | (UINT64_C(3) << 16)  // Count all events
-	                | (UINT64_C(1) << 20)  // Enable LAPIC interrupt
-	                | (UINT64_C(1) << 22)  // Enable performance counter
+	  0xC001'0200,
+	  static_cast<uint64_t>(whichCounter & 0xFF) | (UINT64_C(3) << 16)  // Count all events
+	    | (UINT64_C(1) << 20)  // Enable LAPIC interrupt
+	    | (UINT64_C(1) << 22)  // Enable performance counter
 	);
 }
 

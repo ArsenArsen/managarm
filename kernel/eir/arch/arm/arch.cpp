@@ -32,10 +32,10 @@ constexpr inline static uint64_t kPageGRE = (1 << 2);
 constexpr inline static uint64_t kPagenGnRnE = (2 << 2);
 
 void mapSingle4kPage(
-        address_t address,
-        address_t physical,
-        uint32_t flags,
-        CachingMode caching_mode
+  address_t address,
+  address_t physical,
+  uint32_t flags,
+  CachingMode caching_mode
 ) {
 	auto ttbr = (address >> 63) & 1;
 	auto l0 = (address >> 39) & 0x1FF;
@@ -85,8 +85,8 @@ void mapSingle4kPage(
 	auto l3_ent = ((uint64_t *) l3_ptr)[l3];
 
 	if (l3_ent & kPageValid)
-		eir::panicLogger() << "eir: Trying to map 0x" << frg::hex_fmt { address }
-		                   << " twice!" << frg::endlog;
+		eir::panicLogger()
+		  << "eir: Trying to map 0x" << frg::hex_fmt {address} << " twice!" << frg::endlog;
 
 	uint64_t new_entry = physical | kPageValid | kPageL3Page | kPageAccess;
 
@@ -108,11 +108,11 @@ void mapSingle4kPage(
 
 	if (new_entry & (0b111ULL << 48)) {
 		eir::infoLogger() << "Oops, reserved bits set when mapping 0x"
-		                  << frg::hex_fmt { physical } << " to 0x"
-		                  << frg::hex_fmt { address } << frg::endlog;
+		                  << frg::hex_fmt {physical} << " to 0x" << frg::hex_fmt {address}
+		                  << frg::endlog;
 
 		eir::panicLogger()
-		        << "New entry value: 0x" << frg::hex_fmt { new_entry } << frg::endlog;
+		  << "New entry value: 0x" << frg::hex_fmt {new_entry} << frg::endlog;
 	}
 
 	((uint64_t *) l3_ptr)[l3] = new_entry;
@@ -156,12 +156,12 @@ void initProcessorEarly() {
 
 	if (aa64mmfr0 & (0xF << 28))
 		eir::panicLogger()
-		        << "PANIC! This CPU doesn't support 4K memory translation granules"
-		        << frg::endlog;
+		  << "PANIC! This CPU doesn't support 4K memory translation granules"
+		  << frg::endlog;
 
 	if ((aa64mmfr0 & 0xF) < 1)
-		eir::panicLogger(
-		) << "PANIC! This CPU doesn't support at least 48 bit physical addresses (max "
+		eir::panicLogger()
+		  << "PANIC! This CPU doesn't support at least 48 bit physical addresses (max "
 		  << (aa64mmfr0 & 0xF) << ")" << frg::endlog;
 
 	auto pa = frg::min(uint64_t(5), aa64mmfr0 & 0xF);
@@ -198,9 +198,8 @@ void initProcessorPaging(void *kernel_start, uint64_t &kernel_entry) {
 
 	// Identically map the first 128 MiB so that we can activate paging
 	// without causing a page fault.
-	auto floor = reinterpret_cast<address_t>(&eirImageFloor) & ~address_t { 0xFFF };
-	auto ceiling =
-	        (reinterpret_cast<address_t>(&eirImageCeiling) + 0xFFF) & ~address_t { 0xFFF };
+	auto floor = reinterpret_cast<address_t>(&eirImageFloor) & ~address_t {0xFFF};
+	auto ceiling = (reinterpret_cast<address_t>(&eirImageCeiling) + 0xFFF) & ~address_t {0xFFF};
 	for (address_t addr = floor; addr < ceiling; addr += 0x1000)
 		mapSingle4kPage(addr, addr, PageFlags::write | PageFlags::execute);
 

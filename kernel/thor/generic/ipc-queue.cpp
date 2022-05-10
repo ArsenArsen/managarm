@@ -11,12 +11,12 @@ namespace thor {
 // ----------------------------------------------------------------------------
 
 IpcQueue::IpcQueue(unsigned int ringShift, unsigned int numChunks, size_t chunkSize)
-        : _ringShift { ringShift }
-        , _chunkSize { chunkSize }
-        , _chunkOffsets { *kernelAlloc }
-        , _currentIndex { 0 }
-        , _currentProgress { 0 }
-        , _anyNodes { false } {
+: _ringShift {ringShift}
+, _chunkSize {chunkSize}
+, _chunkOffsets {*kernelAlloc}
+, _currentIndex {0}
+, _currentProgress {0}
+, _anyNodes {false} {
 	auto chunksOffset = (sizeof(QueueStruct) + (sizeof(int) << ringShift) + 63) & ~size_t(63);
 	auto reservedPerChunk = (sizeof(ChunkStruct) + chunkSize + 63) & ~size_t(63);
 	auto overallSize = chunksOffset + numChunks * reservedPerChunk;
@@ -75,20 +75,20 @@ coroutine<void> IpcQueue::_runQueue() {
 					break;  // Waiters bit is already set (in a previous
 					        // iteration).
 			} while (!__atomic_compare_exchange_n(
-			        &head->headFutex,
-			        &headFutexWord,
-			        _currentIndex | kHeadWaiters,
-			        false,
-			        __ATOMIC_ACQUIRE,
-			        __ATOMIC_ACQUIRE
+			  &head->headFutex,
+			  &headFutexWord,
+			  _currentIndex | kHeadWaiters,
+			  false,
+			  __ATOMIC_ACQUIRE,
+			  __ATOMIC_ACQUIRE
 			));
 			if (pastCurrentChunk)
 				break;
 
 			auto hfOffset = offsetof(QueueStruct, headFutex);
 			co_await getGlobalFutexRealm()->wait(
-			        _memory->getImmediateFutex(hfOffset),
-			        _currentIndex | kHeadWaiters
+			  _memory->getImmediateFutex(hfOffset),
+			  _currentIndex | kHeadWaiters
 			);
 		}
 
@@ -98,9 +98,9 @@ coroutine<void> IpcQueue::_runQueue() {
 			auto irqLock = frg::guard(&irqMutex());
 			auto lock = frg::guard(&_mutex);
 
-			size_t iq = +_currentIndex & ((size_t { 1 } << _ringShift) - 1);
+			size_t iq = +_currentIndex & ((size_t {1} << _ringShift) - 1);
 			size_t cn = *_memory->accessImmediate<int>(
-			        offsetof(QueueStruct, indexQueue) + iq * sizeof(int)
+			  offsetof(QueueStruct, indexQueue) + iq * sizeof(int)
 			);
 			assert(cn < _chunkOffsets.size());
 			chunkOffset = _chunkOffsets[cn];
@@ -140,7 +140,7 @@ coroutine<void> IpcQueue::_runQueue() {
 			if (progress + length <= _chunkSize) {
 				// Emit the next element to the current chunk.
 				auto elementOffset =
-				        offsetof(ChunkStruct, buffer) + _currentProgress;
+				  offsetof(ChunkStruct, buffer) + _currentProgress;
 				assert(!(elementOffset & 0x7));
 
 				ElementStruct element;
@@ -148,18 +148,18 @@ coroutine<void> IpcQueue::_runQueue() {
 				element.length = length;
 				element.context = reinterpret_cast<void *>(node->_context);
 				_memory->writeImmediate(
-				        chunkOffset + elementOffset,
-				        &element,
-				        sizeof(ElementStruct)
+				  chunkOffset + elementOffset,
+				  &element,
+				  sizeof(ElementStruct)
 				);
 
 				size_t sgOffset = sizeof(ElementStruct);
 				for (auto sgSource = node->_source; sgSource;
 				     sgSource = sgSource->link) {
 					_memory->writeImmediate(
-					        chunkOffset + elementOffset + sgOffset,
-					        sgSource->pointer,
-					        sgSource->size
+					  chunkOffset + elementOffset + sgOffset,
+					  sgSource->pointer,
+					  sgSource->size
 					);
 					sgOffset += (sgSource->size + 7) & ~size_t(7);
 				}
@@ -176,9 +176,9 @@ coroutine<void> IpcQueue::_runQueue() {
 			}
 
 			auto progressFutexWord = __atomic_exchange_n(
-			        &chunkHead->progressFutex,
-			        newProgressWord,
-			        __ATOMIC_RELEASE
+			  &chunkHead->progressFutex,
+			  newProgressWord,
+			  __ATOMIC_RELEASE
 			);
 			// If user-space modifies any non-flags field, that's a contract violation.
 			// TODO: Shut down the queue in this case.

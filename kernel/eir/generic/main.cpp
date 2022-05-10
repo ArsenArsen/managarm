@@ -38,7 +38,7 @@ void createInitialRegion(address_t base, address_t size) {
 	address = (address + 0x1FFFFF) & ~address_t(0x1FFFFF);
 
 	if (address >= limit) {
-		eir::infoLogger() << "eir: Discarding memory region at 0x" << frg::hex_fmt { base }
+		eir::infoLogger() << "eir: Discarding memory region at 0x" << frg::hex_fmt {base}
 		                  << " (smaller than alignment)" << frg::endlog;
 		return;
 	}
@@ -58,7 +58,7 @@ void createInitialRegion(address_t base, address_t size) {
 	// For now we ensure that the kernel has some memory to work with.
 	// TODO: Handle small memory regions.
 	if (limit - address < 32 * address_t(0x100000)) {
-		eir::infoLogger() << "eir: Discarding memory region at 0x" << frg::hex_fmt { base }
+		eir::infoLogger() << "eir: Discarding memory region at 0x" << frg::hex_fmt {base}
 		                  << " (smaller than minimum size)" << frg::endlog;
 		return;
 	}
@@ -79,22 +79,21 @@ void createInitialRegions(InitialRegion region, frg::span<InitialRegion> reserve
 		auto rsv = reserved.data()[0];
 
 		if (rsv.base > (region.base + region.size) || (rsv.base + rsv.size) < region.base) {
-			createInitialRegions(region, { reserved.data() + 1, reserved.size() - 1 });
+			createInitialRegions(region, {reserved.data() + 1, reserved.size() - 1});
 			return;
 		}
 
 		if (rsv.base > region.base) {
 			createInitialRegions(
-			        { region.base, rsv.base - region.base },
-			        { reserved.data() + 1, reserved.size() - 1 }
+			  {region.base, rsv.base - region.base},
+			  {reserved.data() + 1, reserved.size() - 1}
 			);
 		}
 
 		if (rsv.base + rsv.size < region.base + region.size) {
 			createInitialRegions(
-			        { rsv.base + rsv.size,
-			          region.base + region.size - (rsv.base + rsv.size) },
-			        { reserved.data() + 1, reserved.size() - 1 }
+			  {rsv.base + rsv.size, region.base + region.size - (rsv.base + rsv.size)},
+			  {reserved.data() + 1, reserved.size() - 1}
 			);
 		}
 	}
@@ -154,11 +153,12 @@ uintptr_t bootReserve(size_t length, size_t alignment) {
 			continue;
 
 		auto table = reinterpret_cast<int8_t *>(regions[i].buddyTree);
-		BuddyAccessor accessor { regions[i].address,
-			                 pageShift,
-			                 table,
-			                 regions[i].numRoots,
-			                 regions[i].order };
+		BuddyAccessor accessor {
+		  regions[i].address,
+		  pageShift,
+		  table,
+		  regions[i].numRoots,
+		  regions[i].order};
 		auto physical = accessor.allocate(0, 32);
 		if (physical == BuddyAccessor::illegalAddress)
 			continue;
@@ -175,11 +175,12 @@ uintptr_t allocPage() {
 			continue;
 
 		auto table = reinterpret_cast<int8_t *>(regions[i].buddyTree);
-		BuddyAccessor accessor { regions[i].address,
-			                 pageShift,
-			                 table,
-			                 regions[i].numRoots,
-			                 regions[i].order };
+		BuddyAccessor accessor {
+		  regions[i].address,
+		  pageShift,
+		  table,
+		  regions[i].numRoots,
+		  regions[i].order};
 		auto physical = accessor.allocate(0, 32);
 		if (physical == BuddyAccessor::illegalAddress)
 			continue;
@@ -198,7 +199,7 @@ namespace {
 constexpr int kasanShift = 3;
 constexpr address_t kasanShadowDelta = 0xdfffe00000000000;
 
-constexpr size_t kasanScale = size_t { 1 } << kasanShift;
+constexpr size_t kasanScale = size_t {1} << kasanShift;
 
 address_t kasanToShadow(address_t address) {
 	return kasanShadowDelta + (address >> kasanShift);
@@ -211,7 +212,7 @@ void setShadowRange(address_t base, size_t size, int8_t value) {
 	size_t progress = 0;
 	while (progress < size) {
 		auto shadow = kasanToShadow(base + progress);
-		auto page = shadow & ~address_t { pageSize - 1 };
+		auto page = shadow & ~address_t {pageSize - 1};
 		auto physical = getSingle4kPage(page);
 		assert(physical != static_cast<address_t>(-1));
 
@@ -230,7 +231,7 @@ void setShadowByte(address_t address, int8_t value) {
 	assert(!(address & (kasanScale - 1)));
 
 	auto shadow = kasanToShadow(address);
-	auto page = shadow & ~address_t { pageSize - 1 };
+	auto page = shadow & ~address_t {pageSize - 1};
 	auto physical = getSingle4kPage(page);
 	assert(physical != static_cast<address_t>(-1));
 
@@ -246,13 +247,13 @@ void mapKasanShadow(address_t base, size_t size) {
 #ifdef EIR_KASAN
 	assert(!(base & (kasanScale - 1)));
 
-	eir::infoLogger() << "eir: Mapping KASAN shadow for 0x" << frg::hex_fmt { base }
-	                  << ", size: 0x" << frg::hex_fmt { size } << frg::endlog;
+	eir::infoLogger() << "eir: Mapping KASAN shadow for 0x" << frg::hex_fmt {base}
+	                  << ", size: 0x" << frg::hex_fmt {size} << frg::endlog;
 
 	size = (size + kasanScale - 1) & ~(kasanScale - 1);
 
-	for (address_t page = (kasanToShadow(base) & ~address_t { pageSize - 1 });
-	     page < ((kasanToShadow(base + size) + pageSize - 1) & ~address_t { pageSize - 1 });
+	for (address_t page = (kasanToShadow(base) & ~address_t {pageSize - 1});
+	     page < ((kasanToShadow(base + size) + pageSize - 1) & ~address_t {pageSize - 1});
 	     page += pageSize) {
 		auto physical = getSingle4kPage(page);
 		if (physical != static_cast<address_t>(-1))
@@ -271,8 +272,8 @@ void unpoisonKasanShadow(address_t base, size_t size) {
 #ifdef EIR_KASAN
 	assert(!(base & (kasanScale - 1)));
 
-	eir::infoLogger() << "eir: Unpoisoning KASAN shadow for 0x" << frg::hex_fmt { base }
-	                  << ", size: 0x" << frg::hex_fmt { size } << frg::endlog;
+	eir::infoLogger() << "eir: Unpoisoning KASAN shadow for 0x" << frg::hex_fmt {base}
+	                  << ", size: 0x" << frg::hex_fmt {size} << frg::endlog;
 
 	setShadowRange(base, size & ~(kasanScale - 1), 0);
 	if (size & (kasanScale - 1))
@@ -289,9 +290,9 @@ void mapRegionsAndStructs() {
 	// This region should be available RAM on every PC.
 	for (size_t page = 0x8000; page < 0x80000; page += pageSize)
 		mapSingle4kPage(
-		        0xFFFF'8000'0000'0000 + page,
-		        page,
-		        PageFlags::write | PageFlags::global
+		  0xFFFF'8000'0000'0000 + page,
+		  page,
+		  PageFlags::write | PageFlags::global
 		);
 	mapKasanShadow(0xFFFF'8000'0000'8000, 0x80000);
 	unpoisonKasanShadow(0xFFFF'8000'0000'8000, 0x80000);
@@ -304,9 +305,9 @@ void mapRegionsAndStructs() {
 		// Map the region itself.
 		for (address_t page = 0; page < regions[i].size; page += pageSize)
 			mapSingle4kPage(
-			        0xFFFF'8000'0000'0000 + regions[i].address + page,
-			        regions[i].address + page,
-			        PageFlags::write | PageFlags::global
+			  0xFFFF'8000'0000'0000 + regions[i].address + page,
+			  regions[i].address + page,
+			  PageFlags::write | PageFlags::global
 			);
 		mapKasanShadow(0xFFFF'8000'0000'0000 + regions[i].address, regions[i].size);
 		unpoisonKasanShadow(0xFFFF'8000'0000'0000 + regions[i].address, regions[i].size);
@@ -317,9 +318,9 @@ void mapRegionsAndStructs() {
 
 		for (address_t page = 0; page < regions[i].buddyOverhead; page += pageSize) {
 			mapSingle4kPage(
-			        buddyMapping + page,
-			        regions[i].buddyTree + page,
-			        PageFlags::write | PageFlags::global
+			  buddyMapping + page,
+			  regions[i].buddyTree + page,
+			  PageFlags::write | PageFlags::global
 			);
 		}
 		mapKasanShadow(buddyMapping, regions[i].buddyOverhead);
@@ -332,9 +333,9 @@ void allocLogRingBuffer() {
 	// 256 MiB
 	for (size_t i = 0; i < 0x1000'0000; i += pageSize)
 		mapSingle4kPage(
-		        0xFFFF'F000'0000'0000 + i,
-		        allocPage(),
-		        PageFlags::write | PageFlags::global
+		  0xFFFF'F000'0000'0000 + i,
+		  allocPage(),
+		  PageFlags::write | PageFlags::global
 		);
 	mapKasanShadow(0xFFFF'F000'0000'0000, 0x1000'0000);
 	unpoisonKasanShadow(0xFFFF'F000'0000'0000, 0x1000'0000);
@@ -360,17 +361,18 @@ address_t mapBootstrapData(void *p) {
 address_t loadKernelImage(void *image) {
 	Elf64_Ehdr ehdr;
 	memcpy(&ehdr, image, sizeof(Elf64_Ehdr));
-	if (ehdr.e_ident[0] != '\x7F' || ehdr.e_ident[1] != 'E' || ehdr.e_ident[2] != 'L'
-	    || ehdr.e_ident[3] != 'F') {
+	if (ehdr.e_ident[0] != '\x7F' || ehdr.e_ident[1] != 'E' || ehdr.e_ident[2] != 'L' || ehdr.e_ident[3] != 'F') {
 		eir::panicLogger() << "Illegal magic fields" << frg::endlog;
 	}
 	assert(ehdr.e_type == ET_EXEC);
 
 	for (int i = 0; i < ehdr.e_phnum; i++) {
 		Elf64_Phdr phdr;
-		memcpy(&phdr,
-		       (void *) ((uintptr_t) image + (uintptr_t) ehdr.e_phoff + i * ehdr.e_phentsize),
-		       sizeof(Elf64_Phdr));
+		memcpy(
+		  &phdr,
+		  (void *) ((uintptr_t) image + (uintptr_t) ehdr.e_phoff + i * ehdr.e_phentsize),
+		  sizeof(Elf64_Phdr)
+		);
 		if (phdr.p_type != PT_LOAD)
 			continue;
 		assert(!(phdr.p_offset & (pageSize - 1)));
@@ -385,11 +387,11 @@ address_t loadKernelImage(void *image) {
 			map_flags |= PageFlags::execute;
 		} else if ((phdr.p_flags & (PF_R | PF_W | PF_X)) == (PF_R | PF_W | PF_X)) {
 			eir::infoLogger()
-			        << "eir: warning: Mapping PHDR with RWX permissions" << frg::endlog;
+			  << "eir: warning: Mapping PHDR with RWX permissions" << frg::endlog;
 			map_flags |= PageFlags::write | PageFlags::execute;
 		} else {
 			eir::panicLogger()
-			        << "Illegal combination of segment permissions" << frg::endlog;
+			  << "Illegal combination of segment permissions" << frg::endlog;
 		}
 
 		uintptr_t pg = 0;
@@ -397,11 +399,13 @@ address_t loadKernelImage(void *image) {
 			auto backing = allocPage();
 			memset(reinterpret_cast<void *>(backing), 0, pageSize);
 			if (pg < (uintptr_t) phdr.p_filesz)
-				memcpy(reinterpret_cast<void *>(backing),
-				       reinterpret_cast<void *>(
-				               (uintptr_t) image + (uintptr_t) phdr.p_offset + pg
-				       ),
-				       frg::min(pageSize, (uintptr_t) phdr.p_filesz - pg));
+				memcpy(
+				  reinterpret_cast<void *>(backing),
+				  reinterpret_cast<void *>(
+				    (uintptr_t) image + (uintptr_t) phdr.p_offset + pg
+				  ),
+				  frg::min(pageSize, (uintptr_t) phdr.p_filesz - pg)
+				);
 			mapSingle4kPage(phdr.p_vaddr + pg, backing, map_flags);
 			pg += pageSize;
 		}
@@ -455,7 +459,7 @@ EirInfo *generateInfo(const char *cmdline) {
 		while (*s && *s != ' ')
 			s++;
 
-		frg::string_view token { l, static_cast<size_t>(s - l) };
+		frg::string_view token {l, static_cast<size_t>(s - l)};
 		if (token == "serial") {
 			info_ptr->debugFlags |= eirDebugSerial;
 		} else if (token == "bochs") {

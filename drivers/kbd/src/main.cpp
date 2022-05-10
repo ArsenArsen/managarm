@@ -38,7 +38,7 @@ Controller::Controller() {
 	HEL_CHECK(helAccessIrq(12, &_irq12Handle));
 	_irq12 = helix::UniqueIrq(_irq12Handle);
 
-	uintptr_t ports[] = { DATA, STATUS };
+	uintptr_t ports[] = {DATA, STATUS};
 	HelHandle handle;
 	HEL_CHECK(helAccessIo(ports, 2, &handle));
 	HEL_CHECK(helEnableIo(handle));
@@ -82,7 +82,7 @@ async::detached Controller::init() {
 
 	// Initialize devices.
 	printf("ps2-hid: Setting up first port\n");
-	_ports[0] = new Port { this, 0 };
+	_ports[0] = new Port {this, 0};
 	co_await _ports[0]->init();
 
 	if (_ports[0]->isDead())
@@ -90,7 +90,7 @@ async::detached Controller::init() {
 
 	if (_hasSecondPort) {
 		printf("ps2-hid: Setting up second port\n");
-		_ports[1] = new Port { this, 1 };
+		_ports[1] = new Port {this, 1};
 		co_await _ports[1]->init();
 
 		if (_ports[1]->isDead())
@@ -233,9 +233,9 @@ bool Controller::processData(int irqPort) {
 // --------------------------------------------------------------------
 
 Controller::Port::Port(Controller *controller, int port)
-        : _controller { controller }
-        , _port { port }
-        , _deviceType {} {}
+: _controller {controller}
+, _port {port}
+, _deviceType {} {}
 
 async::result<void> Controller::Port::init() {
 	auto res1 = co_await submitCommand(device_cmd::DisableScan {});
@@ -382,16 +382,16 @@ async::result<void> Controller::KbdDevice::run() {
 	// Create an mbus object for the partition.
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	mbus::Properties descriptor { { "unix.subsystem", mbus::StringItem { "input" } } };
+	mbus::Properties descriptor {{"unix.subsystem", mbus::StringItem {"input"}}};
 
 	auto handler =
-	        mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		        helix::UniqueLane local_lane, remote_lane;
-		        std::tie(local_lane, remote_lane) = helix::createStream();
-		        libevbackend::serveDevice(_evDev, std::move(local_lane));
+	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+		  helix::UniqueLane local_lane, remote_lane;
+		  std::tie(local_lane, remote_lane) = helix::createStream();
+		  libevbackend::serveDevice(_evDev, std::move(local_lane));
 
-		        co_return std::move(remote_lane);
-	        });
+		  co_return std::move(remote_lane);
+	  });
 
 	co_await root.createObject("ps2kbd", descriptor, std::move(handler));
 
@@ -464,16 +464,16 @@ async::result<void> Controller::MouseDevice::run() {
 	// Create an mbus object for the partition.
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	mbus::Properties descriptor { { "unix.subsystem", mbus::StringItem { "input" } } };
+	mbus::Properties descriptor {{"unix.subsystem", mbus::StringItem {"input"}}};
 
 	auto handler =
-	        mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		        helix::UniqueLane local_lane, remote_lane;
-		        std::tie(local_lane, remote_lane) = helix::createStream();
-		        libevbackend::serveDevice(_evDev, std::move(local_lane));
+	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+		  helix::UniqueLane local_lane, remote_lane;
+		  std::tie(local_lane, remote_lane) = helix::createStream();
+		  libevbackend::serveDevice(_evDev, std::move(local_lane));
 
-		        co_return std::move(remote_lane);
-	        });
+		  co_return std::move(remote_lane);
+	  });
 
 	co_await root.createObject("ps2mouse", descriptor, std::move(handler));
 
@@ -515,14 +515,18 @@ async::detached Controller::MouseDevice::processReports() {
 
 		if (logMouse) {
 			printf("ps2-hid: mouse packet dump:\n");
-			printf("ps2-hid: x move: %d, y move: %d, z move: %d\n",
-			       movement_x,
-			       movement_y,
-			       movement_wheel);
-			printf("ps2-hid: left: %d, right: %d, middle: %d\n",
-			       (byte0 & 1) > 0,
-			       (byte0 & 2) > 0,
-			       (byte0 & 4));
+			printf(
+			  "ps2-hid: x move: %d, y move: %d, z move: %d\n",
+			  movement_x,
+			  movement_y,
+			  movement_wheel
+			);
+			printf(
+			  "ps2-hid: left: %d, right: %d, middle: %d\n",
+			  (byte0 & 1) > 0,
+			  (byte0 & 2) > 0,
+			  (byte0 & 4)
+			);
 			printf("ps2-hid: 4th: %d, 5th: %d\n", (byte3 & 4) > 0, (byte3 & 5) > 0);
 		}
 
@@ -1046,8 +1050,8 @@ async::detached Controller::KbdDevice::processReports() {
 				if (byte2 == 0xF0) {
 					if (!released)
 						std::cout
-						        << "ps2: Got inconsistent E1 release codes"
-						        << std::endl;
+						  << "ps2: Got inconsistent E1 release codes"
+						  << std::endl;
 					released = true;
 					byte2 = (co_await _port->pullByte()).value();
 				}
@@ -1082,13 +1086,13 @@ async::result<std::optional<uint8_t>> Controller::Port::pullByte(async::cancella
 
 static DeviceType determineTypeById(uint16_t id) {
 	if (id == 0)
-		return DeviceType { .mouse = true };
+		return DeviceType {.mouse = true};
 	if (id == 0x3)
-		return DeviceType { .mouse = true, .hasScrollWheel = true };
+		return DeviceType {.mouse = true, .hasScrollWheel = true};
 	if (id == 0x4)
-		return DeviceType { .mouse = true, .has5Buttons = true };
+		return DeviceType {.mouse = true, .has5Buttons = true};
 	if (id == 0xAB41 || id == 0xABC1 || id == 0xAB83)
-		return DeviceType { .keyboard = true };
+		return DeviceType {.keyboard = true};
 
 	printf("ps2-hid: unknown device id %04x, please submit a bug report\n", id);
 	return DeviceType {};  // we assume nothing
@@ -1100,9 +1104,11 @@ Controller::Port::submitCommand(device_cmd::Identify tag) {
 	if (!cmdResp)
 		co_return Ps2Error::timeout;
 	if (*cmdResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after Identify command on port %d, got 0x%02x\n",
-		       _port,
-		       *cmdResp);
+		printf(
+		  "ps2-hid: Expected ACK after Identify command on port %d, got 0x%02x\n",
+		  _port,
+		  *cmdResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1111,12 +1117,12 @@ Controller::Port::submitCommand(device_cmd::Identify tag) {
 
 	if (!data0 && !data1) {
 		// Ancient AT keyboard (identify command returns nothing).
-		co_return DeviceType { .keyboard = true };
+		co_return DeviceType {.keyboard = true};
 	} else if (!data1) {
 		co_return determineTypeById(static_cast<uint16_t>(*data0));
 	} else {
 		co_return determineTypeById(
-		        (static_cast<uint16_t>(*data0) << 8) | static_cast<uint16_t>(*data1)
+		  (static_cast<uint16_t>(*data0) << 8) | static_cast<uint16_t>(*data1)
 		);
 	}
 }
@@ -1127,9 +1133,11 @@ async::result<frg::expected<Ps2Error>> Controller::Port::submitCommand(device_cm
 	if (!cmdResp)
 		co_return Ps2Error::timeout;
 	if (*cmdResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after DisableScan command on port %d, got 0x%02x\n",
-		       _port,
-		       *cmdResp);
+		printf(
+		  "ps2-hid: Expected ACK after DisableScan command on port %d, got 0x%02x\n",
+		  _port,
+		  *cmdResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1141,9 +1149,11 @@ async::result<frg::expected<Ps2Error>> Controller::Port::submitCommand(device_cm
 	if (!cmdResp)
 		co_return Ps2Error::timeout;
 	if (*cmdResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after EnableScan command on port %d, got 0x%02x\n",
-		       _port,
-		       *cmdResp);
+		printf(
+		  "ps2-hid: Expected ACK after EnableScan command on port %d, got 0x%02x\n",
+		  _port,
+		  *cmdResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1156,9 +1166,11 @@ Controller::MouseDevice::submitCommand(device_cmd::SetReportRate tag, int rate) 
 	if (!cmdResp)
 		co_return Ps2Error::timeout;
 	if (*cmdResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after SetReportRate command on port %d, got 0x%02x\n",
-		       _port->getIndex(),
-		       *cmdResp);
+		printf(
+		  "ps2-hid: Expected ACK after SetReportRate command on port %d, got 0x%02x\n",
+		  _port->getIndex(),
+		  *cmdResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1166,10 +1178,12 @@ Controller::MouseDevice::submitCommand(device_cmd::SetReportRate tag, int rate) 
 	if (!outResp)
 		co_return Ps2Error::timeout;
 	if (*outResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after SetReportRate output byte on port %d, got "
-		       "0x%02x\n",
-		       _port->getIndex(),
-		       *outResp);
+		printf(
+		  "ps2-hid: Expected ACK after SetReportRate output byte on port %d, got "
+		  "0x%02x\n",
+		  _port->getIndex(),
+		  *outResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1185,10 +1199,12 @@ Controller::KbdDevice::submitCommand(device_cmd::SetScancodeSet tag, int set) {
 	if (!cmdResp)
 		co_return Ps2Error::timeout;
 	if (*cmdResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after SetScancodeSet data byte on port %d, got "
-		       "0x%02x\n",
-		       _port->getIndex(),
-		       *cmdResp);
+		printf(
+		  "ps2-hid: Expected ACK after SetScancodeSet data byte on port %d, got "
+		  "0x%02x\n",
+		  _port->getIndex(),
+		  *cmdResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1196,10 +1212,12 @@ Controller::KbdDevice::submitCommand(device_cmd::SetScancodeSet tag, int set) {
 	if (!outResp)
 		co_return Ps2Error::timeout;
 	if (*outResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after setScancodeSet output byte on port %d, got "
-		       "0x%02x\n",
-		       _port->getIndex(),
-		       *outResp);
+		printf(
+		  "ps2-hid: Expected ACK after setScancodeSet output byte on port %d, got "
+		  "0x%02x\n",
+		  _port->getIndex(),
+		  *outResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1212,10 +1230,12 @@ Controller::KbdDevice::submitCommand(device_cmd::GetScancodeSet tag) {
 	if (!cmdResp)
 		co_return Ps2Error::timeout;
 	if (*cmdResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after SetScancodeSet data byte on port %d, got "
-		       "0x%02x\n",
-		       _port->getIndex(),
-		       *cmdResp);
+		printf(
+		  "ps2-hid: Expected ACK after SetScancodeSet data byte on port %d, got "
+		  "0x%02x\n",
+		  _port->getIndex(),
+		  *cmdResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1223,10 +1243,12 @@ Controller::KbdDevice::submitCommand(device_cmd::GetScancodeSet tag) {
 	if (!outResp)
 		co_return Ps2Error::timeout;
 	if (*outResp != 0xFA) {
-		printf("ps2-hid: Expected ACK after setScancodeSet output byte on port %d, got "
-		       "0x%02x\n",
-		       _port->getIndex(),
-		       *outResp);
+		printf(
+		  "ps2-hid: Expected ACK after setScancodeSet output byte on port %d, got "
+		  "0x%02x\n",
+		  _port->getIndex(),
+		  *outResp
+		);
 		co_return Ps2Error::nack;
 	}
 
@@ -1260,7 +1282,7 @@ async::result<std::optional<uint8_t>> Controller::Port::recvResponseByte(uint64_
 	frg::optional<uint8_t> result;
 	if (timeout) {
 		async::cancellation_event ev;
-		helix::TimeoutCancellation timer { timeout, ev };
+		helix::TimeoutCancellation timer {timeout, ev};
 
 		result = co_await _dataQueue.async_get(ev);
 		co_await timer.retire();

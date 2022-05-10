@@ -32,18 +32,18 @@ constexpr inline static uintptr_t mmioBase = 0x47e000000;
 
 namespace Gpio {
 namespace reg {
-constexpr static arch::bit_register<uint32_t> sel1 { 0x04 };
-constexpr static arch::bit_register<uint32_t> pup_pdn0 { 0xE4 };
+constexpr static arch::bit_register<uint32_t> sel1 {0x04};
+constexpr static arch::bit_register<uint32_t> pup_pdn0 {0xE4};
 }  // namespace reg
 
-constexpr static arch::mem_space space { mmioBase + 0x200000 };
+constexpr static arch::mem_space space {mmioBase + 0x200000};
 
 void configUart0Gpio() {
-	arch::field<uint32_t, uint8_t> sel1_p14 { 12, 3 };
-	arch::field<uint32_t, uint8_t> sel1_p15 { 15, 3 };
+	arch::field<uint32_t, uint8_t> sel1_p14 {12, 3};
+	arch::field<uint32_t, uint8_t> sel1_p15 {15, 3};
 
-	arch::field<uint32_t, uint8_t> pup_pdn0_p14 { 28, 2 };
-	arch::field<uint32_t, uint8_t> pup_pdn0_p15 { 30, 2 };
+	arch::field<uint32_t, uint8_t> pup_pdn0_p14 {28, 2};
+	arch::field<uint32_t, uint8_t> pup_pdn0_p15 {30, 2};
 
 	// Alt 0
 	space.store(reg::sel1, space.load(reg::sel1) / sel1_p14(4) / sel1_p15(4));
@@ -53,12 +53,12 @@ void configUart0Gpio() {
 }  // namespace Gpio
 
 namespace Mbox {
-constexpr static arch::mem_space space { mmioBase + 0xb880 };
+constexpr static arch::mem_space space {mmioBase + 0xb880};
 
 namespace reg {
-constexpr static arch::bit_register<uint32_t> read { 0x00 };
-constexpr static arch::bit_register<uint32_t> status { 0x18 };
-constexpr static arch::bit_register<uint32_t> write { 0x20 };
+constexpr static arch::bit_register<uint32_t> read {0x00};
+constexpr static arch::bit_register<uint32_t> status {0x18};
+constexpr static arch::bit_register<uint32_t> write {0x20};
 }  // namespace reg
 
 enum class Channel {
@@ -73,13 +73,13 @@ enum class Channel {
 };
 
 namespace io {
-constexpr static arch::field<uint32_t, Channel> channel { 0, 4 };
-constexpr static arch::field<uint32_t, uint32_t> value { 4, 28 };
+constexpr static arch::field<uint32_t, Channel> channel {0, 4};
+constexpr static arch::field<uint32_t, uint32_t> value {4, 28};
 }  // namespace io
 
 namespace status {
-constexpr static arch::field<uint32_t, bool> empty { 30, 1 };
-constexpr static arch::field<uint32_t, bool> full { 31, 1 };
+constexpr static arch::field<uint32_t, bool> empty {30, 1};
+constexpr static arch::field<uint32_t, bool> full {31, 1};
 }  // namespace status
 
 void write(Channel channel, uint32_t value) {
@@ -200,10 +200,10 @@ frg::tuple<int, int, void *, size_t> setupFb(int width, int height, int bpp) {
 	}
 
 	return frg::make_tuple(
-	        int(ptr[5]),
-	        int(ptr[6]),
-	        reinterpret_cast<void *>(fbPtr),
-	        size_t(ptr[33])
+	  int(ptr[5]),
+	  int(ptr[6]),
+	  reinterpret_cast<void *>(fbPtr),
+	  size_t(ptr[33])
 	);
 }
 
@@ -260,7 +260,7 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	char cmd_buf[1024];
 	size_t cmd_len = PropertyMbox::getCmdline<1024>(cmd_buf);
 
-	frg::string_view cmd_sv { cmd_buf, cmd_len };
+	frg::string_view cmd_sv {cmd_buf, cmd_len};
 	eir::infoLogger() << "Got cmdline: " << cmd_sv << frg::endlog;
 
 	eir::infoLogger() << "Attempting to set up a framebuffer:" << frg::endlog;
@@ -279,12 +279,12 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 			while (*s && *s != ' ')
 				s++;
 
-			frg::string_view token { l, static_cast<size_t>(s - l) };
+			frg::string_view token {l, static_cast<size_t>(s - l)};
 
 			if (auto equals = token.find_first('='); equals != size_t(-1)) {
 				auto key = token.sub_string(0, equals);
 				auto value =
-				        token.sub_string(equals + 1, token.size() - equals - 1);
+				  token.sub_string(equals + 1, token.size() - equals - 1);
 
 				if (key == "bcm2708_fb.fbwidth") {
 					if (auto width = value.to_number<int>(); width)
@@ -306,7 +306,7 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		eir::infoLogger() << "No display attached" << frg::endlog;
 	} else {
 		auto [actualW, actualH, ptr, pitch] =
-		        PropertyMbox::setupFb(fb_width, fb_height, 32);
+		  PropertyMbox::setupFb(fb_width, fb_height, 32);
 
 		if (!ptr || !pitch) {
 			eir::infoLogger() << "Mode setting failed..." << frg::endlog;
@@ -327,10 +327,10 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 
 	initProcessorEarly();
 
-	DeviceTree dt { reinterpret_cast<void *>(deviceTreePtr) };
+	DeviceTree dt {reinterpret_cast<void *>(deviceTreePtr)};
 
 	eir::infoLogger() << "DTB pointer " << dt.data() << frg::endlog;
-	eir::infoLogger() << "DTB size: 0x" << frg::hex_fmt { dt.size() } << frg::endlog;
+	eir::infoLogger() << "DTB size: 0x" << frg::hex_fmt {dt.size()} << frg::endlog;
 
 	DeviceTreeNode chosenNode;
 	bool hasChosenNode = false;
@@ -339,23 +339,22 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	size_t nMemoryNodes = 0;
 
 	dt.rootNode().discoverSubnodes(
-	        [](DeviceTreeNode &node) {
-		        return !memcmp("memory@", node.name(), 7)
-		            || !memcmp("chosen", node.name(), 7);
-	        },
-	        [&](DeviceTreeNode node) {
-		        if (!memcmp("chosen", node.name(), 7)) {
-			        assert(!hasChosenNode);
+	  [](DeviceTreeNode &node) {
+		  return !memcmp("memory@", node.name(), 7) || !memcmp("chosen", node.name(), 7);
+	  },
+	  [&](DeviceTreeNode node) {
+		  if (!memcmp("chosen", node.name(), 7)) {
+			  assert(!hasChosenNode);
 
-			        chosenNode = node;
-			        hasChosenNode = true;
-		        } else {
-			        assert(nMemoryNodes < 32);
+			  chosenNode = node;
+			  hasChosenNode = true;
+		  } else {
+			  assert(nMemoryNodes < 32);
 
-			        memoryNodes[nMemoryNodes++] = node;
-		        }
-		        infoLogger() << "Node \"" << node.name() << "\" discovered" << frg::endlog;
-	        }
+			  memoryNodes[nMemoryNodes++] = node;
+		  }
+		  infoLogger() << "Node \"" << node.name() << "\" discovered" << frg::endlog;
+	  }
 	);
 
 	uint32_t addressCells = 2, sizeCells = 1;
@@ -375,17 +374,17 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 
 	eir::infoLogger() << "Memory reservation entries:" << frg::endlog;
 	for (auto ent : dt.memoryReservations()) {
-		eir::infoLogger() << "At 0x" << frg::hex_fmt { ent.address } << ", ends at 0x"
-		                  << frg::hex_fmt { ent.address + ent.size } << " (0x"
-		                  << frg::hex_fmt { ent.size } << " bytes)" << frg::endlog;
+		eir::infoLogger() << "At 0x" << frg::hex_fmt {ent.address} << ", ends at 0x"
+		                  << frg::hex_fmt {ent.address + ent.size} << " (0x"
+		                  << frg::hex_fmt {ent.size} << " bytes)" << frg::endlog;
 
-		reservedRegions[nReservedRegions++] = { ent.address, ent.size };
+		reservedRegions[nReservedRegions++] = {ent.address, ent.size};
 	}
 	eir::infoLogger() << "End of memory reservation entries" << frg::endlog;
 
 	uintptr_t eirStart = reinterpret_cast<uintptr_t>(&eirImageFloor);
 	uintptr_t eirEnd = reinterpret_cast<uintptr_t>(&eirImageCeiling);
-	reservedRegions[nReservedRegions++] = { eirStart, eirEnd - eirStart };
+	reservedRegions[nReservedRegions++] = {eirStart, eirEnd - eirStart};
 
 	uintptr_t initrd = 0;
 	if (auto p = chosenNode.findProperty("linux,initrd-start"); p) {
@@ -402,13 +401,13 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		eir::infoLogger() << "Assuming initrd is at " << (void *) initrd << frg::endlog;
 	}
 
-	CpioRange cpio_range { reinterpret_cast<void *>(initrd) };
+	CpioRange cpio_range {reinterpret_cast<void *>(initrd)};
 
 	auto initrd_end = reinterpret_cast<uintptr_t>(cpio_range.eof());
 	eir::infoLogger() << "Initrd ends at " << (void *) initrd_end << frg::endlog;
 
-	reservedRegions[nReservedRegions++] = { initrd, initrd_end - initrd };
-	reservedRegions[nReservedRegions++] = { deviceTreePtr, dt.size() };
+	reservedRegions[nReservedRegions++] = {initrd, initrd_end - initrd};
+	reservedRegions[nReservedRegions++] = {deviceTreePtr, dt.size()};
 
 	for (int i = 0; i < nMemoryNodes; i++) {
 		auto reg = memoryNodes[i].findProperty("reg");
@@ -422,7 +421,7 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 			auto size = reg->asPropArrayEntry(sizeCells, j);
 			j += sizeCells * 4;
 
-			createInitialRegions({ base, size }, { reservedRegions, nReservedRegions });
+			createInitialRegions({base, size}, {reservedRegions, nReservedRegions});
 		}
 	}
 
@@ -433,17 +432,16 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		if (regions[i].regionType == RegionType::null)
 			continue;
 		eir::infoLogger() << "    Memory region [" << i << "]."
-		                  << " Base: 0x" << frg::hex_fmt { regions[i].address }
-		                  << ", length: 0x" << frg::hex_fmt { regions[i].size }
+		                  << " Base: 0x" << frg::hex_fmt {regions[i].address}
+		                  << ", length: 0x" << frg::hex_fmt {regions[i].size}
 		                  << frg::endlog;
 		if (regions[i].regionType == RegionType::allocatable)
-			eir::infoLogger()
-			        << "        Buddy tree at 0x"
-			        << frg::hex_fmt { regions[i].buddyTree } << ", overhead: 0x"
-			        << frg::hex_fmt { regions[i].buddyOverhead } << frg::endlog;
+			eir::infoLogger() << "        Buddy tree at 0x"
+			                  << frg::hex_fmt {regions[i].buddyTree} << ", overhead: 0x"
+			                  << frg::hex_fmt {regions[i].buddyOverhead} << frg::endlog;
 	}
 
-	frg::span<uint8_t> kernel_image { nullptr, 0 };
+	frg::span<uint8_t> kernel_image {nullptr, 0};
 
 	for (auto entry : cpio_range) {
 		if (entry.name == "thor") {
@@ -485,10 +483,10 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 		assert(fb_ptr & ~(pageSize - 1));
 		for (address_t pg = 0; pg < fb_pitch * fb_height; pg += 0x1000)
 			mapSingle4kPage(
-			        0xFFFF'FE00'4000'0000 + pg,
-			        fb_ptr + pg,
-			        PageFlags::write,
-			        CachingMode::writeCombine
+			  0xFFFF'FE00'4000'0000 + pg,
+			  fb_ptr + pg,
+			  PageFlags::write,
+			  CachingMode::writeCombine
 			);
 		mapKasanShadow(0xFFFF'FE00'4000'0000, fb_pitch * fb_height);
 		unpoisonKasanShadow(0xFFFF'FE00'4000'0000, fb_pitch * fb_height);
@@ -498,10 +496,10 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	info_ptr->debugFlags |= eirDebugSerial;
 
 	mapSingle4kPage(
-	        0xFFFF'0000'0000'0000,
-	        mmioBase + 0x201000,
-	        PageFlags::write,
-	        CachingMode::mmio
+	  0xFFFF'0000'0000'0000,
+	  mmioBase + 0x201000,
+	  PageFlags::write,
+	  CachingMode::mmio
 	);
 	mapKasanShadow(0xFFFF'0000'0000'0000, 0x1000);
 	unpoisonKasanShadow(0xFFFF'0000'0000'0000, 0x1000);
@@ -509,11 +507,11 @@ extern "C" void eirRaspi4Main(uintptr_t deviceTreePtr) {
 	eir::infoLogger() << "Leaving Eir and entering the real kernel" << frg::endlog;
 
 	eirEnterKernel(
-	        eirTTBR[0] + 1,
-	        eirTTBR[1] + 1,
-	        kernel_entry,
-	        0xFFFF'FE80'0001'0000,
-	        0xFFFF'FE80'0001'0000
+	  eirTTBR[0] + 1,
+	  eirTTBR[1] + 1,
+	  kernel_entry,
+	  0xFFFF'FE80'0001'0000,
+	  0xFFFF'FE80'0001'0000
 	);
 
 	while (true)

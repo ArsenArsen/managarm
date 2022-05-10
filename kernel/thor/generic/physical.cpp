@@ -34,10 +34,10 @@ void *SkeletalRegion::access(PhysicalAddr physical) {
 PhysicalChunkAllocator::PhysicalChunkAllocator() {}
 
 void PhysicalChunkAllocator::bootstrapRegion(
-        PhysicalAddr address,
-        int order,
-        size_t numRoots,
-        int8_t *buddyTree
+  PhysicalAddr address,
+  int order,
+  size_t numRoots,
+  int8_t *buddyTree
 ) {
 	if (_numRegions >= 8) {
 		infoLogger() << "thor: Ignoring memory region (can only handle 8 regions)"
@@ -49,7 +49,7 @@ void PhysicalChunkAllocator::bootstrapRegion(
 	_allRegions[n].physicalBase = address;
 	_allRegions[n].regionSize = numRoots << (order + kPageShift);
 	_allRegions[n].buddyAccessor =
-	        BuddyAccessor { address, kPageShift, buddyTree, numRoots, order };
+	  BuddyAccessor {address, kPageShift, buddyTree, numRoots, order};
 
 	auto currentTotal = _totalPages.load(std::memory_order_relaxed);
 	auto currentFree = _freePages.load(std::memory_order_relaxed);

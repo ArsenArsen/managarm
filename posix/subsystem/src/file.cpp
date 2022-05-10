@@ -91,11 +91,11 @@ File::ptWrite(void *object, const char *credentials, const void *buffer, size_t 
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>> File::ptPwrite(
-        void *object,
-        int64_t offset,
-        const char *credentials,
-        const void *buffer,
-        size_t length
+  void *object,
+  int64_t offset,
+  const char *credentials,
+  const void *buffer,
+  size_t length
 ) {
 	auto self = static_cast<File *>(object);
 	auto process = findProcessWithCredentials(credentials);
@@ -196,14 +196,14 @@ async::result<frg::expected<protocols::fs::Error, int>> File::ptAddSeals(void *o
 }
 
 async::result<protocols::fs::RecvResult> File::ptRecvMsg(
-        void *object,
-        const char *creds,
-        uint32_t flags,
-        void *data,
-        size_t len,
-        void *addr,
-        size_t addr_len,
-        size_t max_ctrl_len
+  void *object,
+  const char *creds,
+  uint32_t flags,
+  void *data,
+  size_t len,
+  void *addr,
+  size_t addr_len,
+  size_t max_ctrl_len
 ) {
 	auto self = static_cast<File *>(object);
 	auto process = findProcessWithCredentials(creds);
@@ -211,14 +211,14 @@ async::result<protocols::fs::RecvResult> File::ptRecvMsg(
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>> File::ptSendMsg(
-        void *object,
-        const char *creds,
-        uint32_t flags,
-        void *data,
-        size_t len,
-        void *addr,
-        size_t addr_len,
-        std::vector<uint32_t> fds
+  void *object,
+  const char *creds,
+  uint32_t flags,
+  void *data,
+  size_t len,
+  void *addr,
+  size_t addr_len,
+  std::vector<uint32_t> fds
 ) {
 	auto self = static_cast<File *>(object);
 	auto process = findProcessWithCredentials(creds);
@@ -260,9 +260,8 @@ bool File::isTerminal() {
 async::result<frg::expected<Error>> File::readExactly(Process *process, void *data, size_t length) {
 	size_t offset = 0;
 	while (offset < length) {
-		auto result = FRG_CO_TRY(
-		        co_await readSome(process, (char *) data + offset, length - offset)
-		);
+		auto result =
+		  FRG_CO_TRY(co_await readSome(process, (char *) data + offset, length - offset));
 		if (!result)
 			co_return Error::wouldBlock;
 		offset += result;
@@ -310,13 +309,7 @@ File::recvMsg(Process *, uint32_t, void *, size_t, void *, size_t, size_t) {
 }
 
 async::result<frg::expected<protocols::fs::Error, size_t>> File::
-        sendMsg(Process *,
-                uint32_t,
-                const void *,
-                size_t,
-                const void *,
-                size_t,
-                std::vector<smarter::shared_ptr<File, FileHandle>>) {
+  sendMsg(Process *, uint32_t, const void *, size_t, const void *, size_t, std::vector<smarter::shared_ptr<File, FileHandle>>) {
 	std::cout << "posix \e[1;34m" << structName()
 	          << "\e[0m: Object does not implement sendMsg()" << std::endl;
 	throw std::runtime_error("posix: Object has no File::sendMsg()");
@@ -349,10 +342,10 @@ expected<PollResult> File::poll(Process *, uint64_t, async::cancellation_token) 
 }
 
 async::result<frg::expected<Error, PollWaitResult>> File::pollWait(
-        Process *process,
-        uint64_t sequence,
-        int mask,
-        async::cancellation_token cancellation
+  Process *process,
+  uint64_t sequence,
+  int mask,
+  async::cancellation_token cancellation
 ) {
 	while (true) {
 		auto resultOrError = co_await poll(process, sequence, cancellation);
@@ -362,7 +355,7 @@ async::result<frg::expected<Error, PollWaitResult>> File::pollWait(
 
 		auto result = std::get<PollResult>(resultOrError);
 		if ((std::get<1>(result) & mask) || cancellation.is_cancellation_requested())
-			co_return PollWaitResult { std::get<0>(result), std::get<1>(result) };
+			co_return PollWaitResult {std::get<0>(result), std::get<1>(result)};
 
 		// Mask was not satisfied.
 		sequence = std::get<0>(result);
@@ -376,7 +369,7 @@ async::result<frg::expected<Error, PollStatusResult>> File::pollStatus(Process *
 		co_return *error;
 
 	auto result = std::get<PollResult>(resultOrError);
-	co_return PollStatusResult { std::get<0>(result), std::get<2>(result) };
+	co_return PollStatusResult {std::get<0>(result), std::get<2>(result)};
 }
 
 async::result<int> File::getOption(int) {

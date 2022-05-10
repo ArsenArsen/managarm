@@ -15,14 +15,14 @@ async::detached bindController(mbus::Entity entity) {
 	auto ahciBar = co_await device.accessBar(5);
 	auto irq = co_await device.accessIrq();
 
-	helix::Mapping mapping { ahciBar, ahciBarInfo.offset, ahciBarInfo.length };
+	helix::Mapping mapping {ahciBar, ahciBarInfo.offset, ahciBarInfo.length};
 
 	auto controller = std::make_unique<Controller>(
-	        entity.getId(),
-	        std::move(device),
-	        std::move(mapping),
-	        std::move(ahciBar),
-	        std::move(irq)
+	  entity.getId(),
+	  std::move(device),
+	  std::move(mapping),
+	  std::move(ahciBar),
+	  std::move(irq)
 	);
 	controller->run();
 	globalControllers.push_back(std::move(controller));
@@ -31,15 +31,17 @@ async::detached bindController(mbus::Entity entity) {
 async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("pci-class", "01"),
-	                                  mbus::EqualsFilter("pci-subclass", "06"),
-	                                  mbus::EqualsFilter("pci-interface", "01") });
+	auto filter = mbus::Conjunction(
+	  {mbus::EqualsFilter("pci-class", "01"),
+	   mbus::EqualsFilter("pci-subclass", "06"),
+	   mbus::EqualsFilter("pci-interface", "01")}
+	);
 
 	auto handler =
-	        mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		        std::cout << "block/ahci: Detected controller\n";
-		        bindController(std::move(entity));
-	        });
+	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		  std::cout << "block/ahci: Detected controller\n";
+		  bindController(std::move(entity));
+	  });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

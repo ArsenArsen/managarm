@@ -4,11 +4,11 @@
 namespace thor {
 
 BootScreen::Formatter::Formatter(BootScreen *screen, int x, int y)
-        : _screen { screen }
-        , _csiState { 0 }
-        , _modeCount { 0 }
-        , _x { x }
-        , _y { y } {
+: _screen {screen}
+, _csiState {0}
+, _modeCount {0}
+, _x {x}
+, _y {y} {
 	for (int i = 0; i < 4; i++)
 		_modeStack[i] = 0;
 }
@@ -90,9 +90,9 @@ void BootScreen::Formatter::print(const char *c) {
 }
 
 BootScreen::BootScreen(TextDisplay *display)
-        : _display { display }
-        , _bottomSequence { 0 }
-        , _fmt { this, 0, 0 } {
+: _display {display}
+, _bottomSequence {0}
+, _fmt {this, 0, 0} {
 	_width = _display->getWidth();
 	_height = _display->getHeight();
 }
@@ -101,7 +101,7 @@ void BootScreen::printChar(char) {
 	auto displayLine = [&](uint64_t seq, int i) {
 		char text[100];
 		copyLogMessage(seq, text);
-		_fmt = Formatter { this, 0, i };
+		_fmt = Formatter {this, 0, i};
 		_fmt.print(text);
 	};
 
@@ -116,7 +116,7 @@ void BootScreen::printChar(char) {
 		// Clear the last line.
 		_bottomSequence = cs;
 		_display->setBlanks(0, _height - 1, frg::min(100, _width), -1);
-		_fmt = Formatter { this, 0, _height - 1 };
+		_fmt = Formatter {this, 0, _height - 1};
 	}
 
 	// Partially draw the last line.

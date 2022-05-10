@@ -20,7 +20,7 @@ constexpr inline arch::scalar_register<uint32_t> lApicEoi(0x00B0);
 constexpr inline arch::bit_register<uint32_t> lApicSpurious(0x00F0);
 constexpr inline arch::bit_register<uint32_t> lApicIcrLow(0x0300);
 constexpr inline arch::bit_register<uint32_t> lApicIcrHigh(0x0310);
-constexpr inline arch::bit_register<uint64_t> lX2ApicIcr { 0x0300 };
+constexpr inline arch::bit_register<uint64_t> lX2ApicIcr {0x0300};
 constexpr inline arch::bit_register<uint32_t> lApicLvtTimer(0x0320);
 constexpr inline arch::bit_register<uint32_t> lApicLvtPerfCount(0x0340);
 constexpr inline arch::bit_register<uint32_t> lApicLvtLocal0(0x0350);
@@ -70,17 +70,17 @@ ApicRegisterSpace picBase;
 
 namespace {
 bool getLocalApicIsr(unsigned int vector) {
-	arch::scalar_register<uint32_t> isrRegister { 0x100 + 0x10 * (vector >> 5) };
+	arch::scalar_register<uint32_t> isrRegister {0x100 + 0x10 * (vector >> 5)};
 	return picBase.load(isrRegister) & (1 << (vector & 31));
 }
 
 bool getLocalApicTmr(unsigned int vector) {
-	arch::scalar_register<uint32_t> tmrRegister { 0x180 + 0x10 * (vector >> 5) };
+	arch::scalar_register<uint32_t> tmrRegister {0x180 + 0x10 * (vector >> 5)};
 	return picBase.load(tmrRegister) & (1 << (vector & 31));
 }
 
 bool getLocalApicIrr(unsigned int vector) {
-	arch::scalar_register<uint32_t> irrRegister { 0x200 + 0x10 * (vector >> 5) };
+	arch::scalar_register<uint32_t> irrRegister {0x200 + 0x10 * (vector >> 5)};
 	return picBase.load(irrRegister) & (1 << (vector & 31));
 }
 }  // namespace
@@ -125,7 +125,7 @@ void GlobalApicContext::GlobalAlarmSlot::arm(uint64_t nanos) {
 	LocalApicContext::_updateLocalTimer();
 }
 
-LocalApicContext::LocalApicContext() : _preemptionDeadline { 0 }, _globalDeadline { 0 } {}
+LocalApicContext::LocalApicContext() : _preemptionDeadline {0}, _globalDeadline {0} {}
 
 void LocalApicContext::setPreemption(uint64_t nanos) {
 	assert(localApicContext()->timersAreCalibrated);
@@ -191,11 +191,8 @@ void LocalApicContext::_updateLocalTimer() {
 		}
 
 		uint64_t ticks;
-		auto of = __builtin_mul_overflow(
-		        deadline,
-		        localApicContext()->tscTicksPerMilli,
-		        &ticks
-		);
+		auto of =
+		  __builtin_mul_overflow(deadline, localApicContext()->tscTicksPerMilli, &ticks);
 		assert(!of);
 		ticks /= 1'000'000;
 		common::x86::wrmsr(0x6E0, ticks);
@@ -221,9 +218,9 @@ void LocalApicContext::_updateLocalTimer() {
 				             << "]: Setting timer " << ((deadline - now) / 1000)
 				             << " us in the future" << frg::endlog;
 			auto of = __builtin_mul_overflow(
-			        deadline - now,
-			        localApicContext()->localTicksPerMilli,
-			        &ticks
+			  deadline - now,
+			  localApicContext()->localTicksPerMilli,
+			  &ticks
 			);
 			assert(!of);
 			ticks /= 1'000'000;
@@ -251,44 +248,42 @@ bool preemptionIsArmed() {
 // --------------------------------------------------------
 
 initgraph::Stage *getApicDiscoveryStage() {
-	static initgraph::Stage s { &globalInitEngine, "x86.apic-discovered" };
+	static initgraph::Stage s {&globalInitEngine, "x86.apic-discovered"};
 	return &s;
 }
 
 static initgraph::Task discoverApicTask {
-	&globalInitEngine,
-	"x86.discover-apic",
-	initgraph::Entails { getApicDiscoveryStage() },
-	[] {
-	        uint64_t msr = common::x86::rdmsr(common::x86::kMsrLocalApicBase);
-	        msr |= (1 << 11);  // Enable APIC
+  &globalInitEngine,
+  "x86.discover-apic",
+  initgraph::Entails {getApicDiscoveryStage()},
+  [] {
+	  uint64_t msr = common::x86::rdmsr(common::x86::kMsrLocalApicBase);
+	  msr |= (1 << 11);  // Enable APIC
 
-	        bool haveX2apic = false;
-	        if (common::x86::cpuid(0x01)[2] & (uint32_t(1) << 21)) {
-		        infoLogger() << "\e[37mthor: CPU supports x2apic\e[39m" << frg::endlog;
-		        msr |= (1 << 10);
-		        haveX2apic = true;
-	        } else {
-		        infoLogger()
-		                << "\e[37mthor: CPU does not support x2apic\e[39m" << frg::endlog;
-	        }
+	  bool haveX2apic = false;
+	  if (common::x86::cpuid(0x01)[2] & (uint32_t(1) << 21)) {
+		  infoLogger() << "\e[37mthor: CPU supports x2apic\e[39m" << frg::endlog;
+		  msr |= (1 << 10);
+		  haveX2apic = true;
+	  } else {
+		  infoLogger() << "\e[37mthor: CPU does not support x2apic\e[39m" << frg::endlog;
+	  }
 
-	        common::x86::wrmsr(common::x86::kMsrLocalApicBase, msr);
+	  common::x86::wrmsr(common::x86::kMsrLocalApicBase, msr);
 
-	        // TODO: We really only need a single page.
-	        auto register_ptr = KernelVirtualMemory::global().allocate(0x10000);
-	        // TODO: Intel SDM specifies that we should mask out all
-	        // bits > the physical address limit of the msr.
-	        // For now we just assume that they are zero.
-	        KernelPageSpace::global().mapSingle4k(
-	                VirtualAddr(register_ptr),
-	                msr & ~PhysicalAddr { 0xFFF },
-	                page_access::write,
-	                CachingMode::null
-	        );
-	        picBase = ApicRegisterSpace(haveX2apic, register_ptr);
-	}
-};
+	  // TODO: We really only need a single page.
+	  auto register_ptr = KernelVirtualMemory::global().allocate(0x10000);
+	  // TODO: Intel SDM specifies that we should mask out all
+	  // bits > the physical address limit of the msr.
+	  // For now we just assume that they are zero.
+	  KernelPageSpace::global().mapSingle4k(
+	    VirtualAddr(register_ptr),
+	    msr & ~PhysicalAddr {0xFFF},
+	    page_access::write,
+	    CachingMode::null
+	  );
+	  picBase = ApicRegisterSpace(haveX2apic, register_ptr);
+  }};
 
 void initLocalApicPerCpu() {
 	uint64_t msr = common::x86::rdmsr(common::x86::kMsrLocalApicBase);
@@ -312,8 +307,8 @@ void initLocalApicPerCpu() {
 	// Enable the local APIC.
 	uint32_t spurious_vector = 0x81;
 	picBase.store(
-	        lApicSpurious,
-	        apicSpuriousVector(spurious_vector) | apicSpuriousSwEnable(true)
+	  lApicSpurious,
+	  apicSpuriousVector(spurious_vector) | apicSpuriousSwEnable(true)
 	);
 
 	dumpLocalInt(0);
@@ -354,7 +349,7 @@ namespace {
 struct TscClockSource final : ClockSource {
 	uint64_t currentNanos() override {
 		auto r =
-		        getRawTimestampCounter() * 1'000'000 / localApicContext()->tscTicksPerMilli;
+		  getRawTimestampCounter() * 1'000'000 / localApicContext()->tscTicksPerMilli;
 		//		infoLogger() << r << frg::endlog;
 		return r;
 	}
@@ -397,29 +392,28 @@ void calibrateApicTimer() {
 }
 
 static initgraph::Task assessTimersTask {
-	&globalInitEngine,
-	"x86.assess-timers",
-	initgraph::Requires { getHpetInitializedStage() },
-	initgraph::Entails { getTaskingAvailableStage() },
-	[] {
-	        if (getGlobalCpuFeatures()->haveInvariantTsc) {
-		        globalTscClockSource.initialize();
-		        globalClockSource = globalTscClockSource.get();
-	        } else {
-		        infoLogger() << "thor: No invariant TSC; using HPET as system clock source"
-		                     << frg::endlog;
+  &globalInitEngine,
+  "x86.assess-timers",
+  initgraph::Requires {getHpetInitializedStage()},
+  initgraph::Entails {getTaskingAvailableStage()},
+  [] {
+	  if (getGlobalCpuFeatures()->haveInvariantTsc) {
+		  globalTscClockSource.initialize();
+		  globalClockSource = globalTscClockSource.get();
+	  } else {
+		  infoLogger() << "thor: No invariant TSC; using HPET as system clock source"
+		               << frg::endlog;
 
-		        globalClockSource = hpetClockSource;
-	        }
+		  globalClockSource = hpetClockSource;
+	  }
 
-	        globalTimerEngine = frg::construct<PrecisionTimerEngine>(
-	                *kernelAlloc,
-	                globalClockSource,
-	                globalApicContext()->globalAlarm()
-	        );
-	        //			globalClockSource, hpetAlarmTracker);
-	}
-};
+	  globalTimerEngine = frg::construct<PrecisionTimerEngine>(
+	    *kernelAlloc,
+	    globalClockSource,
+	    globalApicContext()->globalAlarm()
+	  );
+	  //			globalClockSource, hpetAlarmTracker);
+  }};
 
 void acknowledgeIpi() {
 	picBase.store(lApicEoi, 0);
@@ -428,17 +422,16 @@ void acknowledgeIpi() {
 void raiseInitAssertIpi(uint32_t dest_apic_id) {
 	if (picBase.isUsingX2apic()) {
 		picBase.store(
-		        lX2ApicIcr,
-		        x2apicIcrLowDelivMode(5) | x2apicIcrLowLevel(true)
-		                | x2apicIcrLowTriggerMode(true)
-		                | x2apicIcrHighDestField(dest_apic_id)
+		  lX2ApicIcr,
+		  x2apicIcrLowDelivMode(5) | x2apicIcrLowLevel(true) | x2apicIcrLowTriggerMode(true)
+		    | x2apicIcrHighDestField(dest_apic_id)
 		);
 	} else {
 		picBase.store(lApicIcrHigh, apicIcrHighDestField(dest_apic_id));
 		// DM:init = 5, Level:assert = 1, TM:Level = 1
 		picBase.store(
-		        lApicIcrLow,
-		        apicIcrLowDelivMode(5) | apicIcrLowLevel(true) | apicIcrLowTriggerMode(true)
+		  lApicIcrLow,
+		  apicIcrLowDelivMode(5) | apicIcrLowLevel(true) | apicIcrLowTriggerMode(true)
 		);
 		while (picBase.load(lApicIcrLow) & apicIcrLowDelivStatus) {
 			// Wait for IPI delivery.
@@ -449,9 +442,9 @@ void raiseInitAssertIpi(uint32_t dest_apic_id) {
 void raiseInitDeassertIpi(uint32_t dest_apic_id) {
 	if (picBase.isUsingX2apic()) {
 		picBase.store(
-		        lX2ApicIcr,
-		        x2apicIcrLowDelivMode(5) | x2apicIcrLowTriggerMode(true)
-		                | x2apicIcrHighDestField(dest_apic_id)
+		  lX2ApicIcr,
+		  x2apicIcrLowDelivMode(5) | x2apicIcrLowTriggerMode(true)
+		    | x2apicIcrHighDestField(dest_apic_id)
 		);
 	} else {
 		picBase.store(lApicIcrHigh, apicIcrHighDestField(dest_apic_id));
@@ -468,9 +461,9 @@ void raiseStartupIpi(uint32_t dest_apic_id, uint32_t page) {
 	uint32_t vector = page / 0x1000;  // determines the startup code page
 	if (picBase.isUsingX2apic()) {
 		picBase.store(
-		        lX2ApicIcr,
-		        x2apicIcrLowVector(vector) | x2apicIcrLowDelivMode(6)
-		                | x2apicIcrHighDestField(dest_apic_id)
+		  lX2ApicIcr,
+		  x2apicIcrLowVector(vector) | x2apicIcrLowDelivMode(6)
+		    | x2apicIcrHighDestField(dest_apic_id)
 		);
 	} else {
 		picBase.store(lApicIcrHigh, apicIcrHighDestField(dest_apic_id));
@@ -485,17 +478,16 @@ void raiseStartupIpi(uint32_t dest_apic_id, uint32_t page) {
 void sendShootdownIpi() {
 	if (picBase.isUsingX2apic()) {
 		picBase.store(
-		        lX2ApicIcr,
-		        x2apicIcrLowVector(0xF0) | x2apicIcrLowDelivMode(0)
-		                | x2apicIcrLowLevel(true) | x2apicIcrLowShorthand(2)
-		                | x2apicIcrHighDestField(0)
+		  lX2ApicIcr,
+		  x2apicIcrLowVector(0xF0) | x2apicIcrLowDelivMode(0) | x2apicIcrLowLevel(true)
+		    | x2apicIcrLowShorthand(2) | x2apicIcrHighDestField(0)
 		);
 	} else {
 		picBase.store(lApicIcrHigh, apicIcrHighDestField(0));
 		picBase.store(
-		        lApicIcrLow,
-		        apicIcrLowVector(0xF0) | apicIcrLowDelivMode(0) | apicIcrLowLevel(true)
-		                | apicIcrLowShorthand(2)
+		  lApicIcrLow,
+		  apicIcrLowVector(0xF0) | apicIcrLowDelivMode(0) | apicIcrLowLevel(true)
+		    | apicIcrLowShorthand(2)
 		);
 		while (picBase.load(lApicIcrLow) & apicIcrLowDelivStatus) {
 			// Wait for IPI delivery.
@@ -508,17 +500,16 @@ void sendPingIpi(int id) {
 	//	infoLogger() << "thor [CPU" << getLocalApicId() << "]: Sending ping" << frg::endlog;
 	if (picBase.isUsingX2apic()) {
 		picBase.store(
-		        lX2ApicIcr,
-		        x2apicIcrLowVector(0xF1) | x2apicIcrLowDelivMode(0)
-		                | x2apicIcrLowLevel(true) | x2apicIcrLowShorthand(0)
-		                | x2apicIcrHighDestField(apic)
+		  lX2ApicIcr,
+		  x2apicIcrLowVector(0xF1) | x2apicIcrLowDelivMode(0) | x2apicIcrLowLevel(true)
+		    | x2apicIcrLowShorthand(0) | x2apicIcrHighDestField(apic)
 		);
 	} else {
 		picBase.store(lApicIcrHigh, apicIcrHighDestField(apic));
 		picBase.store(
-		        lApicIcrLow,
-		        apicIcrLowVector(0xF1) | apicIcrLowDelivMode(0) | apicIcrLowLevel(true)
-		                | apicIcrLowShorthand(0)
+		  lApicIcrLow,
+		  apicIcrLowVector(0xF1) | apicIcrLowDelivMode(0) | apicIcrLowLevel(true)
+		    | apicIcrLowShorthand(0)
 		);
 		while (picBase.load(lApicIcrLow) & apicIcrLowDelivStatus) {
 			// Wait for IPI delivery.
@@ -530,16 +521,16 @@ void sendGlobalNmi() {
 	// Send the NMI to all /other/ CPUs but not to the current one.
 	if (picBase.isUsingX2apic()) {
 		picBase.store(
-		        lX2ApicIcr,
-		        x2apicIcrLowVector(0) | x2apicIcrLowDelivMode(4) | x2apicIcrLowLevel(true)
-		                | x2apicIcrLowShorthand(3) | x2apicIcrHighDestField(0)
+		  lX2ApicIcr,
+		  x2apicIcrLowVector(0) | x2apicIcrLowDelivMode(4) | x2apicIcrLowLevel(true)
+		    | x2apicIcrLowShorthand(3) | x2apicIcrHighDestField(0)
 		);
 	} else {
 		picBase.store(lApicIcrHigh, apicIcrHighDestField(0));
 		picBase.store(
-		        lApicIcrLow,
-		        apicIcrLowVector(0) | apicIcrLowDelivMode(4) | apicIcrLowLevel(true)
-		                | apicIcrLowShorthand(3)
+		  lApicIcrLow,
+		  apicIcrLowVector(0) | apicIcrLowDelivMode(4) | apicIcrLowLevel(true)
+		    | apicIcrLowShorthand(3)
 		);
 		while (picBase.load(lApicIcrLow) & apicIcrLowDelivStatus) {
 			// Wait for IPI delivery.
@@ -567,8 +558,8 @@ extern IrqSpinlock globalIrqSlotsLock;
 namespace {
 struct ApicMsiPin final : MsiPin {
 	ApicMsiPin(frg::string<KernelAlloc> name, unsigned int vector)
-	        : MsiPin { std::move(name) }
-	        , vector_ { vector } {}
+	: MsiPin {std::move(name)}
+	, vector_ {vector} {}
 
 	IrqStrategy program(TriggerMode mode, Polarity) override {
 		assert(mode == TriggerMode::edge);
@@ -613,8 +604,7 @@ MsiPin *allocateApicMsi(frg::string<KernelAlloc> name) {
 
 	// Create an IRQ pin for the MSI.
 	auto pin = frg::construct<ApicMsiPin>(*kernelAlloc, std::move(name), 64 + slotIndex);
-	pin->configure(IrqConfiguration { .trigger = TriggerMode::edge, .polarity = Polarity::high }
-	);
+	pin->configure(IrqConfiguration {.trigger = TriggerMode::edge, .polarity = Polarity::high});
 
 	infoLogger() << "thor: Allocating IRQ slot " << slotIndex << " to " << pin->name()
 	             << frg::endlog;
@@ -698,16 +688,16 @@ private:
 };
 
 static frg::string<KernelAlloc> buildName(int apic_id, unsigned int index) {
-	return frg::string<KernelAlloc> { *kernelAlloc, "io-apic." }
+	return frg::string<KernelAlloc> {*kernelAlloc, "io-apic."}
 	     + frg::to_allocated_string(*kernelAlloc, apic_id)
-	     + frg::string<KernelAlloc> { *kernelAlloc, ":" }
+	     + frg::string<KernelAlloc> {*kernelAlloc, ":"}
 	     + frg::to_allocated_string(*kernelAlloc, index);
 }
 
 IoApic::Pin::Pin(IoApic *chip, unsigned int index)
-        : IrqPin { buildName(chip->_apicId, index) }
-        , _chip { chip }
-        , _index { index } {}
+: IrqPin {buildName(chip->_apicId, index)}
+, _chip {chip}
+, _index {index} {}
 
 void IoApic::Pin::dumpHardwareState() {
 	infoLogger() << "thor: Local APIC state of vector " << _vector << ":"
@@ -715,7 +705,7 @@ void IoApic::Pin::dumpHardwareState() {
 	             << ", TMR: " << (getLocalApicTmr(_vector) ? "level" : "edge")
 	             << ", IRR: " << (int) getLocalApicIrr(_vector) << frg::endlog;
 
-	arch::bit_value<uint32_t> word1 { _chip->_loadRegister(kIoApicInts + _index * 2) };
+	arch::bit_value<uint32_t> word1 {_chip->_loadRegister(kIoApicInts + _index * 2)};
 	infoLogger() << "thor: Configuration of pin " << name() << ": "
 	             << ((word1 & pin_word1::levelTriggered) ? "level" : "edge")
 	             << "-triggered, active-" << ((word1 & pin_word1::activeLow) ? "low" : "high")
@@ -761,8 +751,8 @@ IrqStrategy IoApic::Pin::program(TriggerMode mode, Polarity polarity) {
 		for (int i = 0; i < 64; i++) {
 			if (!globalIrqSlots[i]->isAvailable())
 				continue;
-			infoLogger() << "thor: Allocating IRQ slot " << i << " to " << name()
-			             << frg::endlog;
+			infoLogger()
+			  << "thor: Allocating IRQ slot " << i << " to " << name() << frg::endlog;
 			globalIrqSlots[i]->link(this);
 			_vector = 64 + i;
 			break;
@@ -773,16 +763,15 @@ IrqStrategy IoApic::Pin::program(TriggerMode mode, Polarity polarity) {
 		              << frg::endlog;
 
 	_chip->_storeRegister(
-	        kIoApicInts + _index * 2 + 1,
-	        static_cast<uint32_t>(pin_word2::destination(0))
+	  kIoApicInts + _index * 2 + 1,
+	  static_cast<uint32_t>(pin_word2::destination(0))
 	);
 	_chip->_storeRegister(
-	        kIoApicInts + _index * 2,
-	        static_cast<uint32_t>(
-	                pin_word1::vector(_vector) | pin_word1::deliveryMode(0)
-	                | pin_word1::levelTriggered(_levelTriggered)
-	                | pin_word1::activeLow(_activeLow)
-	        )
+	  kIoApicInts + _index * 2,
+	  static_cast<uint32_t>(
+	    pin_word1::vector(_vector) | pin_word1::deliveryMode(0)
+	    | pin_word1::levelTriggered(_levelTriggered) | pin_word1::activeLow(_activeLow)
+	  )
 	);
 	return strategy;
 }
@@ -790,12 +779,12 @@ IrqStrategy IoApic::Pin::program(TriggerMode mode, Polarity polarity) {
 void IoApic::Pin::mask() {
 	//		infoLogger() << "thor: Masking pin " << _index << frg::endlog;
 	_chip->_storeRegister(
-	        kIoApicInts + _index * 2,
-	        static_cast<uint32_t>(
-	                pin_word1::vector(_vector) | pin_word1::deliveryMode(0)
-	                | pin_word1::levelTriggered(_levelTriggered)
-	                | pin_word1::activeLow(_activeLow) | pin_word1::masked(true)
-	        )
+	  kIoApicInts + _index * 2,
+	  static_cast<uint32_t>(
+	    pin_word1::vector(_vector) | pin_word1::deliveryMode(0)
+	    | pin_word1::levelTriggered(_levelTriggered) | pin_word1::activeLow(_activeLow)
+	    | pin_word1::masked(true)
+	  )
 	);
 
 	// Dummy load from the I/O APIC to ensure that the mask has taken effect.
@@ -809,12 +798,11 @@ void IoApic::Pin::mask() {
 void IoApic::Pin::unmask() {
 	//		infoLogger() << "thor: Unmasking pin " << _index << frg::endlog;
 	_chip->_storeRegister(
-	        kIoApicInts + _index * 2,
-	        static_cast<uint32_t>(
-	                pin_word1::vector(_vector) | pin_word1::deliveryMode(0)
-	                | pin_word1::levelTriggered(_levelTriggered)
-	                | pin_word1::activeLow(_activeLow)
-	        )
+	  kIoApicInts + _index * 2,
+	  static_cast<uint32_t>(
+	    pin_word1::vector(_vector) | pin_word1::deliveryMode(0)
+	    | pin_word1::levelTriggered(_levelTriggered) | pin_word1::activeLow(_activeLow)
+	  )
 	);
 }
 
@@ -822,7 +810,7 @@ void IoApic::Pin::sendEoi() {
 	acknowledgeIrq(0);
 }
 
-IoApic::IoApic(int apic_id, arch::mem_space space) : _apicId(apic_id), _space { std::move(space) } {
+IoApic::IoApic(int apic_id, arch::mem_space space) : _apicId(apic_id), _space {std::move(space)} {
 	_numPins = ((_loadRegister(kIoApicVersion) >> 16) & 0xFF) + 1;
 	infoLogger() << "thor: I/O APIC " << apic_id << " supports " << _numPins << " pins"
 	             << frg::endlog;
@@ -832,10 +820,10 @@ IoApic::IoApic(int apic_id, arch::mem_space space) : _apicId(apic_id), _space { 
 		_pins[i] = frg::construct<Pin>(*kernelAlloc, this, i);
 
 		// Dump interesting configurations.
-		arch::bit_value<uint32_t> current { _loadRegister(kIoApicInts + i * 2) };
+		arch::bit_value<uint32_t> current {_loadRegister(kIoApicInts + i * 2)};
 		if (!(current & pin_word1::masked))
 			infoLogger()
-			        << "    Pin " << i << " was not masked by BIOS." << frg::endlog;
+			  << "    Pin " << i << " was not masked by BIOS." << frg::endlog;
 
 		// Mask all interrupts before they are configured.
 		_storeRegister(kIoApicInts + i * 2, static_cast<uint32_t>(pin_word1::masked(true)));
@@ -854,16 +842,12 @@ IrqPin *IoApic::accessPin(size_t n) {
 void setupIoApic(int apic_id, int gsi_base, PhysicalAddr address) {
 	// TODO: We really only need a single page.
 	auto register_ptr = KernelVirtualMemory::global().allocate(0x10000);
-	KernelPageSpace::global().mapSingle4k(
-	        VirtualAddr(register_ptr),
-	        address,
-	        page_access::write,
-	        CachingMode::null
-	);
+	KernelPageSpace::global()
+	  .mapSingle4k(VirtualAddr(register_ptr), address, page_access::write, CachingMode::null);
 
 	picModel = kModelApic;
 
-	auto apic = frg::construct<IoApic>(*kernelAlloc, apic_id, arch::mem_space { register_ptr });
+	auto apic = frg::construct<IoApic>(*kernelAlloc, apic_id, arch::mem_space {register_ptr});
 	for (size_t i = 0; i < apic->pinCount(); i++) {
 		auto pin = apic->accessPin(i);
 		globalSystemIrqs[gsi_base + i] = pin;
@@ -883,16 +867,17 @@ void setupIoApic(int apic_id, int gsi_base, PhysicalAddr address) {
 // Legacy PIC management
 // --------------------------------------------------------
 
-static initgraph::Task setupPicTask { &globalInitEngine,
-	                              "x86.setup-legacy-pic",
-	                              initgraph::Entails { getTaskingAvailableStage() },
-	                              [] {
-	                                      // TODO: managarm crashes on bochs if we do not remap
-	                                      // the legacy PIC. we need to debug that and find the
-	                                      // cause of this problem.
-	                                      remapLegacyPic(32);
-	                                      maskLegacyPic();
-	                              } };
+static initgraph::Task setupPicTask {
+  &globalInitEngine,
+  "x86.setup-legacy-pic",
+  initgraph::Entails {getTaskingAvailableStage()},
+  [] {
+	  // TODO: managarm crashes on bochs if we do not remap
+	  // the legacy PIC. we need to debug that and find the
+	  // cause of this problem.
+	  remapLegacyPic(32);
+	  maskLegacyPic();
+  }};
 
 void ioWait() {}
 

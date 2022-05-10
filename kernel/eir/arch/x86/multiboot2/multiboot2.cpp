@@ -137,13 +137,13 @@ extern "C" void eirEnterKernel(uintptr_t, uint64_t, uint64_t);
 extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 	if (magic != 0x36d76289)
 		eir::panicLogger()
-		        << "eir: Invalid multiboot2 signature, halting..." << frg::endlog;
+		  << "eir: Invalid multiboot2 signature, halting..." << frg::endlog;
 
 	InitialRegion reservedRegions[32];
 	size_t nReservedRegions = 0;
 
 	uintptr_t eirEnd = reinterpret_cast<uintptr_t>(&eirImageCeiling);
-	reservedRegions[nReservedRegions++] = { 0, eirEnd };
+	reservedRegions[nReservedRegions++] = {0, eirEnd};
 
 	Mb2Info *mb_info = reinterpret_cast<Mb2Info *>(info);
 	size_t add_size = 0;
@@ -175,21 +175,19 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 		switch (tag->type) {
 		case kMb2TagFramebuffer: {
 			auto *framebuffer_tag = reinterpret_cast<Mb2TagFramebuffer *>(tag);
-			if (framebuffer_tag->address
-			            + framebuffer_tag->width * framebuffer_tag->pitch
-			    >= UINTPTR_MAX) {
+			if (framebuffer_tag->address + framebuffer_tag->width * framebuffer_tag->pitch >= UINTPTR_MAX) {
 				eir::panicLogger()
-				        << "eir: Framebuffer outside of addressable memory!"
-				        << frg::endlog;
+				  << "eir: Framebuffer outside of addressable memory!"
+				  << frg::endlog;
 			} else if (framebuffer_tag->bpp != 32) {
 				eir::panicLogger()
-				        << "eir: Framebuffer does not use 32 bpp!" << frg::endlog;
+				  << "eir: Framebuffer does not use 32 bpp!" << frg::endlog;
 			} else {
 				setFbInfo(
-				        reinterpret_cast<void *>(framebuffer->address),
-				        framebuffer_tag->width,
-				        framebuffer_tag->height,
-				        framebuffer_tag->pitch
+				  reinterpret_cast<void *>(framebuffer->address),
+				  framebuffer_tag->width,
+				  framebuffer_tag->height,
+				  framebuffer_tag->pitch
 				);
 
 				framebuffer = framebuffer_tag;
@@ -207,7 +205,7 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 
 			uintptr_t start = (uintptr_t) module->start;
 			uintptr_t end = (uintptr_t) module->end;
-			reservedRegions[nReservedRegions++] = { start, end - start };
+			reservedRegions[nReservedRegions++] = {start, end - start};
 
 			break;
 		}
@@ -224,7 +222,7 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 		case kMb2TagCmdline: {
 			auto *cmdline_tag = reinterpret_cast<Mb2TagCmdline *>(tag);
 
-			cmdline = { cmdline_tag->string };
+			cmdline = {cmdline_tag->string};
 
 			break;
 		}
@@ -233,8 +231,8 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 			auto *rsdp_tag = reinterpret_cast<Mb2TagRSDPv1 *>(tag);
 
 			if (acpiRevision)
-				eir::infoLogger(
-				) << "eir: Parsing old acpi tag but acpiRevision is alreay set?"
+				eir::infoLogger()
+				  << "eir: Parsing old acpi tag but acpiRevision is alreay set?"
 				  << frg::endlog;
 			rsdt = rsdp_tag->rsdp.rsdt;
 			acpiRevision = 1;
@@ -246,8 +244,8 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 			auto *rsdp_tag = reinterpret_cast<Mb2TagRSDPv2 *>(tag);
 
 			if (acpiRevision)
-				eir::infoLogger(
-				) << "eir: Parsing new acpi tag but acpiRevision is alreay set?"
+				eir::infoLogger()
+				  << "eir: Parsing new acpi tag but acpiRevision is alreay set?"
 				  << frg::endlog;
 			rsdt = rsdp_tag->xsdp.xsdt;
 			acpiRevision = 2;
@@ -273,16 +271,16 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 	for (Mb2MmapEntry *map = (Mb2MmapEntry *) mmap_start; map < (Mb2MmapEntry *) mmap_end;
 	     map++) {
 		eir::infoLogger() << "    Type " << map->type << " mapping."
-		                  << " Base: 0x" << frg::hex_fmt { map->base } << ", length: 0x"
-		                  << frg::hex_fmt { map->length } << frg::endlog;
+		                  << " Base: 0x" << frg::hex_fmt {map->base} << ", length: 0x"
+		                  << frg::hex_fmt {map->length} << frg::endlog;
 	}
 
 	for (Mb2MmapEntry *map = (Mb2MmapEntry *) mmap_start; map < (Mb2MmapEntry *) mmap_end;
 	     map++) {
 		if (map->type == 1)
 			createInitialRegions(
-			        { map->base, map->length },
-			        { reservedRegions, nReservedRegions }
+			  {map->base, map->length},
+			  {reservedRegions, nReservedRegions}
 			);
 	}
 	setupRegionStructs();
@@ -292,14 +290,13 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 		if (regions[i].regionType == RegionType::null)
 			continue;
 		eir::infoLogger() << "    Memory region [" << i << "]."
-		                  << " Base: 0x" << frg::hex_fmt { regions[i].address }
-		                  << ", length: 0x" << frg::hex_fmt { regions[i].size }
+		                  << " Base: 0x" << frg::hex_fmt {regions[i].address}
+		                  << ", length: 0x" << frg::hex_fmt {regions[i].size}
 		                  << frg::endlog;
 		if (regions[i].regionType == RegionType::allocatable)
-			eir::infoLogger()
-			        << "        Buddy tree at 0x"
-			        << frg::hex_fmt { regions[i].buddyTree } << ", overhead: 0x"
-			        << frg::hex_fmt { regions[i].buddyOverhead } << frg::endlog;
+			eir::infoLogger() << "        Buddy tree at 0x"
+			                  << frg::hex_fmt {regions[i].buddyTree} << ", overhead: 0x"
+			                  << frg::hex_fmt {regions[i].buddyOverhead} << frg::endlog;
 	}
 
 	uint64_t kernel_entry = 0;
@@ -358,10 +355,10 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic) {
 	assert(framebuffer->address & ~(pageSize - 1));
 	for (address_t pg = 0; pg < framebuffer->pitch * framebuffer->height; pg += 0x1000)
 		mapSingle4kPage(
-		        0xFFFF'FE00'4000'0000 + pg,
-		        framebuffer->address + pg,
-		        PageFlags::write,
-		        CachingMode::writeCombine
+		  0xFFFF'FE00'4000'0000 + pg,
+		  framebuffer->address + pg,
+		  PageFlags::write,
+		  CachingMode::writeCombine
 		);
 	mapKasanShadow(0xFFFF'FE00'4000'0000, framebuffer->pitch * framebuffer->height);
 	unpoisonKasanShadow(0xFFFF'FE00'4000'0000, framebuffer->pitch * framebuffer->height);

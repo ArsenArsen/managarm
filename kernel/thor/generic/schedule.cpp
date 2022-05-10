@@ -20,17 +20,17 @@ constexpr bool disablePreemption = false;
 constexpr int64_t sliceGranularity = 10'000'000;
 
 struct IdleTask final : ScheduleEntity {
-	IdleTask() : ScheduleEntity { ScheduleType::idle } {}
+	IdleTask() : ScheduleEntity {ScheduleType::idle} {}
 
 	[[noreturn]] void invoke() override {
 		runOnStack(
-		        [](Continuation) {
-			        if (logIdle)
-				        infoLogger() << "System is idle" << frg::endlog;
-			        suspendSelf();
-			        __builtin_trap();
-		        },
-		        getCpuData()->idleStack.base()
+		  [](Continuation) {
+			  if (logIdle)
+				  infoLogger() << "System is idle" << frg::endlog;
+			  suspendSelf();
+			  __builtin_trap();
+		  },
+		  getCpuData()->idleStack.base()
 		);
 		__builtin_trap();
 	}
@@ -39,12 +39,12 @@ struct IdleTask final : ScheduleEntity {
 		localScheduler()->update();
 		if (localScheduler()->maybeReschedule()) {
 			runOnStack(
-			        [](Continuation cont, IrqImageAccessor image) {
-				        scrubStack(image, cont);
-				        localScheduler()->commitReschedule();
-			        },
-			        getCpuData()->detachedStack.base(),
-			        image
+			  [](Continuation cont, IrqImageAccessor image) {
+				  scrubStack(image, cont);
+				  localScheduler()->commitReschedule();
+			  },
+			  getCpuData()->detachedStack.base(),
+			  image
 			);
 		} else {
 			localScheduler()->renewSchedule();
@@ -69,13 +69,13 @@ bool ScheduleEntity::scheduleBefore(const ScheduleEntity *a, const ScheduleEntit
 }
 
 ScheduleEntity::ScheduleEntity(ScheduleType type)
-        : type_ { type }
-        , state { ScheduleState::null }
-        , priority { 0 }
-        , _refClock { 0 }
-        , _runTime { 0 }
-        , refProgress { 0 }
-        , baseUnfairness { 0 } {}
+: type_ {type}
+, state {ScheduleState::null}
+, priority {0}
+, _refClock {0}
+, _runTime {0}
+, refProgress {0}
+, baseUnfairness {0} {}
 
 ScheduleEntity::~ScheduleEntity() {
 	assert(state == ScheduleState::null);
@@ -165,8 +165,8 @@ void Scheduler::suspendCurrent() {
 }
 
 Scheduler::Scheduler(CpuData *cpuContext)
-        : _cpuContext { cpuContext }
-        , _current { &globalIdleTask.get() } {}
+: _cpuContext {cpuContext}
+, _current {&globalIdleTask.get()} {}
 
 Progress Scheduler::_liveUnfairness(const ScheduleEntity *entity) {
 	assert(entity->type() == ScheduleType::regular);
@@ -216,12 +216,12 @@ void Scheduler::update() {
 
 	// Finally, process all pending entities.
 	frg::intrusive_list<
-	        ScheduleEntity,
-	        frg::locate_member<
-	                ScheduleEntity,
-	                frg::default_list_hook<ScheduleEntity>,
-	                &ScheduleEntity::listHook>>
-	        pendingSnapshot;
+	  ScheduleEntity,
+	  frg::locate_member<
+	    ScheduleEntity,
+	    frg::default_list_hook<ScheduleEntity>,
+	    &ScheduleEntity::listHook>>
+	  pendingSnapshot;
 	{
 		auto irqLock = frg::guard(&irqMutex());
 		auto lock = frg::guard(&_mutex);

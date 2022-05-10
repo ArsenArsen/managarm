@@ -40,7 +40,7 @@ DEFINE_TEST(sigaltstack, ([] {
 #if defined(__x86_64__)
 	            asm volatile("mov $0, %%rsp\n\tpush $0" ::: "rsp");
 #elif defined(__aarch64__)
-	            asm volatile("mov sp, %0\n\tstp x0, x1, [sp, #-16]!" ::"r"(uint64_t { 0 })
+	            asm volatile("mov sp, %0\n\tstp x0, x1, [sp, #-16]!" ::"r"(uint64_t {0})
 	                         : "sp");
 #else
 #	error Unknown architecture

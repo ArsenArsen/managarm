@@ -29,9 +29,9 @@ void IrqSlot::link(IrqPin *pin) {
 // --------------------------------------------------------
 
 IrqSink::IrqSink(frg::string<KernelAlloc> name)
-        : _name { std::move(name) }
-        , _pin { nullptr }
-        , _currentSequence { 0 } {}
+: _name {std::move(name)}
+, _pin {nullptr}
+, _currentSequence {0} {}
 
 void IrqSink::dumpHardwareState() {
 	infoLogger() << "thor: No dump available for IRQ sink " << name() << frg::endlog;
@@ -122,11 +122,11 @@ Error IrqPin::kickSink(IrqSink *sink, bool wantClear) {
 // --------------------------------------------------------
 
 IrqPin::IrqPin(frg::string<KernelAlloc> name)
-        : _name { std::move(name) }
-        , _strategy { IrqStrategy::null }
-        , _inService { false }
-        , _dueSinks { 0 }
-        , _maskState { 0 } {
+: _name {std::move(name)}
+, _strategy {IrqStrategy::null}
+, _inService {false}
+, _dueSinks {0}
+, _maskState {0} {
 	[](IrqPin *self, enable_detached_coroutine = {}) -> void {
 		while (true) {
 			co_await self->_unstallEvent.async_wait_if([&]() -> bool {
@@ -151,7 +151,7 @@ IrqPin::IrqPin(frg::string<KernelAlloc> name)
 
 			auto ms = static_cast<uint64_t>(50) * (1 << self->_unstallExponent);
 			co_await generalTimerEngine()->sleepFor(
-			        static_cast<uint64_t>(50'000'000) * (1 << self->_unstallExponent)
+			  static_cast<uint64_t>(50'000'000) * (1 << self->_unstallExponent)
 			);
 
 			// Kick the IRQ.
@@ -356,8 +356,7 @@ void IrqPin::warnIfPending() {
 	if (!_inService || (_maskState & maskedForNack))
 		return;
 
-	if (systemClockSource()->currentNanos() - _raiseClock > 1000000000
-	    && !_warnedAfterPending) {
+	if (systemClockSource()->currentNanos() - _raiseClock > 1000000000 && !_warnedAfterPending) {
 		auto log = infoLogger();
 		log << "\e[35mthor: Pending IRQ " << _name
 		    << " has not been"
@@ -475,7 +474,7 @@ void IrqPin::_updateMask() {
 // We create the IrqObject in latched state in order to ensure that users to not miss IRQs
 // that happened before the object was created.
 // However this can result in spurious raises.
-IrqObject::IrqObject(frg::string<KernelAlloc> name) : IrqSink { std::move(name) } {}
+IrqObject::IrqObject(frg::string<KernelAlloc> name) : IrqSink {std::move(name)} {}
 
 // TODO: Add a sequence parameter to this function and run the kernlet if the sequence advanced.
 //       This would prevent races between automate() and IRQs.
@@ -500,7 +499,7 @@ IrqStatus IrqObject::raise() {
 		} else {
 			assert(!result);
 			infoLogger()
-			        << "thor: IRQ automation does not handle the IRQ?" << frg::endlog;
+			  << "thor: IRQ automation does not handle the IRQ?" << frg::endlog;
 			return IrqStatus::indefinite;
 		}
 	} else

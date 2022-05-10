@@ -21,9 +21,9 @@ constexpr size_t fontWidth = 8;
 
 struct FbDisplay final : TextDisplay {
 	FbDisplay(void *ptr, unsigned int width, unsigned int height, size_t pitch)
-	        : _width { width }
-	        , _height { height }
-	        , _pitch { pitch / sizeof(uint32_t) } {
+	: _width {width}
+	, _height {height}
+	, _pitch {pitch / sizeof(uint32_t)} {
 		assert(!(pitch % sizeof(uint32_t)));
 		setWindow(ptr);
 		_clearScreen(defaultBg);
@@ -57,16 +57,16 @@ int FbDisplay::getHeight() {
 
 void FbDisplay::setChars(unsigned int x, unsigned int y, const char *c, int count, int fg, int bg) {
 	renderChars(
-	        (void *) _window,
-	        _pitch,
-	        x,
-	        y,
-	        c,
-	        count,
-	        fg,
-	        bg,
-	        std::integral_constant<int, fontWidth> {},
-	        std::integral_constant<int, fontHeight> {}
+	  (void *) _window,
+	  _pitch,
+	  x,
+	  y,
+	  c,
+	  count,
+	  fg,
+	  bg,
+	  std::integral_constant<int, fontWidth> {},
+	  std::integral_constant<int, fontHeight> {}
 	);
 }
 
@@ -101,13 +101,13 @@ frg::manual_box<BootScreen> bootScreen;
 }  // namespace
 
 void initializeBootFb(
-        uint64_t address,
-        uint64_t pitch,
-        uint64_t width,
-        uint64_t height,
-        uint64_t bpp,
-        uint64_t type,
-        void *early_window
+  uint64_t address,
+  uint64_t pitch,
+  uint64_t width,
+  uint64_t height,
+  uint64_t bpp,
+  uint64_t type,
+  void *early_window
 ) {
 	bootInfo.initialize();
 	auto fb_info = bootInfo.get();
@@ -132,15 +132,15 @@ void transitionBootFb() {
 	}
 
 	auto window_size =
-	        (bootInfo->height * bootInfo->pitch + (kPageSize - 1)) & ~(kPageSize - 1);
+	  (bootInfo->height * bootInfo->pitch + (kPageSize - 1)) & ~(kPageSize - 1);
 	assert(window_size <= 0x1'000'000);
 	auto window = KernelVirtualMemory::global().allocate(0x1'000'000);
 	for (size_t pg = 0; pg < window_size; pg += kPageSize)
 		KernelPageSpace::global().mapSingle4k(
-		        VirtualAddr(window) + pg,
-		        bootInfo->address + pg,
-		        page_access::write,
-		        CachingMode::writeCombine
+		  VirtualAddr(window) + pg,
+		  bootInfo->address + pg,
+		  page_access::write,
+		  CachingMode::writeCombine
 		);
 
 	// Transition to the kernel mapping window.
@@ -148,10 +148,10 @@ void transitionBootFb() {
 
 	assert(!(bootInfo->address & (kPageSize - 1)));
 	bootInfo->memory = smarter::allocate_shared<HardwareMemory>(
-	        *kernelAlloc,
-	        bootInfo->address & ~(kPageSize - 1),
-	        (bootInfo->height * bootInfo->pitch + (kPageSize - 1)) & ~(kPageSize - 1),
-	        CachingMode::writeCombine
+	  *kernelAlloc,
+	  bootInfo->address & ~(kPageSize - 1),
+	  (bootInfo->height * bootInfo->pitch + (kPageSize - 1)) & ~(kPageSize - 1),
+	  CachingMode::writeCombine
 	);
 
 	// Try to attached the framebuffer to a PCI device.

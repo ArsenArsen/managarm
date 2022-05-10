@@ -39,7 +39,7 @@ struct Fortuna {
 		assert(size <= 32 && "Entropy sources should hash their data instead of"
 				" large buffers into injectEntropy()");
 
-		uint8_t prefix[2] = { entropySource, static_cast<uint8_t>(size) };
+		uint8_t prefix[2] = {entropySource, static_cast<uint8_t>(size)};
 
 		auto k = seqNum & (numPools - 1);
 		auto pool = &pools_[k];
@@ -52,8 +52,8 @@ struct Fortuna {
 				// TODO: for 32-bit size_t, this could potentially overflow.
 				//       For now, this should not be an issue though.
 				injectedIntoPoolZero_.fetch_add(
-				        2 + size,
-				        std::memory_order_release
+				  2 + size,
+				  std::memory_order_release
 				);
 			}
 		}
@@ -88,7 +88,7 @@ struct Fortuna {
 
 		if (injectedIntoPoolZero_.load(std::memory_order_acquire) >= entropyThreshold) {
 			infoLogger()
-			        << "thor: Reseeding PRNG from entropy accumulator" << frg::endlog;
+			  << "thor: Reseeding PRNG from entropy accumulator" << frg::endlog;
 
 			cralgo::sha2_32_secrets keyHash;
 			cralgo::sha2_32_secrets localHash;
@@ -100,7 +100,7 @@ struct Fortuna {
 
 			// Secondly, hash in entropy.
 			for (int k = 0; k < numPools; ++k) {
-				if (reseedNumber_ & ((uint32_t { 1 } << k) - 1))
+				if (reseedNumber_ & ((uint32_t {1} << k) - 1))
 					break;
 				auto pool = &pools_[k];
 				{
@@ -152,7 +152,7 @@ struct Fortuna {
 		while (progress < size) {
 			if (progress >= (1 << 20))
 				break;
-			size_t chunk = std::min(size - progress, size_t { blockSize });
+			size_t chunk = std::min(size - progress, size_t {blockSize});
 			uint8_t block[blockSize];
 			generateBlock(block);
 			memcpy(p + progress, block, chunk);
@@ -188,7 +188,7 @@ private:
 
 	// The remaining fields form the entropy accumulator.
 	Pool pools_[numPools];
-	std::atomic<size_t> injectedIntoPoolZero_ { 0 };
+	std::atomic<size_t> injectedIntoPoolZero_ {0};
 };
 
 frg::manual_box<Fortuna> csprng;

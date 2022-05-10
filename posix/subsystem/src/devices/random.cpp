@@ -41,26 +41,27 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        file,
-		        &fileOperations,
-		        file->_cancelServe
+		  std::move(lane),
+		  file,
+		  &fileOperations,
+		  file->_cancelServe
 		));
 	}
 
 	RandomFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-	        : File { StructName::get("random-file"), std::move(mount), std::move(link) } {}
+	: File {StructName::get("random-file"), std::move(mount), std::move(link)} {}
 };
 
 struct RandomDevice final : UnixDevice {
-	RandomDevice() : UnixDevice(VfsType::charDevice) { assignId({ 1, 8 }); }
+	RandomDevice() : UnixDevice(VfsType::charDevice) { assignId({1, 8}); }
 
 	std::string nodePath() override { return "random"; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		if (semantic_flags & ~(semanticRead | semanticWrite)) {
 			std::cout << "\e[31mposix: open() received illegal arguments:"
 			          << std::bitset<32>(semantic_flags)

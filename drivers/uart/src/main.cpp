@@ -34,10 +34,10 @@ struct ReadRequest {
 };
 
 boost::intrusive::list<
-        ReadRequest,
-        boost::intrusive::
-                member_hook<ReadRequest, boost::intrusive::list_member_hook<>, &ReadRequest::hook>>
-        recvRequests;
+  ReadRequest,
+  boost::intrusive::
+    member_hook<ReadRequest, boost::intrusive::list_member_hook<>, &ReadRequest::hook>>
+  recvRequests;
 
 std::deque<uint8_t> recvBuffer;
 
@@ -46,12 +46,10 @@ void completeRecvs() {
 	assert(!recvBuffer.empty());
 
 	boost::intrusive::list<
-	        ReadRequest,
-	        boost::intrusive::member_hook<
-	                ReadRequest,
-	                boost::intrusive::list_member_hook<>,
-	                &ReadRequest::hook>>
-	        pending;
+	  ReadRequest,
+	  boost::intrusive::
+	    member_hook<ReadRequest, boost::intrusive::list_member_hook<>, &ReadRequest::hook>>
+	  pending;
 
 	while (!recvRequests.empty() && !recvBuffer.empty()) {
 		auto req = &recvRequests.front();
@@ -81,9 +79,9 @@ void completeRecvs() {
 
 struct WriteRequest {
 	WriteRequest(const void *buffer, size_t length)
-	        : buffer(buffer)
-	        , length(length)
-	        , progress(0) {}
+	: buffer(buffer)
+	, length(length)
+	, progress(0) {}
 
 	const void *buffer;
 	size_t length;
@@ -93,12 +91,10 @@ struct WriteRequest {
 };
 
 boost::intrusive::list<
-        WriteRequest,
-        boost::intrusive::member_hook<
-                WriteRequest,
-                boost::intrusive::list_member_hook<>,
-                &WriteRequest::hook>>
-        sendRequests;
+  WriteRequest,
+  boost::intrusive::
+    member_hook<WriteRequest, boost::intrusive::list_member_hook<>, &WriteRequest::hook>>
+  sendRequests;
 
 // Size of the device's TX FIFO in bytes.
 constexpr size_t txFifoSize = 16;
@@ -113,12 +109,10 @@ void flushSends() {
 		std::cout << "uart: Flushing TX" << std::endl;
 
 	boost::intrusive::list<
-	        WriteRequest,
-	        boost::intrusive::member_hook<
-	                WriteRequest,
-	                boost::intrusive::list_member_hook<>,
-	                &WriteRequest::hook>>
-	        pending;
+	  WriteRequest,
+	  boost::intrusive::
+	    member_hook<WriteRequest, boost::intrusive::list_member_hook<>, &WriteRequest::hook>>
+	  pending;
 
 	size_t fifoAvailable = txFifoSize;
 	while (!sendRequests.empty() && fifoAvailable) {
@@ -220,9 +214,9 @@ async::detached handleIrqs() {
 
 async::result<protocols::fs::ReadResult> read(void *, const char *, void *buffer, size_t length) {
 	if (!length)
-		co_return size_t { 0 };
+		co_return size_t {0};
 
-	ReadRequest req { buffer, length };
+	ReadRequest req {buffer, length};
 	recvRequests.push_back(req);
 
 	if (!recvBuffer.empty())
@@ -240,7 +234,7 @@ write(void *, const char *, const void *buffer, size_t length) {
 	if (logTx)
 		std::cout << "uart: New TX request" << std::endl;
 
-	WriteRequest req { buffer, length };
+	WriteRequest req {buffer, length};
 	sendRequests.push_back(req);
 
 	if (!txInFlight)
@@ -258,21 +252,19 @@ async::result<protocols::fs::SeekResult> seek(void *, int64_t) {
 }
 
 constexpr auto fileOperations = protocols::fs::FileOperations {
-	.seekAbs = &seek,
-	.seekRel = &seek,
-	.seekEof = &seek,
-	.read = &read,
-	.write = &write,
+  .seekAbs = &seek,
+  .seekRel = &seek,
+  .seekEof = &seek,
+  .read = &read,
+  .write = &write,
 };
 
 async::detached serveTerminal(helix::UniqueLane lane) {
 	std::cout << "unix device: Connection" << std::endl;
 
 	while (true) {
-		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
-		        lane,
-		        helix_ng::accept(helix_ng::recvInline())
-		);
+		auto [accept, recv_req] =
+		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_req.error());
 
@@ -284,9 +276,9 @@ async::detached serveTerminal(helix::UniqueLane lane) {
 			helix::UniqueLane local_lane, remote_lane;
 			std::tie(local_lane, remote_lane) = helix::createStream();
 			async::detach(protocols::fs::servePassthrough(
-			        std::move(local_lane),
-			        nullptr,
-			        &fileOperations
+			  std::move(local_lane),
+			  nullptr,
+			  &fileOperations
 			));
 
 			managarm::fs::SvrResponse resp;
@@ -294,9 +286,9 @@ async::detached serveTerminal(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_node] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size()),
-			        helix_ng::pushDescriptor(remote_lane)
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size()),
+			  helix_ng::pushDescriptor(remote_lane)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_node.error());
@@ -310,17 +302,18 @@ async::detached runTerminal() {
 	// Create an mbus object for the partition.
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	mbus::Properties descriptor { { "generic.devtype", mbus::StringItem { "block" } },
-		                      { "generic.devname", mbus::StringItem { "ttyS0" } } };
+	mbus::Properties descriptor {
+	  {"generic.devtype", mbus::StringItem {"block"}},
+	  {"generic.devname", mbus::StringItem {"ttyS0"}}};
 
 	auto handler =
-	        mbus::ObjectHandler {}.withBind([]() -> async::result<helix::UniqueDescriptor> {
-		        helix::UniqueLane local_lane, remote_lane;
-		        std::tie(local_lane, remote_lane) = helix::createStream();
-		        serveTerminal(std::move(local_lane));
+	  mbus::ObjectHandler {}.withBind([]() -> async::result<helix::UniqueDescriptor> {
+		  helix::UniqueLane local_lane, remote_lane;
+		  std::tie(local_lane, remote_lane) = helix::createStream();
+		  serveTerminal(std::move(local_lane));
 
-		        co_return std::move(remote_lane);
-	        });
+		  co_return std::move(remote_lane);
+	  });
 
 	co_await root.createObject("uart0", descriptor, std::move(handler));
 }
@@ -332,8 +325,8 @@ int main() {
 	HEL_CHECK(helAccessIrq(4, &irq_handle));
 	irq = helix::UniqueIrq(irq_handle);
 
-	uintptr_t ports[] = { COM1,     COM1 + 1, COM1 + 2, COM1 + 3,
-		              COM1 + 4, COM1 + 5, COM1 + 6, COM1 + 7 };
+	uintptr_t ports[] =
+	  {COM1, COM1 + 1, COM1 + 2, COM1 + 3, COM1 + 4, COM1 + 5, COM1 + 6, COM1 + 7};
 	HelHandle handle;
 	HEL_CHECK(helAccessIo(ports, 8, &handle));
 	HEL_CHECK(helEnableIo(handle));
@@ -342,9 +335,9 @@ int main() {
 
 	// Perform general initialization.
 	base.store(
-	        uart_register::fifoControl,
-	        fifo_control::fifoEnable(FifoCtrl::enable)
-	                | fifo_control::fifoIrqLvl(FifoCtrl::triggerLvl14)
+	  uart_register::fifoControl,
+	  fifo_control::fifoEnable(FifoCtrl::enable)
+	    | fifo_control::fifoIrqLvl(FifoCtrl::triggerLvl14)
 	);
 
 	// Wait for the FIFO to become empty.
@@ -353,9 +346,9 @@ int main() {
 
 	// Enable IRQs.
 	base.store(
-	        uart_register::irqEnable,
-	        irq_enable::dataAvailable(IrqCtrl::enable) | irq_enable::txEmpty(IrqCtrl::enable)
-	                | irq_enable::lineStatus(IrqCtrl::enable)
+	  uart_register::irqEnable,
+	  irq_enable::dataAvailable(IrqCtrl::enable) | irq_enable::txEmpty(IrqCtrl::enable)
+	    | irq_enable::lineStatus(IrqCtrl::enable)
 	);
 
 	// Set the baud rate.
@@ -364,9 +357,9 @@ int main() {
 	base.store(uart_register::baudHigh, BaudRate::high9600);
 
 	base.store(
-	        uart_register::lineControl,
-	        line_control::dataBits(DataBits::charLen8) | line_control::stopBit(StopBits::one)
-	                | line_control::parityBits(Parity::none) | line_control::dlab(false)
+	  uart_register::lineControl,
+	  line_control::dataBits(DataBits::charLen8) | line_control::stopBit(StopBits::one)
+	    | line_control::parityBits(Parity::none) | line_control::dlab(false)
 	);
 
 	runTerminal();

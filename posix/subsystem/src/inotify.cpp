@@ -26,19 +26,19 @@ public:
 
 	struct Watch final : FsObserver {
 		Watch(OpenFile *file_, int descriptor, uint32_t mask)
-		        : file { file_ }
-		        , descriptor { descriptor }
-		        , mask { mask } {}
+		: file {file_}
+		, descriptor {descriptor}
+		, mask {mask} {}
 
 		void observeNotification(uint32_t events, const std::string &name, uint32_t cookie)
-		        override {
+		  override {
 			uint32_t inotifyEvents = 0;
 			if (events & FsObserver::deleteEvent)
 				inotifyEvents |= IN_DELETE;
 			if (!(inotifyEvents & mask))
 				return;
 			file->_queue.push_back(
-			        Packet { descriptor, inotifyEvents & mask, name, cookie }
+			  Packet {descriptor, inotifyEvents & mask, name, cookie}
 			);
 			file->_inSeq = ++file->_currentSeq;
 			file->_statusBell.raise();
@@ -53,13 +53,13 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        smarter::shared_ptr<File> { file },
-		        &File::fileOperations
+		  std::move(lane),
+		  smarter::shared_ptr<File> {file},
+		  &File::fileOperations
 		));
 	}
 
-	OpenFile() : File { StructName::get("inotify") } {}
+	OpenFile() : File {StructName::get("inotify")} {}
 
 	~OpenFile() {
 		// TODO: Properly keep track of watches.
@@ -86,15 +86,17 @@ public:
 		e.len = packet.name.size();
 
 		memcpy(data, &e, sizeof(inotify_event));
-		memcpy(reinterpret_cast<char *>(data) + sizeof(inotify_event),
-		       packet.name.c_str(),
-		       packet.name.size() + 1);
+		memcpy(
+		  reinterpret_cast<char *>(data) + sizeof(inotify_event),
+		  packet.name.c_str(),
+		  packet.name.size() + 1
+		);
 		co_return sizeof(inotify_event) + packet.name.size() + 1;
 	}
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		(void) mask;  // TODO: utilize mask.
 		// TODO: Return Error::fileClosed as appropriate.
 

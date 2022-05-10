@@ -23,7 +23,7 @@ void UserContext::migrate(CpuData *cpu_data) {
 	cpu_data->exceptionStackPtr = kernelStack.basePtr();
 }
 
-FiberContext::FiberContext(UniqueKernelStack stack) : stack { std::move(stack) } {}
+FiberContext::FiberContext(UniqueKernelStack stack) : stack {std::move(stack)} {}
 
 extern "C" [[noreturn]] void _restoreExecutorRegisters(void *pointer);
 
@@ -38,7 +38,7 @@ size_t Executor::determineSize() {
 	return sizeof(Frame);
 }
 
-Executor::Executor() : _pointer { nullptr }, _exceptionStack { nullptr } {}
+Executor::Executor() : _pointer {nullptr}, _exceptionStack {nullptr} {}
 
 Executor::Executor(UserContext *context, AbiParameters abi) {
 	_pointer = static_cast<char *>(kernelAlloc->allocate(getStateSize()));
@@ -52,7 +52,7 @@ Executor::Executor(UserContext *context, AbiParameters abi) {
 	_exceptionStack = context->kernelStack.basePtr();
 }
 
-Executor::Executor(FiberContext *context, AbiParameters abi) : _exceptionStack { nullptr } {
+Executor::Executor(FiberContext *context, AbiParameters abi) : _exceptionStack {nullptr} {
 	_pointer = static_cast<char *>(kernelAlloc->allocate(getStateSize()));
 	memset(_pointer, 0, getStateSize());
 
@@ -201,20 +201,20 @@ void doRunOnStack(void (*function)(void *, void *), void *sp, void *argument) {
 	assert(!intsAreEnabled());
 
 	cleanKasanShadow(
-	        reinterpret_cast<std::byte *>(sp) - UniqueKernelStack::kSize,
-	        UniqueKernelStack::kSize
+	  reinterpret_cast<std::byte *>(sp) - UniqueKernelStack::kSize,
+	  UniqueKernelStack::kSize
 	);
 
 	asm volatile(
-	        "\tmov x28, sp\n"
-	        "\tmov x1, sp\n"
-	        "\tmov x0, %0\n"
-	        "\tmov sp, %2\n"
-	        "\tblr %1\n"
-	        "\tmov sp, x28\n"
-	        :
-	        : "r"(argument), "r"(function), "r"(sp)
-	        : "x30", "x28", "x1", "x0", "memory"
+	  "\tmov x28, sp\n"
+	  "\tmov x1, sp\n"
+	  "\tmov x0, %0\n"
+	  "\tmov sp, %2\n"
+	  "\tblr %1\n"
+	  "\tmov sp, x28\n"
+	  :
+	  : "r"(argument), "r"(function), "r"(sp)
+	  : "x30", "x28", "x1", "x0", "memory"
 	);
 }
 
@@ -246,24 +246,24 @@ void setupBootCpuContext() {
 	setupCpuContext(staticBootCpuContext.get());
 }
 
-static initgraph::Task initBootProcessorTask { &globalInitEngine,
-	                                       "arm.init-boot-processor",
-	                                       initgraph::Entails { getBootProcessorReadyStage() },
-	                                       [] {
-	                                               allCpuContexts.initialize(*kernelAlloc);
+static initgraph::Task initBootProcessorTask {
+  &globalInitEngine,
+  "arm.init-boot-processor",
+  initgraph::Entails {getBootProcessorReadyStage()},
+  [] {
+	  allCpuContexts.initialize(*kernelAlloc);
 
-	                                               infoLogger() << "Booting on CPU #0"
-	                                                            << frg::endlog;
+	  infoLogger() << "Booting on CPU #0" << frg::endlog;
 
-	                                               initializeThisProcessor();
-	                                       } };
+	  initializeThisProcessor();
+  }};
 
 initgraph::Stage *getBootProcessorReadyStage() {
-	static initgraph::Stage s { &globalInitEngine, "arm.boot-processor-ready" };
+	static initgraph::Stage s {&globalInitEngine, "arm.boot-processor-ready"};
 	return &s;
 }
 
-initgraph::Edge bootProcessorReadyEdge { getBootProcessorReadyStage(), getFibersAvailableStage() };
+initgraph::Edge bootProcessorReadyEdge {getBootProcessorReadyStage(), getFibersAvailableStage()};
 
 void initializeThisProcessor() {
 	auto cpu_data = getCpuData();

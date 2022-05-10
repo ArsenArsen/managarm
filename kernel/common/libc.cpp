@@ -149,19 +149,19 @@ void *memset(void *dest, int val, size_t n) {
 	}
 
 	auto pattern64 = static_cast<word<uint64_t>>(
-	        static_cast<uint64_t>(byte) | (static_cast<uint64_t>(byte) << 8)
-	        | (static_cast<uint64_t>(byte) << 16) | (static_cast<uint64_t>(byte) << 24)
-	        | (static_cast<uint64_t>(byte) << 32) | (static_cast<uint64_t>(byte) << 40)
-	        | (static_cast<uint64_t>(byte) << 48) | (static_cast<uint64_t>(byte) << 56)
+	  static_cast<uint64_t>(byte) | (static_cast<uint64_t>(byte) << 8)
+	  | (static_cast<uint64_t>(byte) << 16) | (static_cast<uint64_t>(byte) << 24)
+	  | (static_cast<uint64_t>(byte) << 32) | (static_cast<uint64_t>(byte) << 40)
+	  | (static_cast<uint64_t>(byte) << 48) | (static_cast<uint64_t>(byte) << 56)
 	);
 
 	auto pattern32 = static_cast<word<uint32_t>>(
-	        static_cast<uint32_t>(byte) | (static_cast<uint32_t>(byte) << 8)
-	        | (static_cast<uint32_t>(byte) << 16) | (static_cast<uint32_t>(byte) << 24)
+	  static_cast<uint32_t>(byte) | (static_cast<uint32_t>(byte) << 8)
+	  | (static_cast<uint32_t>(byte) << 16) | (static_cast<uint32_t>(byte) << 24)
 	);
 
 	auto pattern16 = static_cast<word<uint16_t>>(
-	        static_cast<uint16_t>(byte) | (static_cast<uint16_t>(byte) << 8)
+	  static_cast<uint16_t>(byte) | (static_cast<uint16_t>(byte) << 8)
 	);
 
 	while (n >= 8 * 8) {

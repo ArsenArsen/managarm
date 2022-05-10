@@ -72,17 +72,17 @@ Mode edidToMode(DisplayData edid) {
 	assert(!edid.detailTimings[0].vertBorder);
 
 	auto horz_active =
-	        edid.detailTimings[0].horzActive
-	        | (static_cast<unsigned int>(edid.detailTimings[0].horzActiveBlankMsb >> 4) << 8);
+	  edid.detailTimings[0].horzActive
+	  | (static_cast<unsigned int>(edid.detailTimings[0].horzActiveBlankMsb >> 4) << 8);
 	auto horz_blank =
-	        edid.detailTimings[0].horzBlank
-	        | (static_cast<unsigned int>(edid.detailTimings[0].horzActiveBlankMsb & 0xF) << 8);
+	  edid.detailTimings[0].horzBlank
+	  | (static_cast<unsigned int>(edid.detailTimings[0].horzActiveBlankMsb & 0xF) << 8);
 	auto horz_sync_offset =
-	        edid.detailTimings[0].horzSyncOffset
-	        | (static_cast<unsigned int>(edid.detailTimings[0].syncMsb >> 6) << 8);
+	  edid.detailTimings[0].horzSyncOffset
+	  | (static_cast<unsigned int>(edid.detailTimings[0].syncMsb >> 6) << 8);
 	auto horz_sync_pulse =
-	        edid.detailTimings[0].horzSyncPulse
-	        | ((static_cast<unsigned int>(edid.detailTimings[0].syncMsb >> 4) & 0x3) << 8);
+	  edid.detailTimings[0].horzSyncPulse
+	  | ((static_cast<unsigned int>(edid.detailTimings[0].syncMsb >> 4) & 0x3) << 8);
 
 	std::cout << "horizontal: " << horz_active << ", " << horz_blank << ", " << horz_sync_offset
 	          << ", " << horz_sync_pulse << std::endl;
@@ -93,17 +93,17 @@ Mode edidToMode(DisplayData edid) {
 	mode.horizontal.dump();
 
 	auto vert_active =
-	        edid.detailTimings[0].vertActive
-	        | (static_cast<unsigned int>(edid.detailTimings[0].vertActiveBlankMsb >> 4) << 8);
+	  edid.detailTimings[0].vertActive
+	  | (static_cast<unsigned int>(edid.detailTimings[0].vertActiveBlankMsb >> 4) << 8);
 	auto vert_blank =
-	        edid.detailTimings[0].vertBlank
-	        | (static_cast<unsigned int>(edid.detailTimings[0].vertActiveBlankMsb & 0xF) << 8);
+	  edid.detailTimings[0].vertBlank
+	  | (static_cast<unsigned int>(edid.detailTimings[0].vertActiveBlankMsb & 0xF) << 8);
 	auto vert_sync_offset =
-	        (edid.detailTimings[0].vertSync >> 4)
-	        | ((static_cast<unsigned int>(edid.detailTimings[0].syncMsb >> 2) & 0x3) << 4);
+	  (edid.detailTimings[0].vertSync >> 4)
+	  | ((static_cast<unsigned int>(edid.detailTimings[0].syncMsb >> 2) & 0x3) << 4);
 	auto vert_sync_pulse =
-	        (edid.detailTimings[0].vertSync & 0xF)
-	        | (static_cast<unsigned int>(edid.detailTimings[0].syncMsb & 0x3) << 4);
+	  (edid.detailTimings[0].vertSync & 0xF)
+	  | (static_cast<unsigned int>(edid.detailTimings[0].syncMsb & 0x3) << 4);
 
 	std::cout << "vertical: " << vert_active << ", " << vert_blank << ", " << vert_sync_offset
 	          << ", " << vert_sync_pulse << std::endl;
@@ -184,7 +184,7 @@ int computeSdvoMultiplier(int pixel_clock) {
 }
 
 struct Controller {
-	Controller(arch::mem_space ctrl, void *memory) : _ctrl { ctrl }, _memory { memory } {}
+	Controller(arch::mem_space ctrl, void *memory) : _ctrl {ctrl}, _memory {memory} {}
 
 	void run();
 
@@ -291,7 +291,7 @@ void Controller::i2cWrite(unsigned int address, const void *buffer, size_t size)
 		for (size_t i = 0; i < 4; ++i) {
 			if (progress == size)
 				break;
-			data |= uint32_t { view[progress++] } << (8 * i);
+			data |= uint32_t {view[progress++]} << (8 * i);
 		}
 		_ctrl.store(regs::gmbusData, data);
 	};
@@ -299,10 +299,9 @@ void Controller::i2cWrite(unsigned int address, const void *buffer, size_t size)
 	// Asymmetry to i2cRead(): We fill the data buffer before issuing the cycle.
 	stream();
 	_ctrl.store(
-	        regs::gmbusCommand,
-	        gmbus_command::address(address) | gmbus_command::byteCount(size)
-	                | gmbus_command::cycleSelect(BusCycle::wait)
-	                | gmbus_command::softwareReady(true)
+	  regs::gmbusCommand,
+	  gmbus_command::address(address) | gmbus_command::byteCount(size)
+	    | gmbus_command::cycleSelect(BusCycle::wait) | gmbus_command::softwareReady(true)
 	);
 	//	std::cout << "gfx_intel i2c: Wait" << std::endl;
 	_waitForGmbusProgress();
@@ -329,11 +328,10 @@ void Controller::i2cRead(unsigned int address, void *buffer, size_t size) {
 	};
 
 	_ctrl.store(
-	        regs::gmbusCommand,
-	        gmbus_command::issueRead(true) | gmbus_command::address(address)
-	                | gmbus_command::byteCount(size)
-	                | gmbus_command::cycleSelect(BusCycle::wait)
-	                | gmbus_command::softwareReady(true)
+	  regs::gmbusCommand,
+	  gmbus_command::issueRead(true) | gmbus_command::address(address)
+	    | gmbus_command::byteCount(size) | gmbus_command::cycleSelect(BusCycle::wait)
+	    | gmbus_command::softwareReady(true)
 	);
 
 	while (progress < size) {
@@ -376,21 +374,21 @@ void Controller::disableDpll() {
 
 void Controller::programDpll(PllParams params, int multiplier) {
 	_ctrl.store(
-	        regs::pllDivisor1,
-	        pll_divisor::m2(params.m2) | pll_divisor::m1(params.m1) | pll_divisor::n(params.n)
+	  regs::pllDivisor1,
+	  pll_divisor::m2(params.m2) | pll_divisor::m1(params.m1) | pll_divisor::n(params.n)
 	);
 	_ctrl.store(
-	        regs::pllDivisor2,
-	        pll_divisor::m2(params.m2) | pll_divisor::m1(params.m1) | pll_divisor::n(params.n)
+	  regs::pllDivisor2,
+	  pll_divisor::m2(params.m2) | pll_divisor::m1(params.m1) | pll_divisor::n(params.n)
 	);
 
 	_ctrl.store(regs::pllControl, pll_control::enablePll(false));
 
 	_ctrl.store(
-	        regs::pllControl,
-	        pll_control::phase(6) | pll_control::encodedP1(1 << (params.p1 - 1))
-	                | pll_control::modeSelect(1) | pll_control::disableVga(true)
-	                | pll_control::enablePll(true)
+	  regs::pllControl,
+	  pll_control::phase(6) | pll_control::encodedP1(1 << (params.p1 - 1))
+	    | pll_control::modeSelect(1) | pll_control::disableVga(true)
+	    | pll_control::enablePll(true)
 	);
 	_ctrl.load(regs::pllControl);
 
@@ -404,17 +402,17 @@ void Controller::programDpll(PllParams params, int multiplier) {
 	          << std::endl;
 
 	_ctrl.store(
-	        regs::busMultiplier,
-	        bus_multiplier::vgaMultiplier(multiplier - 1)
-	                | bus_multiplier::dacMultiplier(multiplier - 1)
+	  regs::busMultiplier,
+	  bus_multiplier::vgaMultiplier(multiplier - 1)
+	    | bus_multiplier::dacMultiplier(multiplier - 1)
 	);
 
 	for (int i = 0; i < 3; i++) {
 		_ctrl.store(
-		        regs::pllControl,
-		        pll_control::phase(6) | pll_control::encodedP1(1 << (params.p1 - 1))
-		                | pll_control::modeSelect(1) | pll_control::disableVga(true)
-		                | pll_control::enablePll(true)
+		  regs::pllControl,
+		  pll_control::phase(6) | pll_control::encodedP1(1 << (params.p1 - 1))
+		    | pll_control::modeSelect(1) | pll_control::disableVga(true)
+		    | pll_control::enablePll(true)
 		);
 		_ctrl.load(regs::pllControl);
 
@@ -471,39 +469,37 @@ void Controller::disablePipe() {
 void Controller::programPipe(Mode mode) {
 	// Program the display timings.
 	_ctrl.store(
-	        regs::htotal,
-	        hvtotal::active(mode.horizontal.active - 1)
-	                | hvtotal::total(mode.horizontal.total - 1)
+	  regs::htotal,
+	  hvtotal::active(mode.horizontal.active - 1) | hvtotal::total(mode.horizontal.total - 1)
 	);
 	_ctrl.store(
-	        regs::hblank,
-	        hvblank::start(mode.horizontal.blankingStart() - 1)
-	                | hvblank::end(mode.horizontal.blankingEnd() - 1)
+	  regs::hblank,
+	  hvblank::start(mode.horizontal.blankingStart() - 1)
+	    | hvblank::end(mode.horizontal.blankingEnd() - 1)
 	);
 	_ctrl.store(
-	        regs::hsync,
-	        hvsync::start(mode.horizontal.syncStart - 1)
-	                | hvsync::end(mode.horizontal.syncEnd - 1)
+	  regs::hsync,
+	  hvsync::start(mode.horizontal.syncStart - 1) | hvsync::end(mode.horizontal.syncEnd - 1)
 	);
 
 	_ctrl.store(
-	        regs::vtotal,
-	        hvtotal::active(mode.vertical.active - 1) | hvtotal::total(mode.vertical.total - 1)
+	  regs::vtotal,
+	  hvtotal::active(mode.vertical.active - 1) | hvtotal::total(mode.vertical.total - 1)
 	);
 	_ctrl.store(
-	        regs::vblank,
-	        hvblank::start(mode.vertical.blankingStart() - 1)
-	                | hvblank::end(mode.vertical.blankingEnd() - 1)
+	  regs::vblank,
+	  hvblank::start(mode.vertical.blankingStart() - 1)
+	    | hvblank::end(mode.vertical.blankingEnd() - 1)
 	);
 	_ctrl.store(
-	        regs::vsync,
-	        hvsync::start(mode.vertical.syncStart - 1) | hvsync::end(mode.vertical.syncEnd - 1)
+	  regs::vsync,
+	  hvsync::start(mode.vertical.syncStart - 1) | hvsync::end(mode.vertical.syncEnd - 1)
 	);
 
 	_ctrl.store(
-	        regs::sourceSize,
-	        source_size::vertical(mode.vertical.active - 1)
-	                | source_size::horizontal(mode.horizontal.active - 1)
+	  regs::sourceSize,
+	  source_size::vertical(mode.vertical.active - 1)
+	    | source_size::horizontal(mode.horizontal.active - 1)
 	);
 
 	// Enable the pipe.
@@ -566,10 +562,9 @@ void Controller::enablePlane(Framebuffer *fb) {
 	std::cout << "Plane control: " << static_cast<uint32_t>(bits) << std::endl;
 	assert(!(bits & plane_control::enablePlane));
 	_ctrl.store(
-	        regs::planeControl,
-	        (bits & ~plane_control::pixelFormat)
-	                | plane_control::pixelFormat(PrimaryFormat::RGBX8888)
-	                | plane_control::enablePlane(true)
+	  regs::planeControl,
+	  (bits & ~plane_control::pixelFormat) | plane_control::pixelFormat(PrimaryFormat::RGBX8888)
+	    | plane_control::enablePlane(true)
 	);
 }
 
@@ -598,8 +593,8 @@ void Controller::relinquishVga() {
 	auto bits = _ctrl.load(regs::vgaControl);
 	assert(!(bits & vga_control::disableVga));
 	_ctrl.store(
-	        regs::vgaControl,
-	        (bits & ~vga_control::centeringMode) | vga_control::disableVga(true)
+	  regs::vgaControl,
+	  (bits & ~vga_control::centeringMode) | vga_control::disableVga(true)
 	);
 }
 
@@ -620,39 +615,40 @@ async::detached bindController(mbus::Entity entity) {
 
 	void *ctrl_window, *memory_window;
 	HEL_CHECK(helMapMemory(
-	        ctrl_bar.getHandle(),
-	        kHelNullHandle,
-	        nullptr,
-	        0,
-	        0x8'0000,
-	        kHelMapProtRead | kHelMapProtWrite,
-	        &ctrl_window
+	  ctrl_bar.getHandle(),
+	  kHelNullHandle,
+	  nullptr,
+	  0,
+	  0x8'0000,
+	  kHelMapProtRead | kHelMapProtWrite,
+	  &ctrl_window
 	));
 	HEL_CHECK(helMapMemory(
-	        memory_bar.getHandle(),
-	        kHelNullHandle,
-	        nullptr,
-	        0,
-	        0x1000'0000,
-	        kHelMapProtRead | kHelMapProtWrite,
-	        &memory_window
+	  memory_bar.getHandle(),
+	  kHelNullHandle,
+	  nullptr,
+	  0,
+	  0x1000'0000,
+	  kHelMapProtRead | kHelMapProtWrite,
+	  &memory_window
 	));
 
-	Controller controller { arch::mem_space(ctrl_window), memory_window };
+	Controller controller {arch::mem_space(ctrl_window), memory_window};
 	controller.run();
 }
 
 async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("pci-vendor", "8086"),
-	                                  mbus::EqualsFilter("pci-device", "2e32") });
+	auto filter = mbus::Conjunction(
+	  {mbus::EqualsFilter("pci-vendor", "8086"), mbus::EqualsFilter("pci-device", "2e32")}
+	);
 
 	auto handler =
-	        mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		        std::cout << "gfx_intel: Detected controller" << std::endl;
-		        bindController(std::move(entity));
-	        });
+	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		  std::cout << "gfx_intel: Detected controller" << std::endl;
+		  bindController(std::move(entity));
+	  });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

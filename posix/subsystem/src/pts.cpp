@@ -38,10 +38,10 @@ struct Packet {
 
 struct Channel {
 	Channel(int pts_index)
-	        : ptsIndex { pts_index }
-	        , currentSeq { 1 }
-	        , masterInSeq { 0 }
-	        , slaveInSeq { 0 } {
+	: ptsIndex {pts_index}
+	, currentSeq {1}
+	, masterInSeq {0}
+	, slaveInSeq {0} {
 		auto ctrl = [](char c) -> char {  // Convert ^X to X.
 			return c - 64;
 		};
@@ -93,14 +93,15 @@ struct Channel {
 //-----------------------------------------------------------------------------
 
 struct MasterDevice final : UnixDevice {
-	MasterDevice() : UnixDevice(VfsType::charDevice) { assignId({ 5, 2 }); }
+	MasterDevice() : UnixDevice(VfsType::charDevice) { assignId({5, 2}); }
 
 	std::string nodePath() override { return "ptmx"; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override;
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override;
 };
 
 struct SlaveDevice final : UnixDevice {
@@ -108,10 +109,11 @@ struct SlaveDevice final : UnixDevice {
 
 	std::string nodePath() override { return std::string {}; }
 
-	async::result<frg::expected<Error, SharedFilePtr>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override;
+	async::result<frg::expected<Error, SharedFilePtr>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override;
 
 private:
 	std::shared_ptr<Channel> _channel;
@@ -124,17 +126,15 @@ public:
 
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
-		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        file,
-		        &File::fileOperations
-		));
+		async::detach(
+		  protocols::fs::servePassthrough(std::move(lane), file, &File::fileOperations)
+		);
 	}
 
 	MasterFile(
-	        std::shared_ptr<MountView> mount,
-	        std::shared_ptr<FsLink> link,
-	        bool nonBlocking
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  bool nonBlocking
 	);
 
 	async::result<frg::expected<Error, size_t>>
@@ -148,13 +148,13 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	        override;
+	  override;
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *) override;
 
 	async::result<void>
-	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation
-	) override;
+	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation)
+	  override;
 
 	helix::BorrowedDescriptor getPassthroughLane() override { return _passthrough; }
 
@@ -173,18 +173,16 @@ public:
 
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
-		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        file,
-		        &File::fileOperations
-		));
+		async::detach(
+		  protocols::fs::servePassthrough(std::move(lane), file, &File::fileOperations)
+		);
 	}
 
 	SlaveFile(
-	        std::shared_ptr<MountView> mount,
-	        std::shared_ptr<FsLink> link,
-	        std::shared_ptr<Channel> channel,
-	        bool nonBlock
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  std::shared_ptr<Channel> channel,
+	  bool nonBlock
 	);
 
 	async::result<frg::expected<Error, size_t>>
@@ -198,13 +196,13 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t sequence, int mask, async::cancellation_token cancellation)
-	        override;
+	  override;
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *) override;
 
 	async::result<void>
-	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation
-	) override;
+	ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLane conversation)
+	  override;
 
 	helix::BorrowedDescriptor getPassthroughLane() override { return _passthrough; }
 
@@ -225,9 +223,9 @@ private:
 struct Link final : FsLink {
 public:
 	explicit Link(RootNode *root, std::string name, std::shared_ptr<DeviceNode> device)
-	        : _root { root }
-	        , _name { std::move(name) }
-	        , _device { std::move(device) } {}
+	: _root {root}
+	, _name {std::move(name)}
+	, _device {std::move(device)} {}
 
 	std::shared_ptr<FsNode> getOwner() override;
 
@@ -278,7 +276,7 @@ struct LinkCompare {
 
 struct DeviceNode final : FsNode {
 public:
-	DeviceNode(DeviceId id) : _type { VfsType::charDevice }, _id { id } {}
+	DeviceNode(DeviceId id) : _type {VfsType::charDevice}, _id {id} {}
 
 	VfsType getType() override { return _type; }
 
@@ -289,10 +287,11 @@ public:
 
 	DeviceId readDevice() override { return _id; }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		return openDevice(_type, _id, std::move(mount), std::move(link), semantic_flags);
 	}
 
@@ -302,8 +301,8 @@ private:
 };
 
 struct RootNode final
-        : FsNode
-        , std::enable_shared_from_this<RootNode> {
+: FsNode
+, std::enable_shared_from_this<RootNode> {
 	friend struct Superblock;
 	friend struct DirectoryFile;
 
@@ -333,15 +332,13 @@ private:
 };
 
 async::result<void> Channel::commonIoctl(
-        Process *process,
-        managarm::fs::CntRequest req,
-        helix::UniqueLane conversation
+  Process *process,
+  managarm::fs::CntRequest req,
+  helix::UniqueLane conversation
 ) {
 	if (req.command() == TIOCSCTTY) {
-		auto [extractCreds] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::extractCredentials()
-		);
+		auto [extractCreds] =
+		  co_await helix_ng::exchangeMsgs(conversation, helix_ng::extractCredentials());
 		HEL_CHECK(extractCreds.error());
 
 		auto process = findProcessWithCredentials(extractCreds.credentials());
@@ -358,17 +355,15 @@ async::result<void> Channel::commonIoctl(
 
 		auto ser = resp.SerializeAsString();
 		auto [sendResp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(sendResp.error());
 	} else if (req.command() == TIOCGPGRP) {
 		managarm::fs::SvrResponse resp;
 
-		auto [extractCreds] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::extractCredentials()
-		);
+		auto [extractCreds] =
+		  co_await helix_ng::exchangeMsgs(conversation, helix_ng::extractCredentials());
 		HEL_CHECK(extractCreds.error());
 
 		auto process = findProcessWithCredentials(extractCreds.credentials());
@@ -382,17 +377,15 @@ async::result<void> Channel::commonIoctl(
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCSPGRP) {
 		managarm::fs::SvrResponse resp;
 
-		auto [extractCreds] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::extractCredentials()
-		);
+		auto [extractCreds] =
+		  co_await helix_ng::exchangeMsgs(conversation, helix_ng::extractCredentials());
 		HEL_CHECK(extractCreds.error());
 
 		auto process = findProcessWithCredentials(extractCreds.credentials());
@@ -411,17 +404,15 @@ async::result<void> Channel::commonIoctl(
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCGSID) {
 		managarm::fs::SvrResponse resp;
 
-		auto [extractCreds] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::extractCredentials()
-		);
+		auto [extractCreds] =
+		  co_await helix_ng::exchangeMsgs(conversation, helix_ng::extractCredentials());
 		HEL_CHECK(extractCreds.error());
 
 		auto process = findProcessWithCredentials(extractCreds.credentials());
@@ -435,8 +426,8 @@ async::result<void> Channel::commonIoctl(
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else {
@@ -451,9 +442,9 @@ async::result<void> Channel::commonIoctl(
 //-----------------------------------------------------------------------------
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> MasterDevice::open(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        SemanticFlags semantic_flags
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
@@ -465,9 +456,9 @@ async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> Maste
 	}
 
 	auto file = smarter::make_shared<MasterFile>(
-	        std::move(mount),
-	        std::move(link),
-	        semantic_flags & semanticNonBlock
+	  std::move(mount),
+	  std::move(link),
+	  semantic_flags & semanticNonBlock
 	);
 	file->setupWeakFile(file);
 	MasterFile::serve(file);
@@ -475,22 +466,19 @@ async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> Maste
 }
 
 MasterFile::MasterFile(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        bool nonBlocking
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  bool nonBlocking
 )
-        : File { StructName::get("pts.master"),
-	         std::move(mount),
-	         std::move(link),
-	         File::defaultPipeLikeSeek }
-        , _channel { std::make_shared<Channel>(nextPtsIndex++) }
-        , _nonBlocking { nonBlocking } {
+: File {StructName::get("pts.master"), std::move(mount), std::move(link), File::defaultPipeLikeSeek}
+, _channel {std::make_shared<Channel>(nextPtsIndex++)}
+, _nonBlocking {nonBlocking} {
 	auto slave_device = std::make_shared<SlaveDevice>(_channel);
 	charRegistry.install(std::move(slave_device));
 
 	globalRootLink->rootNode()->linkDevice(
-	        std::to_string(_channel->ptsIndex),
-	        std::make_shared<DeviceNode>(DeviceId { 136, _channel->ptsIndex })
+	  std::to_string(_channel->ptsIndex),
+	  std::make_shared<DeviceNode>(DeviceId {136, _channel->ptsIndex})
 	);
 }
 
@@ -555,10 +543,10 @@ MasterFile::getControllingTerminal() {
 }
 
 async::result<frg::expected<Error, PollWaitResult>> MasterFile::pollWait(
-        Process *,
-        uint64_t past_seq,
-        int mask,
-        async::cancellation_token cancellation
+  Process *,
+  uint64_t past_seq,
+  int mask,
+  async::cancellation_token cancellation
 ) {
 	(void) mask;  // TODO: utilize mask.
 	assert(past_seq <= _channel->currentSeq);
@@ -571,7 +559,7 @@ async::result<frg::expected<Error, PollWaitResult>> MasterFile::pollWait(
 	if (_channel->masterInSeq > past_seq)
 		edges |= EPOLLIN;
 
-	co_return PollWaitResult { _channel->currentSeq, edges };
+	co_return PollWaitResult {_channel->currentSeq, edges};
 }
 
 async::result<frg::expected<Error, PollStatusResult>> MasterFile::pollStatus(Process *) {
@@ -580,7 +568,7 @@ async::result<frg::expected<Error, PollStatusResult>> MasterFile::pollStatus(Pro
 	if (!_channel->masterQueue.empty())
 		events |= EPOLLIN;
 
-	co_return PollStatusResult { _channel->currentSeq, events };
+	co_return PollStatusResult {_channel->currentSeq, events};
 }
 
 async::result<void>
@@ -593,8 +581,8 @@ MasterFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueL
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCSWINSZ) {
@@ -615,8 +603,8 @@ MasterFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueL
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCSCTTY || req.command() == TIOCGPGRP || req.command() == TIOCSPGRP || req.command() == TIOCGSID) {
@@ -633,15 +621,15 @@ MasterFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueL
 //-----------------------------------------------------------------------------
 
 SlaveDevice::SlaveDevice(std::shared_ptr<Channel> channel)
-        : UnixDevice(VfsType::charDevice)
-        , _channel { std::move(channel) } {
-	assignId({ 136, _channel->ptsIndex });
+: UnixDevice(VfsType::charDevice)
+, _channel {std::move(channel)} {
+	assignId({136, _channel->ptsIndex});
 }
 
 async::result<frg::expected<Error, SharedFilePtr>> SlaveDevice::open(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        SemanticFlags semantic_flags
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
@@ -653,10 +641,10 @@ async::result<frg::expected<Error, SharedFilePtr>> SlaveDevice::open(
 	}
 
 	auto file = smarter::make_shared<SlaveFile>(
-	        std::move(mount),
-	        std::move(link),
-	        _channel,
-	        semantic_flags & semanticNonBlock
+	  std::move(mount),
+	  std::move(link),
+	  _channel,
+	  semantic_flags & semanticNonBlock
 	);
 	file->setupWeakFile(file);
 	SlaveFile::serve(file);
@@ -664,17 +652,14 @@ async::result<frg::expected<Error, SharedFilePtr>> SlaveDevice::open(
 }
 
 SlaveFile::SlaveFile(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        std::shared_ptr<Channel> channel,
-        bool nonBlock
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  std::shared_ptr<Channel> channel,
+  bool nonBlock
 )
-        : File { StructName::get("pts.slave"),
-	         std::move(mount),
-	         std::move(link),
-	         File::defaultIsTerminal | File::defaultPipeLikeSeek }
-        , _channel { std::move(channel) }
-        , nonBlock_ { nonBlock } {}
+: File {StructName::get("pts.slave"), std::move(mount), std::move(link), File::defaultIsTerminal | File::defaultPipeLikeSeek}
+, _channel {std::move(channel)}
+, nonBlock_ {nonBlock} {}
 
 async::result<frg::expected<Error, size_t>>
 SlaveFile::readSome(Process *, void *data, size_t maxLength) {
@@ -744,10 +729,10 @@ SlaveFile::getControllingTerminal() {
 }
 
 async::result<frg::expected<Error, PollWaitResult>> SlaveFile::pollWait(
-        Process *,
-        uint64_t past_seq,
-        int mask,
-        async::cancellation_token cancellation
+  Process *,
+  uint64_t past_seq,
+  int mask,
+  async::cancellation_token cancellation
 ) {
 	(void) mask;  // TODO: utilize mask.
 	assert(past_seq <= _channel->currentSeq);
@@ -759,7 +744,7 @@ async::result<frg::expected<Error, PollWaitResult>> SlaveFile::pollWait(
 	if (_channel->slaveInSeq > past_seq)
 		edges |= EPOLLIN;
 
-	co_return PollWaitResult { _channel->currentSeq, edges };
+	co_return PollWaitResult {_channel->currentSeq, edges};
 }
 
 async::result<frg::expected<Error, PollStatusResult>> SlaveFile::pollStatus(Process *) {
@@ -768,7 +753,7 @@ async::result<frg::expected<Error, PollStatusResult>> SlaveFile::pollStatus(Proc
 	if (!_channel->slaveQueue.empty())
 		events |= EPOLLIN;
 
-	co_return PollStatusResult { _channel->currentSeq, events };
+	co_return PollStatusResult {_channel->currentSeq, events};
 }
 
 async::result<void>
@@ -790,9 +775,9 @@ SlaveFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLa
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp, send_attrs] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size()),
-		        helix_ng::sendBuffer(&attrs, sizeof(struct termios))
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size()),
+		  helix_ng::sendBuffer(&attrs, sizeof(struct termios))
 		);
 		HEL_CHECK(send_resp.error());
 		HEL_CHECK(send_attrs.error());
@@ -801,8 +786,8 @@ SlaveFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLa
 		managarm::fs::SvrResponse resp;
 
 		auto [recv_attrs] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::recvBuffer(&attrs, sizeof(struct termios))
+		  conversation,
+		  helix_ng::recvBuffer(&attrs, sizeof(struct termios))
 		);
 		HEL_CHECK(recv_attrs.error());
 
@@ -825,8 +810,8 @@ SlaveFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLa
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCGWINSZ) {
@@ -840,8 +825,8 @@ SlaveFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLa
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCSWINSZ) {
@@ -862,8 +847,8 @@ SlaveFile::ioctl(Process *process, managarm::fs::CntRequest req, helix::UniqueLa
 
 		auto ser = resp.SerializeAsString();
 		auto [send_resp] = co_await helix_ng::exchangeMsgs(
-		        conversation,
-		        helix_ng::sendBuffer(ser.data(), ser.size())
+		  conversation,
+		  helix_ng::sendBuffer(ser.data(), ser.size())
 		);
 		HEL_CHECK(send_resp.error());
 	} else if (req.command() == TIOCSCTTY || req.command() == TIOCGPGRP || req.command() == TIOCSPGRP || req.command() == TIOCGSID) {

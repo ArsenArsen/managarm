@@ -79,9 +79,9 @@ public:
 //-----------------------------------------------------------------------------
 
 Device::Device(std::shared_ptr<Device> parent, std::string name, UnixDevice *unix_device)
-        : sysfs::Object { parent ? parent : globalDevicesObject, std::move(name) }
-        , _unixDevice { unix_device }
-        , _parentDevice { std::move(parent) } {}
+: sysfs::Object {parent ? parent : globalDevicesObject, std::move(name)}
+, _unixDevice {unix_device}
+, _parentDevice {std::move(parent)} {}
 
 std::string Device::getSysfsPath() {
 	std::string path = name();
@@ -117,7 +117,7 @@ void Device::linkToSubsystem() {
 //-----------------------------------------------------------------------------
 
 BusSubsystem::BusSubsystem(std::string name)
-        : _object { std::make_shared<sysfs::Object>(globalBusObject, std::move(name)) } {
+: _object {std::make_shared<sysfs::Object>(globalBusObject, std::move(name))} {
 	_object->addObject();
 	_devicesObject = std::make_shared<sysfs::Object>(_object, "devices");
 	_devicesObject->addObject();
@@ -126,8 +126,8 @@ BusSubsystem::BusSubsystem(std::string name)
 }
 
 BusDevice::BusDevice(BusSubsystem *subsystem, std::string name, UnixDevice *unix_device)
-        : Device { nullptr, std::move(name), unix_device }
-        , _subsystem { subsystem } {}
+: Device {nullptr, std::move(name), unix_device}
+, _subsystem {subsystem} {}
 
 void BusDevice::linkToSubsystem() {
 	auto devices_object = _subsystem->devicesObject();
@@ -140,18 +140,18 @@ void BusDevice::linkToSubsystem() {
 //-----------------------------------------------------------------------------
 
 ClassSubsystem::ClassSubsystem(std::string name)
-        : _object { std::make_shared<sysfs::Object>(globalClassObject, std::move(name)) } {
+: _object {std::make_shared<sysfs::Object>(globalClassObject, std::move(name))} {
 	_object->addObject();
 }
 
 ClassDevice::ClassDevice(
-        ClassSubsystem *subsystem,
-        std::shared_ptr<Device> parent,
-        std::string name,
-        UnixDevice *unix_device
+  ClassSubsystem *subsystem,
+  std::shared_ptr<Device> parent,
+  std::string name,
+  UnixDevice *unix_device
 )
-        : Device { std::move(parent), std::move(name), unix_device }
-        , _subsystem { subsystem } {}
+: Device {std::move(parent), std::move(name), unix_device}
+, _subsystem {subsystem} {}
 
 void ClassDevice::linkToSubsystem() {
 	auto subsystem_object = _subsystem->object();
@@ -166,13 +166,13 @@ void ClassDevice::linkToSubsystem() {
 //-----------------------------------------------------------------------------
 
 BlockDevice::BlockDevice(
-        ClassSubsystem *subsystem,
-        std::shared_ptr<Device> parent,
-        std::string name,
-        UnixDevice *unix_device
+  ClassSubsystem *subsystem,
+  std::shared_ptr<Device> parent,
+  std::string name,
+  UnixDevice *unix_device
 )
-        : Device { std::move(parent), std::move(name), unix_device }
-        , _subsystem { subsystem } {}
+: Device {std::move(parent), std::move(name), unix_device}
+, _subsystem {subsystem} {}
 
 void BlockDevice::linkToSubsystem() {
 	auto subsystem_object = _subsystem->object();

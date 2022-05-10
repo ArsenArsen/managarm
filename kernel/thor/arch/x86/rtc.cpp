@@ -78,13 +78,13 @@ int64_t getCmosTime() {
 }
 
 coroutine<bool> handleReq(LaneHandle lane) {
-	auto [acceptError, conversation] = co_await AcceptSender { lane };
+	auto [acceptError, conversation] = co_await AcceptSender {lane};
 	if (acceptError == Error::endOfLane)
 		co_return false;
 	// TODO: improve error handling here.
 	assert(acceptError == Error::success);
 
-	auto [reqError, reqBuffer] = co_await RecvBufferSender { conversation };
+	auto [reqError, reqBuffer] = co_await RecvBufferSender {conversation};
 	// TODO: improve error handling here.
 	assert(reqError == Error::success);
 
@@ -99,9 +99,9 @@ coroutine<bool> handleReq(LaneHandle lane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { conversation, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {conversation, std::move(respBuffer)};
 		// TODO: improve error handling here.
 		assert(respError == Error::success);
 	} else {
@@ -110,9 +110,9 @@ coroutine<bool> handleReq(LaneHandle lane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { conversation, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {conversation, std::move(respBuffer)};
 		// TODO: improve error handling here.
 		assert(respError == Error::success);
 	}
@@ -125,7 +125,7 @@ coroutine<bool> handleReq(LaneHandle lane) {
 // ------------------------------------------------------------------------
 
 coroutine<LaneHandle> createObject(LaneHandle mbusLane) {
-	auto [offerError, conversation] = co_await OfferSender { mbusLane };
+	auto [offerError, conversation] = co_await OfferSender {mbusLane};
 	// TODO: improve error handling here.
 	assert(offerError == Error::success);
 
@@ -141,20 +141,20 @@ coroutine<LaneHandle> createObject(LaneHandle mbusLane) {
 
 	frg::string<KernelAlloc> ser(*kernelAlloc);
 	req.SerializeToString(&ser);
-	frg::unique_memory<KernelAlloc> reqBuffer { *kernelAlloc, ser.size() };
+	frg::unique_memory<KernelAlloc> reqBuffer {*kernelAlloc, ser.size()};
 	memcpy(reqBuffer.data(), ser.data(), ser.size());
-	auto reqError = co_await SendBufferSender { conversation, std::move(reqBuffer) };
+	auto reqError = co_await SendBufferSender {conversation, std::move(reqBuffer)};
 	// TODO: improve error handling here.
 	assert(reqError == Error::success);
 
-	auto [respError, respBuffer] = co_await RecvBufferSender { conversation };
+	auto [respError, respBuffer] = co_await RecvBufferSender {conversation};
 	// TODO: improve error handling here.
 	assert(respError == Error::success);
 	managarm::mbus::SvrResponse<KernelAlloc> resp(*kernelAlloc);
 	resp.ParseFromArray(respBuffer.data(), respBuffer.size());
 	assert(resp.error() == managarm::mbus::Error::SUCCESS);
 
-	auto [descError, descriptor] = co_await PullDescriptorSender { conversation };
+	auto [descError, descriptor] = co_await PullDescriptorSender {conversation};
 	// TODO: improve error handling here.
 	assert(descError == Error::success);
 	assert(descriptor.is<LaneDescriptor>());
@@ -162,11 +162,11 @@ coroutine<LaneHandle> createObject(LaneHandle mbusLane) {
 }
 
 coroutine<void> handleBind(LaneHandle objectLane) {
-	auto [acceptError, conversation] = co_await AcceptSender { objectLane };
+	auto [acceptError, conversation] = co_await AcceptSender {objectLane};
 	// TODO: improve error handling here.
 	assert(acceptError == Error::success);
 
-	auto [reqError, reqBuffer] = co_await RecvBufferSender { conversation };
+	auto [reqError, reqBuffer] = co_await RecvBufferSender {conversation};
 	// TODO: improve error handling here.
 	assert(reqError == Error::success);
 	managarm::mbus::SvrRequest<KernelAlloc> req(*kernelAlloc);
@@ -178,15 +178,15 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 
 	frg::string<KernelAlloc> ser(*kernelAlloc);
 	resp.SerializeToString(&ser);
-	frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+	frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 	memcpy(respBuffer.data(), ser.data(), ser.size());
-	auto respError = co_await SendBufferSender { conversation, std::move(respBuffer) };
+	auto respError = co_await SendBufferSender {conversation, std::move(respBuffer)};
 	// TODO: improve error handling here.
 	assert(respError == Error::success);
 
 	auto stream = createStream();
 	auto descError =
-	        co_await PushDescriptorSender { conversation, LaneDescriptor { stream.get<1>() } };
+	  co_await PushDescriptorSender {conversation, LaneDescriptor {stream.get<1>()}};
 	// TODO: improve error handling here.
 	assert(descError == Error::success);
 
@@ -201,19 +201,18 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 }  // anonymous namespace
 
 static initgraph::Task initRtcTask {
-	&globalInitEngine,
-	"x86.init-rtc",
-	initgraph::Requires { getFibersAvailableStage() },
-	[] {
-	        // Create a fiber to manage requests to the RTC mbus object.
-	        KernelFiber::run([=] {
-		        async::detach_with_allocator(*kernelAlloc, []() -> coroutine<void> {
-			        auto objectLane = co_await createObject(*mbusClient);
-			        while (true)
-				        co_await handleBind(objectLane);
-		        }());
-	        });
-	}
-};
+  &globalInitEngine,
+  "x86.init-rtc",
+  initgraph::Requires {getFibersAvailableStage()},
+  [] {
+	  // Create a fiber to manage requests to the RTC mbus object.
+	  KernelFiber::run([=] {
+		  async::detach_with_allocator(*kernelAlloc, []() -> coroutine<void> {
+			  auto objectLane = co_await createObject(*mbusClient);
+			  while (true)
+				  co_await handleBind(objectLane);
+		  }());
+	  });
+  }};
 
 }  // namespace thor

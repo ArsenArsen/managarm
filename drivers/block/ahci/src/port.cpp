@@ -5,17 +5,17 @@
 #include <inttypes.h>
 
 namespace regs {
-constexpr arch::scalar_register<uint32_t> clBase { 0x0 };
-constexpr arch::scalar_register<uint32_t> clBaseUpper { 0x4 };
-constexpr arch::scalar_register<uint32_t> fisBase { 0x8 };
-constexpr arch::scalar_register<uint32_t> fisBaseUpper { 0xC };
-constexpr arch::scalar_register<uint32_t> interruptStatus { 0x10 };
-constexpr arch::scalar_register<uint32_t> interruptEnable { 0x14 };
-constexpr arch::scalar_register<uint32_t> commandAndStatus { 0x18 };
-constexpr arch::scalar_register<uint32_t> tfd { 0x20 };
-constexpr arch::scalar_register<uint32_t> status { 0x28 };
-constexpr arch::scalar_register<uint32_t> sErr { 0x30 };
-constexpr arch::scalar_register<uint32_t> commandIssue { 0x38 };
+constexpr arch::scalar_register<uint32_t> clBase {0x0};
+constexpr arch::scalar_register<uint32_t> clBaseUpper {0x4};
+constexpr arch::scalar_register<uint32_t> fisBase {0x8};
+constexpr arch::scalar_register<uint32_t> fisBaseUpper {0xC};
+constexpr arch::scalar_register<uint32_t> interruptStatus {0x10};
+constexpr arch::scalar_register<uint32_t> interruptEnable {0x14};
+constexpr arch::scalar_register<uint32_t> commandAndStatus {0x18};
+constexpr arch::scalar_register<uint32_t> tfd {0x20};
+constexpr arch::scalar_register<uint32_t> status {0x28};
+constexpr arch::scalar_register<uint32_t> sErr {0x30};
+constexpr arch::scalar_register<uint32_t> commandIssue {0x38};
 }  // namespace regs
 
 namespace flags {
@@ -50,18 +50,18 @@ constexpr bool logCommands = false;
 
 // TODO: We can use a more appropriate block size, but this breaks other parts of the OS.
 Port::Port(
-        int64_t parentId,
-        int portIndex,
-        size_t numCommandSlots,
-        bool staggeredSpinUp,
-        arch::mem_space regs
+  int64_t parentId,
+  int portIndex,
+  size_t numCommandSlots,
+  bool staggeredSpinUp,
+  arch::mem_space regs
 )
-        : BlockDevice { ::sectorSize, parentId }
-        , regs_ { regs }
-        , numCommandSlots_ { numCommandSlots }
-        , commandsInFlight_ { 0 }
-        , portIndex_ { portIndex }
-        , staggeredSpinUp_ { staggeredSpinUp } {}
+: BlockDevice {::sectorSize, parentId}
+, regs_ {regs}
+, numCommandSlots_ {numCommandSlots}
+, commandsInFlight_ {0}
+, portIndex_ {portIndex}
+, staggeredSpinUp_ {staggeredSpinUp} {}
 
 async::result<bool> Port::init() {
 	if (staggeredSpinUp_) {
@@ -117,9 +117,9 @@ async::result<bool> Port::init() {
 	// Allocate memory for command list, received FIS, and command tables
 	// Note: the combination of libarch DMA types and ptrToPhysical ensures that
 	// these buffers will remain present in the page tables at all times.
-	commandList_ = arch::dma_object<commandList> { nullptr };
-	commandTables_ = arch::dma_array<commandTable> { nullptr, numCommandSlots_ };
-	receivedFis_ = arch::dma_object<receivedFis> { nullptr };
+	commandList_ = arch::dma_object<commandList> {nullptr};
+	commandTables_ = arch::dma_array<commandTable> {nullptr, numCommandSlots_};
+	receivedFis_ = arch::dma_object<receivedFis> {nullptr};
 
 	uintptr_t clPhys = helix::ptrToPhysical(commandList_.data()),
 	          ctPhys = helix::ptrToPhysical(&commandTables_[0]),
@@ -157,7 +157,7 @@ async::detached Port::run() {
 
 	size_t slot = co_await findFreeSlot_();
 
-	arch::dma_object<identifyDevice> identify { nullptr };
+	arch::dma_object<identifyDevice> identify {nullptr};
 	Command cmd = Command(identify.data(), CommandType::identify);
 	cmd.prepare(commandTables_[slot], commandList_->slots[slot]);
 
@@ -174,13 +174,15 @@ async::detached Port::run() {
 	auto sectorCount = identify->maxLBA48;
 	auto model = identify->getModel();
 
-	printf("block/ahci: Started port %d, model %s, logical sector size %zu, "
-	       "physical sector size %zu, sector count %" PRIu64 "\n",
-	       portIndex_,
-	       model.c_str(),
-	       logicalSize,
-	       physicalSize,
-	       sectorCount);
+	printf(
+	  "block/ahci: Started port %d, model %s, logical sector size %zu, "
+	  "physical sector size %zu, sector count %" PRIu64 "\n",
+	  portIndex_,
+	  model.c_str(),
+	  logicalSize,
+	  physicalSize,
+	  sectorCount
+	);
 	assert(logicalSize == 512 && "block/ahci: logical sector size > 512 is not supported");
 
 	// Clear errors
@@ -191,10 +193,9 @@ async::detached Port::run() {
 	regs_.store(regs::interruptStatus, is);
 	auto ie = regs_.load(regs::interruptEnable);
 	regs_.store(
-	        regs::interruptEnable,
-	        ie | flags::is::d2hFis | flags::is::taskFileError | flags::is::hostDataError
-	                | flags::is::hostFatalError | flags::is::ifFatalError
-	                | flags::is::ifNonFatalError
+	  regs::interruptEnable,
+	  ie | flags::is::d2hFis | flags::is::taskFileError | flags::is::hostDataError
+	    | flags::is::hostFatalError | flags::is::ifFatalError | flags::is::ifNonFatalError
 	);
 
 	submitPendingLoop_();
@@ -231,23 +232,27 @@ void Port::handleIrq() {
 	// Check errors
 	// TODO: Make this more robust (log non-fatal errors, try to recover, print more state etc.)
 	if (is & (flags::is::hostFatalError | flags::is::ifFatalError)) {
-		printf("\e[31mblock/ahci: Port %d encountered fatal error, PxIS = %u, PxSERR = "
-		       "%u\e[39m\n",
-		       portIndex_,
-		       is,
-		       regs_.load(regs::sErr));
+		printf(
+		  "\e[31mblock/ahci: Port %d encountered fatal error, PxIS = %u, PxSERR = "
+		  "%u\e[39m\n",
+		  portIndex_,
+		  is,
+		  regs_.load(regs::sErr)
+		);
 		abort();
 	}
 
 	if (logCommands) {
-		printf("block/ahci: Port %d handling IRQ: PxIS %x, PxIE %x, TFD %x, CI %x, CAS "
-		       "%x\n",
-		       portIndex_,
-		       is,
-		       regs_.load(regs::interruptEnable),
-		       regs_.load(regs::tfd),
-		       regs_.load(regs::commandIssue),
-		       regs_.load(regs::commandAndStatus));
+		printf(
+		  "block/ahci: Port %d handling IRQ: PxIS %x, PxIE %x, TFD %x, CI %x, CAS "
+		  "%x\n",
+		  portIndex_,
+		  is,
+		  regs_.load(regs::interruptEnable),
+		  regs_.load(regs::tfd),
+		  regs_.load(regs::commandIssue),
+		  regs_.load(regs::commandAndStatus)
+		);
 	}
 
 	// Notify all completed commands
@@ -299,17 +304,18 @@ async::result<void> Port::submitCommand_(Command *cmd) {
 }
 
 async::result<void> Port::readSectors(uint64_t sector, void *buffer, size_t numSectors) {
-	Command cmd { sector, numSectors, numSectors * sectorSize, buffer, CommandType::read };
+	Command cmd {sector, numSectors, numSectors * sectorSize, buffer, CommandType::read};
 	pendingCmdQueue_.put(&cmd);
 	co_await cmd.getFuture();
 }
 
 async::result<void> Port::writeSectors(uint64_t sector, const void *buffer, size_t numSectors) {
-	Command cmd { sector,
-		      numSectors,
-		      numSectors * sectorSize,
-		      const_cast<void *>(buffer),
-		      CommandType::write };
+	Command cmd {
+	  sector,
+	  numSectors,
+	  numSectors * sectorSize,
+	  const_cast<void *>(buffer),
+	  CommandType::write};
 	pendingCmdQueue_.put(&cmd);
 	co_await cmd.getFuture();
 }

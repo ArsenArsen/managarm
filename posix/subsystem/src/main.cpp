@@ -99,19 +99,23 @@ void dumpRegisters(std::shared_ptr<Process> proc) {
 	// Registers X0-X30 have indices 0-30
 	for (int i = 0; i < 31; i += 3) {
 		if (i != 30) {
-			printf("x%02d: %.16lx, x%02d: %.16lx, x%02d: %.16lx\n",
-			       i,
-			       gprs[i],
-			       i + 1,
-			       gprs[i + 1],
-			       i + 2,
-			       gprs[i + 2]);
+			printf(
+			  "x%02d: %.16lx, x%02d: %.16lx, x%02d: %.16lx\n",
+			  i,
+			  gprs[i],
+			  i + 1,
+			  gprs[i + 1],
+			  i + 2,
+			  gprs[i + 2]
+			);
 		} else {
-			printf("x%d: %.16lx,  ip: %.16lx,  sp: %.16lx\n",
-			       i,
-			       gprs[i],
-			       pcrs[kHelRegIp],
-			       pcrs[kHelRegSp]);
+			printf(
+			  "x%d: %.16lx,  ip: %.16lx,  sp: %.16lx\n",
+			  i,
+			  gprs[i],
+			  pcrs[kHelRegIp],
+			  pcrs[kHelRegSp]
+			);
 		}
 	}
 #endif
@@ -124,8 +128,9 @@ void dumpRegisters(std::shared_ptr<Process> proc) {
 		std::string path;
 		if (mapping.backingFile().get()) {
 			// TODO: store the ViewPath inside the mapping.
-			ViewPath vp { proc->fsContext()->getRoot().first,
-				      mapping.backingFile()->associatedLink() };
+			ViewPath vp {
+			  proc->fsContext()->getRoot().first,
+			  mapping.backingFile()->associatedLink()};
 
 			// TODO: This code is copied from GETCWD, factor it out into a function.
 			path = "";
@@ -142,7 +147,7 @@ void dumpRegisters(std::shared_ptr<Process> proc) {
 					auto anchor = vp.first->getAnchor();
 					assert(anchor
 					);  // Non-root mounts must have anchors in their parents.
-					traversed = ViewPath { vp.first->getParent(), vp.second };
+					traversed = ViewPath {vp.first->getParent(), vp.second};
 				} else {
 					traversed = vp;
 				}
@@ -155,27 +160,33 @@ void dumpRegisters(std::shared_ptr<Process> proc) {
 				}
 
 				path = "/" + traversed.second->getName() + path;
-				vp = ViewPath { traversed.first, owner->treeLink() };
+				vp = ViewPath {traversed.first, owner->treeLink()};
 			}
 		} else {
 			path = "anon";
 		}
 
-		printf("%016lx - %016lx %s %s%s%s %s + 0x%lx\n",
-		       start,
-		       end,
-		       mapping.isPrivate() ? "P" : "S",
-		       mapping.isExecutable() ? "x" : "-",
-		       mapping.isReadable() ? "r" : "-",
-		       mapping.isWritable() ? "w" : "-",
-		       path.c_str(),
-		       mapping.backingFileOffset());
+		printf(
+		  "%016lx - %016lx %s %s%s%s %s + 0x%lx\n",
+		  start,
+		  end,
+		  mapping.isPrivate() ? "P" : "S",
+		  mapping.isExecutable() ? "x" : "-",
+		  mapping.isReadable() ? "r" : "-",
+		  mapping.isWritable() ? "w" : "-",
+		  path.c_str(),
+		  mapping.backingFileOffset()
+		);
 		if (ip >= start && ip < end)
-			printf("               ^ IP is 0x%lx bytes into this mapping\n",
-			       ip - start);
+			printf(
+			  "               ^ IP is 0x%lx bytes into this mapping\n",
+			  ip - start
+			);
 		if (sp >= start && sp < end)
-			printf("               ^ Stack is 0x%lx bytes into this mapping\n",
-			       sp - start);
+			printf(
+			  "               ^ Stack is 0x%lx bytes into this mapping\n",
+			  sp - start
+			);
 	}
 }
 
@@ -189,12 +200,8 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			break;
 
 		helix::Observe observe;
-		auto &&submit = helix::submitObserve(
-		        thread,
-		        &observe,
-		        sequence,
-		        helix::Dispatcher::global()
-		);
+		auto &&submit =
+		  helix::submitObserve(thread, &observe, sequence, helix::Dispatcher::global());
 		co_await submit.async_wait();
 
 		// Usually, we should terminate via the generation->inTermination check above.
@@ -215,13 +222,13 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			size_t size = gprs[kHelRegArg0];
 
 			void *address = co_await self->vmContext()->mapFile(
-			        0,
-			        {},
-			        nullptr,
-			        0,
-			        size,
-			        true,
-			        kHelMapProtRead | kHelMapProtWrite
+			  0,
+			  {},
+			  nullptr,
+			  0,
+			  size,
+			  true,
+			  kHelMapProtRead | kHelMapProtWrite
 			);
 
 			gprs[kHelRegError] = kHelErrNone;
@@ -233,8 +240,8 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			HEL_CHECK(helLoadRegisters(thread.getHandle(), kHelRegsGeneral, &gprs));
 
 			self->vmContext()->unmapFile(
-			        reinterpret_cast<void *>(gprs[kHelRegArg0]),
-			        gprs[kHelRegArg1]
+			  reinterpret_cast<void *>(gprs[kHelRegArg0]),
+			  gprs[kHelRegArg1]
 			);
 
 			gprs[kHelRegError] = kHelErrNone;
@@ -243,22 +250,21 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			HEL_CHECK(helResume(thread.getHandle()));
 		} else if (observe.observation() == kHelObserveSuperCall + 1) {
 			posix::ManagarmProcessData data = {
-				self->clientPosixLane(),
-				self->fileContext()->clientMbusLane(),
-				self->clientThreadPage(),
-				static_cast<HelHandle *>(self->clientFileTable()),
-				self->clientClkTrackerPage()
-			};
+			  self->clientPosixLane(),
+			  self->fileContext()->clientMbusLane(),
+			  self->clientThreadPage(),
+			  static_cast<HelHandle *>(self->clientFileTable()),
+			  self->clientClkTrackerPage()};
 
 			if (logRequests)
 				std::cout << "posix: GET_PROCESS_DATA supercall" << std::endl;
 			uintptr_t gprs[kHelNumGprs];
 			HEL_CHECK(helLoadRegisters(thread.getHandle(), kHelRegsGeneral, &gprs));
 			auto storeData = co_await helix_ng::writeMemory(
-			        thread,
-			        gprs[kHelRegArg0],
-			        sizeof(posix::ManagarmProcessData),
-			        &data
+			  thread,
+			  gprs[kHelRegArg0],
+			  sizeof(posix::ManagarmProcessData),
+			  &data
 			);
 			HEL_CHECK(storeData.error());
 			gprs[kHelRegError] = kHelErrNone;
@@ -318,30 +324,30 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			std::string path;
 			path.resize(gprs[kHelRegArg1]);
 			auto loadPath = co_await helix_ng::readMemory(
-			        self->vmContext()->getSpace(),
-			        gprs[kHelRegArg0],
-			        gprs[kHelRegArg1],
-			        path.data()
+			  self->vmContext()->getSpace(),
+			  gprs[kHelRegArg0],
+			  gprs[kHelRegArg1],
+			  path.data()
 			);
 			HEL_CHECK(loadPath.error());
 
 			std::string args_area;
 			args_area.resize(gprs[kHelRegArg3]);
 			auto loadArgs = co_await helix_ng::readMemory(
-			        self->vmContext()->getSpace(),
-			        gprs[kHelRegArg2],
-			        gprs[kHelRegArg3],
-			        args_area.data()
+			  self->vmContext()->getSpace(),
+			  gprs[kHelRegArg2],
+			  gprs[kHelRegArg3],
+			  args_area.data()
 			);
 			HEL_CHECK(loadArgs.error());
 
 			std::string env_area;
 			env_area.resize(gprs[kHelRegArg5]);
 			auto loadEnv = co_await helix_ng::readMemory(
-			        self->vmContext()->getSpace(),
-			        gprs[kHelRegArg4],
-			        gprs[kHelRegArg5],
-			        env_area.data()
+			  self->vmContext()->getSpace(),
+			  gprs[kHelRegArg4],
+			  gprs[kHelRegArg5],
+			  env_area.data()
 			);
 			HEL_CHECK(loadEnv.error());
 
@@ -374,25 +380,21 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			auto error =
-			        co_await Process::exec(self, path, std::move(args), std::move(env));
+			  co_await Process::exec(self, path, std::move(args), std::move(env));
 			if (error == Error::noSuchFile) {
 				gprs[kHelRegError] = kHelErrNone;
 				gprs[kHelRegOut0] = ENOENT;
-				HEL_CHECK(helStoreRegisters(
-				        thread.getHandle(),
-				        kHelRegsGeneral,
-				        &gprs
-				));
+				HEL_CHECK(
+				  helStoreRegisters(thread.getHandle(), kHelRegsGeneral, &gprs)
+				);
 
 				HEL_CHECK(helResume(thread.getHandle()));
 			} else if (error == Error::badExecutable) {
 				gprs[kHelRegError] = kHelErrNone;
 				gprs[kHelRegOut0] = ENOEXEC;
-				HEL_CHECK(helStoreRegisters(
-				        thread.getHandle(),
-				        kHelRegsGeneral,
-				        &gprs
-				));
+				HEL_CHECK(
+				  helStoreRegisters(thread.getHandle(), kHelRegsGeneral, &gprs)
+				);
 
 				HEL_CHECK(helResume(thread.getHandle()));
 			} else
@@ -405,8 +407,7 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			HEL_CHECK(helLoadRegisters(thread.getHandle(), kHelRegsGeneral, &gprs));
 			auto code = gprs[kHelRegArg0];
 
-			co_await self->terminate(TerminationByExit { static_cast<int>(code & 0xFF) }
-			);
+			co_await self->terminate(TerminationByExit {static_cast<int>(code & 0xFF)});
 		} else if (observe.observation() == kHelObserveSuperCall + 7) {
 			if (logRequests)
 				std::cout << "posix: SIG_MASK supercall" << std::endl;
@@ -435,12 +436,12 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			bool killed = false;
 			if (self->checkOrRequestSignalRaise()) {
 				auto active = co_await self->signalContext()->fetchSignal(
-				        ~self->signalMask(),
-				        true
+				  ~self->signalMask(),
+				  true
 				);
 				if (active) {
 					co_await self->signalContext()
-					        ->raiseContext(active, self.get(), killed);
+					  ->raiseContext(active, self.get(), killed);
 				}
 			}
 			if (killed)
@@ -464,13 +465,11 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				             "\e[39m"
 				          << std::endl;
 			bool killed = false;
-			auto active = co_await self->signalContext()->fetchSignal(
-			        ~self->signalMask(),
-			        true
-			);
+			auto active =
+			  co_await self->signalContext()->fetchSignal(~self->signalMask(), true);
 			if (active)
 				co_await self->signalContext()
-				        ->raiseContext(active, self.get(), killed);
+				  ->raiseContext(active, self.get(), killed);
 			if (killed)
 				break;
 			HEL_CHECK(helResume(thread.getHandle()));
@@ -517,11 +516,9 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			gprs[kHelRegError] = 0;
 			if (!target && !targetGroup) {
 				gprs[kHelRegOut0] = ESRCH;
-				HEL_CHECK(helStoreRegisters(
-				        thread.getHandle(),
-				        kHelRegsGeneral,
-				        &gprs
-				));
+				HEL_CHECK(
+				  helStoreRegisters(thread.getHandle(), kHelRegsGeneral, &gprs)
+				);
 				HEL_CHECK(helResume(thread.getHandle()));
 				break;
 			}
@@ -543,12 +540,12 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			bool killed = false;
 			if (self->checkOrRequestSignalRaise()) {
 				auto active = co_await self->signalContext()->fetchSignal(
-				        ~self->signalMask(),
-				        true
+				  ~self->signalMask(),
+				  true
 				);
 				if (active)
 					co_await self->signalContext()
-					        ->raiseContext(active, self.get(), killed);
+					  ->raiseContext(active, self.get(), killed);
 			}
 			if (killed)
 				break;
@@ -576,10 +573,10 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				            | (self->isAltStackEnabled() ? 0 : SS_DISABLE);
 
 				auto store = co_await helix_ng::writeMemory(
-				        self->vmContext()->getSpace(),
-				        oss,
-				        sizeof(stack_t),
-				        &st
+				  self->vmContext()->getSpace(),
+				  oss,
+				  sizeof(stack_t),
+				  &st
 				);
 				HEL_CHECK(store.error());
 			}
@@ -590,10 +587,10 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				stack_t st {};
 
 				auto load = co_await helix_ng::readMemory(
-				        self->vmContext()->getSpace(),
-				        ss,
-				        sizeof(stack_t),
-				        &st
+				  self->vmContext()->getSpace(),
+				  ss,
+				  sizeof(stack_t),
+				  &st
 				);
 				HEL_CHECK(load.error());
 
@@ -603,8 +600,8 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					error = EPERM;
 				} else {
 					self->setAltStackSp(
-					        reinterpret_cast<uint64_t>(st.ss_sp),
-					        st.ss_size
+					  reinterpret_cast<uint64_t>(st.ss_sp),
+					  st.ss_size
 					);
 					self->setAltStackEnabled(!(st.ss_flags & SS_DISABLE));
 				}
@@ -628,8 +625,8 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				if (!std::get<1>(check))
 					co_await self->signalContext()->pollSignal(
-					        std::get<0>(check),
-					        UINT64_C(-1)
+					  std::get<0>(check),
+					  UINT64_C(-1)
 					);
 			}
 
@@ -641,19 +638,21 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			bool killed = false;
 			if (self->checkOrRequestSignalRaise()) {
 				auto active = co_await self->signalContext()->fetchSignal(
-				        ~self->signalMask(),
-				        true
+				  ~self->signalMask(),
+				  true
 				);
 				if (active)
 					co_await self->signalContext()
-					        ->raiseContext(active, self.get(), killed);
+					  ->raiseContext(active, self.get(), killed);
 			}
 			if (killed)
 				break;
 			HEL_CHECK(helResume(thread.getHandle()));
 		} else if (observe.observation() == kHelObservePanic) {
-			printf("\e[35mposix: User space panic in process %s\n",
-			       self->path().c_str());
+			printf(
+			  "\e[35mposix: User space panic in process %s\n",
+			  self->path().c_str()
+			);
 			dumpRegisters(self);
 			printf("\e[39m");
 			fflush(stdout);
@@ -735,8 +734,10 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				break;
 			HEL_CHECK(helResume(thread.getHandle()));
 		} else if (observe.observation() == kHelObserveIllegalInstruction) {
-			printf("\e[31mposix: Illegal instruction in process %s\n",
-			       self->path().c_str());
+			printf(
+			  "\e[31mposix: Illegal instruction in process %s\n",
+			  self->path().c_str()
+			);
 			dumpRegisters(self);
 			printf("\e[39m");
 			fflush(stdout);
@@ -760,8 +761,10 @@ observeThread(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				break;
 			HEL_CHECK(helResume(thread.getHandle()));
 		} else {
-			printf("\e[31mposix: Unexpected observation in process %s\n",
-			       self->path().c_str());
+			printf(
+			  "\e[31mposix: Unexpected observation in process %s\n",
+			  self->path().c_str()
+			);
 			dumpRegisters(self);
 			printf("\e[39m");
 			fflush(stdout);
@@ -793,8 +796,8 @@ serveSignals(std::shared_ptr<Process> self, std::shared_ptr<Generation> generati
 		if (cancellation.is_cancellation_requested())
 			break;
 		// std::cout << "Waiting for raise in " << self->pid() << std::endl;
-		auto result = co_await self->signalContext()
-		                      ->pollSignal(sequence, UINT64_C(-1), cancellation);
+		auto result =
+		  co_await self->signalContext()->pollSignal(sequence, UINT64_C(-1), cancellation);
 		sequence = std::get<0>(result);
 		// std::cout << "Calling helInterruptThread on " << self->pid() << std::endl;
 		HEL_CHECK(helInterruptThread(thread.getHandle()));
@@ -809,16 +812,16 @@ async::result<void>
 serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generation) {
 	async::cancellation_token cancellation = generation->cancelServe;
 
-	async::cancellation_callback cancel_callback { cancellation, [&] {
-		                                              HEL_CHECK(helShutdownLane(
-		                                                      self->posixLane().getHandle()
-		                                              ));
-		                                      } };
+	async::cancellation_callback cancel_callback {
+	  cancellation,
+	  [&] {
+		  HEL_CHECK(helShutdownLane(self->posixLane().getHandle()));
+	  }};
 
 	while (true) {
 		auto [accept, recv_head] = co_await helix_ng::exchangeMsgs(
-		        self->posixLane(),
-		        helix_ng::accept(helix_ng::recvInline())
+		  self->posixLane(),
+		  helix_ng::accept(helix_ng::recvInline())
 		);
 
 		if (accept.error() == kHelErrLaneShutdown)
@@ -835,16 +838,16 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		auto conversation = accept.descriptor();
 
 		auto sendErrorResponse =
-		        [&conversation]<typename Message = managarm::posix::SvrResponse>(
-		                managarm::posix::Errors err
-		        )
-		                ->async::result<void> {
+		  [&conversation]<typename Message = managarm::posix::SvrResponse>(
+		    managarm::posix::Errors err
+		  )
+		    ->async::result<void> {
 			Message resp;
 			resp.set_error(err);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
@@ -868,7 +871,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 		if (preamble.id() == bragi::message_id<managarm::posix::GetTidRequest>) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetTidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetTidRequest>(recv_head);
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
 				          << std::endl;
@@ -882,8 +885,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_pid(self->tid());
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else if (req.request_type() == managarm::posix::CntReqType::GET_PID) {
@@ -898,15 +901,15 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::GetPpidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetPpidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetPpidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -922,14 +925,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_pid(self->getParent()->pid());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::GetUidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetUidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetUidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -945,14 +948,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_uid(self->uid());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::SetUidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SetUidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SetUidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -968,14 +971,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				co_await sendErrorResponse(managarm::posix::Errors::ACCESS_DENIED);
 			} else if (err == Error::illegalArguments) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 			} else {
 				co_await sendErrorResponse(managarm::posix::Errors::SUCCESS);
 			}
 		} else if (preamble.id() == managarm::posix::GetEuidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetEuidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetEuidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -991,14 +994,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_uid(self->euid());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::SetEuidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SetEuidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SetEuidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1014,14 +1017,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				co_await sendErrorResponse(managarm::posix::Errors::ACCESS_DENIED);
 			} else if (err == Error::illegalArguments) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 			} else {
 				co_await sendErrorResponse(managarm::posix::Errors::SUCCESS);
 			}
 		} else if (preamble.id() == managarm::posix::GetGidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetGidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetGidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1037,14 +1040,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_uid(self->gid());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::GetEgidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetEgidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetEgidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1060,14 +1063,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_uid(self->egid());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::SetGidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SetGidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SetGidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1083,14 +1086,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				co_await sendErrorResponse(managarm::posix::Errors::ACCESS_DENIED);
 			} else if (err == Error::illegalArguments) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 			} else {
 				co_await sendErrorResponse(managarm::posix::Errors::SUCCESS);
 			}
 		} else if (preamble.id() == managarm::posix::SetEgidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SetEgidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SetEgidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1106,7 +1109,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				co_await sendErrorResponse(managarm::posix::Errors::ACCESS_DENIED);
 			} else if (err == Error::illegalArguments) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 			} else {
 				co_await sendErrorResponse(managarm::posix::Errors::SUCCESS);
@@ -1119,7 +1122,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				std::cout << "posix: WAIT invalid flags: " << req.flags()
 				          << std::endl;
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -1148,8 +1151,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				mode |= 0x200 | byExit->code;  // 0x200 = normal exit().
 			} else if (auto bySignal = std::get_if<TerminationBySignal>(&state);
 			           bySignal) {
-				mode |= 0x400
-				      | (bySignal->signo << 24);  // 0x400 = killed by signal.
+				mode |=
+				  0x400 | (bySignal->signo << 24);  // 0x400 = killed by signal.
 			} else {
 				assert(std::holds_alternative<std::monostate>(state));
 			}
@@ -1157,9 +1160,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1191,9 +1194,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1212,7 +1215,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (req->mode() & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -1246,28 +1249,28 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				if (copyOnWrite) {
 					address = co_await self->vmContext()->mapFile(
-					        hint,
-					        {},
-					        nullptr,
-					        0,
-					        req->size(),
-					        true,
-					        nativeFlags
+					  hint,
+					  {},
+					  nullptr,
+					  0,
+					  req->size(),
+					  true,
+					  nativeFlags
 					);
 				} else {
 					HelHandle handle;
 					HEL_CHECK(
-					        helAllocateMemory(req->size(), 0, nullptr, &handle)
+					  helAllocateMemory(req->size(), 0, nullptr, &handle)
 					);
 
 					address = co_await self->vmContext()->mapFile(
-					        hint,
-					        helix::UniqueDescriptor { handle },
-					        nullptr,
-					        0,
-					        req->size(),
-					        false,
-					        nativeFlags
+					  hint,
+					  helix::UniqueDescriptor {handle},
+					  nullptr,
+					  0,
+					  req->size(),
+					  false,
+					  nativeFlags
 					);
 				}
 			} else {
@@ -1276,13 +1279,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				auto memory = co_await file->accessMemory();
 				assert(memory);
 				address = co_await self->vmContext()->mapFile(
-				        hint,
-				        std::move(memory),
-				        std::move(file),
-				        req->rel_offset(),
-				        req->size(),
-				        copyOnWrite,
-				        nativeFlags
+				  hint,
+				  std::move(memory),
+				  std::move(file),
+				  req->rel_offset(),
+				  req->size(),
+				  copyOnWrite,
+				  nativeFlags
 				);
 			}
 
@@ -1291,8 +1294,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_offset(reinterpret_cast<uintptr_t>(address));
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else if (req.request_type() == managarm::posix::CntReqType::VM_REMAP) {
@@ -1302,9 +1305,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			helix::SendBuffer send_resp;
 
 			auto address = co_await self->vmContext()->remapFile(
-			        reinterpret_cast<void *>(req.address()),
-			        req.size(),
-			        req.new_size()
+			  reinterpret_cast<void *>(req.address()),
+			  req.size(),
+			  req.new_size()
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -1313,9 +1316,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1329,9 +1332,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				resp.set_error(managarm::posix::Errors::ILLEGAL_ARGUMENTS);
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -1347,17 +1350,17 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				native_flags |= kHelMapProtExecute;
 
 			co_await self->vmContext()->protectFile(
-			        reinterpret_cast<void *>(req.address()),
-			        req.size(),
-			        native_flags
+			  reinterpret_cast<void *>(req.address()),
+			  req.size(),
+			  native_flags
 			);
 
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1370,8 +1373,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			helix::SendBuffer send_resp;
 
 			self->vmContext()->unmapFile(
-			        reinterpret_cast<void *>(req.address()),
-			        req.size()
+			  reinterpret_cast<void *>(req.address()),
+			  req.size()
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -1379,24 +1382,22 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::MountRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::MountRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::MountRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1410,20 +1411,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				          << std::endl;
 
 			auto resolveResult = co_await resolve(
-			        self->fsContext()->getRoot(),
-			        self->fsContext()->getWorkingDirectory(),
-			        req->target_path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  self->fsContext()->getWorkingDirectory(),
+			  req->target_path(),
+			  self.get()
 			);
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1447,21 +1448,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			} else {
 				assert(req->fs_type() == "ext2");
 				auto sourceResult = co_await resolve(
-				        self->fsContext()->getRoot(),
-				        self->fsContext()->getWorkingDirectory(),
-				        req->path(),
-				        self.get()
+				  self->fsContext()->getRoot(),
+				  self->fsContext()->getWorkingDirectory(),
+				  req->path(),
+				  self.get()
 				);
 				if (!sourceResult) {
-					if (sourceResult.error()
-					    == protocols::fs::Error::fileNotFound) {
+					if (sourceResult.error() == protocols::fs::Error::fileNotFound) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					} else if (sourceResult.error() == protocols::fs::Error::notDirectory) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::NOT_A_DIRECTORY
+						  managarm::posix::Errors::NOT_A_DIRECTORY
 						);
 						continue;
 					} else {
@@ -1473,10 +1473,11 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				}
 				auto source = sourceResult.value();
 				assert(source.second);
-				assert(source.second->getTarget()->getType() == VfsType::blockDevice
+				assert(
+				  source.second->getTarget()->getType() == VfsType::blockDevice
 				);
 				auto device =
-				        blockRegistry.get(source.second->getTarget()->readDevice());
+				  blockRegistry.get(source.second->getTarget()->readDevice());
 				auto link = co_await device->mount();
 				co_await target.first->mount(target.second, std::move(link));
 			}
@@ -1488,8 +1489,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
@@ -1500,20 +1501,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			helix::SendBuffer send_resp;
 
 			auto pathResult = co_await resolve(
-			        self->fsContext()->getRoot(),
-			        self->fsContext()->getWorkingDirectory(),
-			        req.path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  self->fsContext()->getWorkingDirectory(),
+			  req.path(),
+			  self.get()
 			);
 			if (!pathResult) {
 				if (pathResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (pathResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1530,9 +1531,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1543,20 +1544,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			helix::SendBuffer send_resp;
 
 			auto pathResult = co_await resolve(
-			        self->fsContext()->getRoot(),
-			        self->fsContext()->getWorkingDirectory(),
-			        req.path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  self->fsContext()->getWorkingDirectory(),
+			  req.path(),
+			  self.get()
 			);
 			if (!pathResult) {
 				if (pathResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (pathResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1573,9 +1574,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1593,25 +1594,26 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
 				continue;
 			}
 
-			self->fsContext()->changeWorkingDirectory({ file->associatedMount(),
-			                                            file->associatedLink() });
+			self->fsContext()->changeWorkingDirectory(
+			  {file->associatedMount(), file->associatedLink()}
+			);
 
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -1633,10 +1635,10 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					          << std::endl;
 				} else {
 					std::cout
-					        << "posix: ACCESSAT unknown flag is unimplemented: "
-					        << req.flags() << std::endl;
+					  << "posix: ACCESSAT unknown flag is unimplemented: "
+					  << req.flags() << std::endl;
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+					  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 					);
 					continue;
 				}
@@ -1652,24 +1654,24 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			auto pathResult = co_await resolve(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req.path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req.path(),
+			  self.get()
 			);
 			if (!pathResult) {
 				if (pathResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (pathResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1685,8 +1687,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		} else if (req.request_type() == managarm::posix::CntReqType::MKDIRAT) {
@@ -1704,9 +1706,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -1723,26 +1725,22 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
-			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req.path(),
-			        self.get()
-			);
+			resolver
+			  .setup(self->fsContext()->getRoot(), relative_to, req.path(), self.get());
 			auto resolveResult = co_await resolver.resolve(resolvePrefix);
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1774,9 +1772,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -1785,9 +1783,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -1795,15 +1793,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::MkfifoAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::MkfifoAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::MkfifoAtRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -1817,7 +1813,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (!req->path().size()) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -1836,27 +1832,27 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->path(),
+			  self.get()
 			);
 			auto resolveResult =
-			        co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
+			  co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1873,7 +1869,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			auto result =
-			        co_await parent->mkfifo(resolver.nextComponent(), req->mode());
+			  co_await parent->mkfifo(resolver.nextComponent(), req->mode());
 			if (!result) {
 				std::cout << "posix: Unexpected failure from mkfifo()" << std::endl;
 				co_return;
@@ -1883,22 +1879,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::LinkAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::LinkAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::LinkAtRequest>(recv_head, tail);
 
 			if (logRequests)
 				std::cout << "posix: LINKAT" << std::endl;
 
 			if (req->flags() & ~(AT_EMPTY_PATH | AT_SYMLINK_FOLLOW)) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -1926,26 +1920,26 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->path(),
+			  self.get()
 			);
 			auto resolveResult = co_await resolver.resolve();
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -1965,34 +1959,32 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver new_resolver;
 			new_resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->target_path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->target_path(),
+			  self.get()
 			);
-			auto new_resolveResult = co_await new_resolver.resolve(
-			        resolvePrefix | resolveNoTrailingSlash
-			);
+			auto new_resolveResult =
+			  co_await new_resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
 			if (!new_resolveResult) {
-				if (new_resolveResult.error()
-				    == protocols::fs::Error::illegalOperationTarget) {
+				if (new_resolveResult.error() == protocols::fs::Error::illegalOperationTarget) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ILLEGAL_OPERATION_TARGET
+					  managarm::posix::Errors::ILLEGAL_OPERATION_TARGET
 					);
 					continue;
 				} else if (new_resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (new_resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -2004,10 +1996,11 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto target = resolver.currentLink()->getTarget();
 			auto directory = new_resolver.currentLink()->getTarget();
-			assert(target->superblock() == directory->superblock()
+			assert(
+			  target->superblock() == directory->superblock()
 			);  // Hard links across mount points are not allowed, return EXDEV
 			auto result =
-			        co_await directory->link(new_resolver.nextComponent(), target);
+			  co_await directory->link(new_resolver.nextComponent(), target);
 			if (!result) {
 				std::cout << "posix: Unexpected failure from link()" << std::endl;
 				co_return;
@@ -2017,14 +2010,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::SymlinkAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
 			auto req = bragi::parse_head_tail<managarm::posix::SymlinkAtRequest>(
-			        recv_head,
-			        tail
+			  recv_head,
+			  tail
 			);
 
 			if (!req) {
@@ -2041,7 +2034,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (!req->path().size()) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -2055,27 +2048,23 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relativeTo = { file->associatedMount(), file->associatedLink() };
+				relativeTo = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
-			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relativeTo,
-			        req->path(),
-			        self.get()
-			);
+			resolver
+			  .setup(self->fsContext()->getRoot(), relativeTo, req->path(), self.get());
 			auto resolveResult =
-			        co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
+			  co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -2086,14 +2075,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			auto parent = resolver.currentLink()->getTarget();
-			auto result = co_await parent->symlink(
-			        resolver.nextComponent(),
-			        req->target_path()
-			);
+			auto result =
+			  co_await parent->symlink(resolver.nextComponent(), req->target_path());
 			if (auto error = std::get_if<Error>(&result); error) {
 				assert(*error == Error::illegalOperationTarget);
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -2102,22 +2089,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else if (preamble.id() == managarm::posix::RenameAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::RenameAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::RenameAtRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -2142,31 +2127,31 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->path(),
+			  self.get()
 			);
 			auto resolveResult = co_await resolver.resolve();
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::isDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::IS_DIRECTORY
+					  managarm::posix::Errors::IS_DIRECTORY
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -2186,33 +2171,32 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			// TODO: Add resolveNoTrailingSlash if source is not a directory?
 			PathResolver new_resolver;
 			new_resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->target_path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->target_path(),
+			  self.get()
 			);
 			auto new_resolveResult = co_await new_resolver.resolve(resolvePrefix);
 			if (!new_resolveResult) {
-				if (new_resolveResult.error()
-				    == protocols::fs::Error::isDirectory) {
+				if (new_resolveResult.error() == protocols::fs::Error::isDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::IS_DIRECTORY
+					  managarm::posix::Errors::IS_DIRECTORY
 					);
 					continue;
 				} else if (new_resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (new_resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -2226,9 +2210,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			auto directory = new_resolver.currentLink()->getTarget();
 			assert(superblock == directory->superblock());
 			auto result = co_await superblock->rename(
-			        resolver.currentLink().get(),
-			        directory.get(),
-			        new_resolver.nextComponent()
+			  resolver.currentLink().get(),
+			  directory.get(),
+			  new_resolver.nextComponent()
 			);
 			if (!result) {
 				assert(result.error() == Error::alreadyExists);
@@ -2240,15 +2224,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::FstatAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::FstatAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::FstatAtRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -2273,7 +2255,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			if (req->flags() & AT_EMPTY_PATH) {
@@ -2281,10 +2263,10 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			} else {
 				PathResolver resolver;
 				resolver.setup(
-				        self->fsContext()->getRoot(),
-				        relative_to,
-				        req->path(),
-				        self.get()
+				  self->fsContext()->getRoot(),
+				  relative_to,
+				  req->path(),
+				  self.get()
 				);
 
 				ResolveFlags resolveFlags = 0;
@@ -2293,15 +2275,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto resolveResult = co_await resolver.resolve(resolveFlags);
 				if (!resolveResult) {
-					if (resolveResult.error()
-					    == protocols::fs::Error::fileNotFound) {
+					if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::NOT_A_DIRECTORY
+						  managarm::posix::Errors::NOT_A_DIRECTORY
 						);
 						continue;
 					} else {
@@ -2372,23 +2353,21 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_ctime_nanos(stats.ctimeNanos);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::FchmodAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::FchmodAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::FchmodAtRequest>(recv_head, tail);
 
 			if (logRequests)
 				std::cout << "posix: FCHMODAT request" << std::endl;
@@ -2407,20 +2386,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			if (req->flags()) {
 				if (req->flags() & AT_SYMLINK_NOFOLLOW) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_SUPPORTED
+					  managarm::posix::Errors::NOT_SUPPORTED
 					);
 					continue;
 				} else if (req->flags() & AT_EMPTY_PATH) {
 					// Allowed, managarm extension
 				} else {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+					  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 					);
 					continue;
 				}
@@ -2431,24 +2410,23 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			} else {
 				PathResolver resolver;
 				resolver.setup(
-				        self->fsContext()->getRoot(),
-				        relative_to,
-				        req->path(),
-				        self.get()
+				  self->fsContext()->getRoot(),
+				  relative_to,
+				  req->path(),
+				  self.get()
 				);
 
 				auto resolveResult = co_await resolver.resolve();
 
 				if (!resolveResult) {
-					if (resolveResult.error()
-					    == protocols::fs::Error::fileNotFound) {
+					if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::NOT_A_DIRECTORY
+						  managarm::posix::Errors::NOT_A_DIRECTORY
 						);
 						continue;
 					} else {
@@ -2468,14 +2446,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::UtimensAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
 			auto req = bragi::parse_head_tail<managarm::posix::UtimensAtRequest>(
-			        recv_head,
-			        tail
+			  recv_head,
+			  tail
 			);
 
 			if (!req) {
@@ -2493,13 +2471,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (!req->path().size()) {
 				target = self->fileContext()
-				                 ->getFile(req->fd())
-				                 ->associatedLink()
-				                 ->getTarget();
+				           ->getFile(req->fd())
+				           ->associatedLink()
+				           ->getTarget();
 			} else {
 				if (req->flags() & ~AT_SYMLINK_NOFOLLOW) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+					  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 					);
 					continue;
 				}
@@ -2516,33 +2494,33 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					file = self->fileContext()->getFile(req->fd());
 					if (!file) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::BAD_FD
+						  managarm::posix::Errors::BAD_FD
 						);
 						continue;
 					}
 
-					relativeTo = { file->associatedMount(),
-						       file->associatedLink() };
+					relativeTo = {
+					  file->associatedMount(),
+					  file->associatedLink()};
 				}
 
 				PathResolver resolver;
 				resolver.setup(
-				        self->fsContext()->getRoot(),
-				        relativeTo,
-				        req->path(),
-				        self.get()
+				  self->fsContext()->getRoot(),
+				  relativeTo,
+				  req->path(),
+				  self.get()
 				);
 				auto resolveResult = co_await resolver.resolve();
 				if (!resolveResult) {
-					if (resolveResult.error()
-					    == protocols::fs::Error::fileNotFound) {
+					if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::NOT_A_DIRECTORY
+						  managarm::posix::Errors::NOT_A_DIRECTORY
 						);
 						continue;
 					} else {
@@ -2557,10 +2535,10 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			co_await target->utimensat(
-			        req->atimeSec(),
-			        req->atimeNsec(),
-			        req->mtimeSec(),
-			        req->mtimeNsec()
+			  req->atimeSec(),
+			  req->atimeNsec(),
+			  req->mtimeSec(),
+			  req->mtimeNsec()
 			);
 
 			co_await sendErrorResponse(managarm::posix::Errors::SUCCESS);
@@ -2572,11 +2550,11 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			helix::SendBuffer send_data;
 
 			auto pathResult = co_await resolve(
-			        self->fsContext()->getRoot(),
-			        self->fsContext()->getWorkingDirectory(),
-			        req.path(),
-			        self.get(),
-			        resolveDontFollow
+			  self->fsContext()->getRoot(),
+			  self->fsContext()->getWorkingDirectory(),
+			  req.path(),
+			  self.get(),
+			  resolveDontFollow
 			);
 			if (!pathResult) {
 				if (pathResult.error() == protocols::fs::Error::fileNotFound) {
@@ -2585,15 +2563,15 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 					auto ser = resp.SerializeAsString();
 					auto &&transmit = helix::submitAsync(
-					        conversation,
-					        helix::Dispatcher::global(),
-					        helix::action(
-					                &send_resp,
-					                ser.data(),
-					                ser.size(),
-					                kHelItemChain
-					        ),
-					        helix::action(&send_data, nullptr, 0)
+					  conversation,
+					  helix::Dispatcher::global(),
+					  helix::action(
+					    &send_resp,
+					    ser.data(),
+					    ser.size(),
+					    kHelItemChain
+					  ),
+					  helix::action(&send_data, nullptr, 0)
 					);
 					co_await transmit.async_wait();
 					HEL_CHECK(send_resp.error());
@@ -2604,15 +2582,15 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 					auto ser = resp.SerializeAsString();
 					auto &&transmit = helix::submitAsync(
-					        conversation,
-					        helix::Dispatcher::global(),
-					        helix::action(
-					                &send_resp,
-					                ser.data(),
-					                ser.size(),
-					                kHelItemChain
-					        ),
-					        helix::action(&send_data, nullptr, 0)
+					  conversation,
+					  helix::Dispatcher::global(),
+					  helix::action(
+					    &send_resp,
+					    ser.data(),
+					    ser.size(),
+					    kHelItemChain
+					  ),
+					  helix::action(&send_data, nullptr, 0)
 					);
 					co_await transmit.async_wait();
 					HEL_CHECK(send_resp.error());
@@ -2626,8 +2604,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			auto path = pathResult.value();
 
 			auto result = co_await path.second->getTarget()->readSymlink(
-			        path.second.get(),
-			        self.get()
+			  path.second.get(),
+			  self.get()
 			);
 			if (auto error = std::get_if<Error>(&result); error) {
 				assert(*error == Error::illegalOperationTarget);
@@ -2637,15 +2615,10 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(
-				                &send_resp,
-				                ser.data(),
-				                ser.size(),
-				                kHelItemChain
-				        ),
-				        helix::action(&send_data, nullptr, 0)
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+				  helix::action(&send_data, nullptr, 0)
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -2657,15 +2630,10 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(
-				                &send_resp,
-				                ser.data(),
-				                ser.size(),
-				                kHelItemChain
-				        ),
-				        helix::action(&send_data, target.data(), target.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+				  helix::action(&send_data, target.data(), target.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -2673,15 +2641,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == bragi::message_id<managarm::posix::OpenAtRequest>) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recvTail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recvTail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::OpenAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::OpenAtRequest>(recv_head, tail);
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
 				          << std::endl;
@@ -2691,20 +2657,22 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				std::cout << "posix: OPENAT path: " << req->path() << std::endl;
 
 			if ((req->flags()
-			     & ~(managarm::posix::OpenFlags::OF_CREATE
-			         | managarm::posix::OpenFlags::OF_EXCLUSIVE
-			         | managarm::posix::OpenFlags::OF_NONBLOCK
-			         | managarm::posix::OpenFlags::OF_CLOEXEC
-			         | managarm::posix::OpenFlags::OF_TRUNC
-			         | managarm::posix::OpenFlags::OF_RDONLY
-			         | managarm::posix::OpenFlags::OF_WRONLY
-			         | managarm::posix::OpenFlags::OF_RDWR
-			         | managarm::posix::OpenFlags::OF_PATH
-			         | managarm::posix::OpenFlags::OF_NOCTTY))) {
+			     & ~(
+			       managarm::posix::OpenFlags::OF_CREATE
+			       | managarm::posix::OpenFlags::OF_EXCLUSIVE
+			       | managarm::posix::OpenFlags::OF_NONBLOCK
+			       | managarm::posix::OpenFlags::OF_CLOEXEC
+			       | managarm::posix::OpenFlags::OF_TRUNC
+			       | managarm::posix::OpenFlags::OF_RDONLY
+			       | managarm::posix::OpenFlags::OF_WRONLY
+			       | managarm::posix::OpenFlags::OF_RDWR
+			       | managarm::posix::OpenFlags::OF_PATH
+			       | managarm::posix::OpenFlags::OF_NOCTTY
+			     ))) {
 				std::cout << "posix: OPENAT flags not recognized: " << req->flags()
 				          << std::endl;
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -2734,37 +2702,35 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->path(),
+			  self.get()
 			);
 			if (req->flags() & managarm::posix::OpenFlags::OF_CREATE) {
-				auto resolveResult = co_await resolver.resolve(
-				        resolvePrefix | resolveNoTrailingSlash
-				);
+				auto resolveResult =
+				  co_await resolver.resolve(resolvePrefix | resolveNoTrailingSlash);
 				if (!resolveResult) {
-					if (resolveResult.error()
-					    == protocols::fs::Error::isDirectory) {
+					if (resolveResult.error() == protocols::fs::Error::isDirectory) {
 						// TODO: Verify additional constraints for sending
 						// EISDIR.
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::IS_DIRECTORY
+						  managarm::posix::Errors::IS_DIRECTORY
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::NOT_A_DIRECTORY
+						  managarm::posix::Errors::NOT_A_DIRECTORY
 						);
 						continue;
 					} else {
@@ -2781,21 +2747,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto directory = resolver.currentLink()->getTarget();
 				auto tailResult =
-				        co_await directory->getLink(resolver.nextComponent());
+				  co_await directory->getLink(resolver.nextComponent());
 				assert(tailResult);
 				auto tail = tailResult.value();
 				if (tail) {
-					if (req->flags()
-					    & managarm::posix::OpenFlags::OF_EXCLUSIVE) {
+					if (req->flags() & managarm::posix::OpenFlags::OF_EXCLUSIVE) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::ALREADY_EXISTS
+						  managarm::posix::Errors::ALREADY_EXISTS
 						);
 						continue;
 					} else {
 						auto fileResult = co_await tail->getTarget()->open(
-						        resolver.currentView(),
-						        std::move(tail),
-						        semantic_flags
+						  resolver.currentView(),
+						  std::move(tail),
+						  semantic_flags
 						);
 						assert(fileResult);
 						file = fileResult.value();
@@ -2804,26 +2769,24 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				} else {
 					assert(directory->superblock());
 					auto node =
-					        co_await directory->superblock()->createRegular();
+					  co_await directory->superblock()->createRegular();
 					if (!node) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					}
 					// Due to races, link() can fail here.
 					// TODO: Implement a version of link() that eithers links
 					// the new node or returns the current node without failing.
-					auto linkResult = co_await directory->link(
-					        resolver.nextComponent(),
-					        node
-					);
+					auto linkResult =
+					  co_await directory->link(resolver.nextComponent(), node);
 					assert(linkResult);
 					auto link = linkResult.value();
 					auto fileResult = co_await node->open(
-					        resolver.currentView(),
-					        std::move(link),
-					        semantic_flags
+					  resolver.currentView(),
+					  std::move(link),
+					  semantic_flags
 					);
 					assert(fileResult);
 					file = fileResult.value();
@@ -2832,22 +2795,21 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			} else {
 				auto resolveResult = co_await resolver.resolve();
 				if (!resolveResult) {
-					if (resolveResult.error()
-					    == protocols::fs::Error::isDirectory) {
+					if (resolveResult.error() == protocols::fs::Error::isDirectory) {
 						// TODO: Verify additional constraints for sending
 						// EISDIR.
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::IS_DIRECTORY
+						  managarm::posix::Errors::IS_DIRECTORY
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::FILE_NOT_FOUND
+						  managarm::posix::Errors::FILE_NOT_FOUND
 						);
 						continue;
 					} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::NOT_A_DIRECTORY
+						  managarm::posix::Errors::NOT_A_DIRECTORY
 						);
 						continue;
 					} else {
@@ -2862,28 +2824,26 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				if (req->flags() & managarm::posix::OpenFlags::OF_PATH) {
 					auto dummyFile = smarter::make_shared<DummyFile>(
-					        resolver.currentView(),
-					        resolver.currentLink()
+					  resolver.currentView(),
+					  resolver.currentLink()
 					);
 					DummyFile::serve(dummyFile);
 					file = File::constructHandle(std::move(dummyFile));
 				} else {
 					auto fileResult = co_await target->open(
-					        resolver.currentView(),
-					        resolver.currentLink(),
-					        semantic_flags
+					  resolver.currentView(),
+					  resolver.currentLink(),
+					  semantic_flags
 					);
 					if (!fileResult) {
 						if (fileResult.error() == Error::noBackingDevice) {
 							co_await sendErrorResponse(
-							        managarm::posix::Errors::
-							                NO_BACKING_DEVICE
+							  managarm::posix::Errors::NO_BACKING_DEVICE
 							);
 							continue;
 						} else if (fileResult.error() == Error::illegalArguments) {
 							co_await sendErrorResponse(
-							        managarm::posix::Errors::
-							                ILLEGAL_ARGUMENTS
+							  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 							);
 							continue;
 						} else {
@@ -2924,13 +2884,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (req->flags() & managarm::posix::OpenFlags::OF_TRUNC) {
 				auto result = co_await file->truncate(0);
-				assert(result
-				       || result.error()
-				                  == protocols::fs::Error::illegalOperationTarget);
+				assert(
+				  result
+				  || result.error() == protocols::fs::Error::illegalOperationTarget
+				);
 			}
 			int fd = self->fileContext()->attachFile(
-			        file,
-			        req->flags() & managarm::posix::OpenFlags::OF_CLOEXEC
+			  file,
+			  req->flags() & managarm::posix::OpenFlags::OF_CLOEXEC
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -2938,8 +2899,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_fd(fd);
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else if (preamble.id() == bragi::message_id<managarm::posix::CloseRequest>) {
@@ -2959,8 +2920,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else if (req.request_type() == managarm::posix::CntReqType::DUP) {
@@ -2977,9 +2938,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -2994,9 +2955,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -3004,8 +2965,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			int newfd = self->fileContext()->attachFile(
-			        file,
-			        req.flags() & managarm::posix::OpenFlags::OF_CLOEXEC
+			  file,
+			  req.flags() & managarm::posix::OpenFlags::OF_CLOEXEC
 			);
 
 			helix::SendBuffer send_resp;
@@ -3016,9 +2977,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3036,9 +2997,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -3053,9 +3014,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -3071,9 +3032,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3100,8 +3061,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_mode(file->isTerminal());
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else if (req.request_type() == managarm::posix::CntReqType::TTY_NAME) {
@@ -3131,9 +3092,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3142,7 +3103,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				std::cout << "posix: GETCWD" << std::endl;
 
 			std::string path = self->fsContext()->getWorkingDirectory().getPath(
-			        self->fsContext()->getRoot()
+			  self->fsContext()->getRoot()
 			);
 
 			helix::SendBuffer send_resp;
@@ -3154,14 +3115,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(
-			                &send_path,
-			                path.data(),
-			                std::min(static_cast<size_t>(req.size()), path.size() + 1)
-			        )
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(
+			    &send_path,
+			    path.data(),
+			    std::min(static_cast<size_t>(req.size()), path.size() + 1)
+			  )
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3169,15 +3130,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::UnlinkAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::UnlinkAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::UnlinkAtRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -3202,7 +3161,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					             "with unknown flag: "
 					          << req->flags() << std::endl;
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+					  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 					);
 				}
 			}
@@ -3217,15 +3176,15 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->path(),
+			  self.get()
 			);
 
 			auto resolveResult = co_await resolver.resolve();
@@ -3234,17 +3193,17 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					// TODO: Only when AT_REMOVEDIR is not specified, fix this
 					// when flag handling is implemented.
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::IS_DIRECTORY
+					  managarm::posix::Errors::IS_DIRECTORY
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -3266,7 +3225,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			if (!result) {
 				if (result.error() == Error::noSuchFile) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else {
@@ -3280,15 +3239,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 		} else if (preamble.id() == managarm::posix::RmdirRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::RmdirRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::RmdirRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -3306,22 +3263,22 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        self->fsContext()->getWorkingDirectory(),
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  self->fsContext()->getWorkingDirectory(),
+			  req->path(),
+			  self.get()
 			);
 
 			auto resolveResult = co_await resolver.resolve();
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -3354,9 +3311,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -3373,9 +3330,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3387,13 +3344,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				std::cout << "posix: FD_SET_FLAGS unknown flags: " << req.flags()
 				          << std::endl;
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
 			int closeOnExec = req.flags() & FD_CLOEXEC;
-			if (self->fileContext()->setDescriptor(req.fd(), closeOnExec)
-			    != Error::success) {
+			if (self->fileContext()->setDescriptor(req.fd(), closeOnExec) != Error::success) {
 				co_await sendErrorResponse(managarm::posix::Errors::NO_SUCH_FD);
 				continue;
 			}
@@ -3403,14 +3359,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == bragi::message_id<managarm::posix::IoctlFioclexRequest>) {
-			auto req = bragi::parse_head_only<managarm::posix::IoctlFioclexRequest>(
-			        recv_head
-			);
+			auto req =
+			  bragi::parse_head_only<managarm::posix::IoctlFioclexRequest>(recv_head);
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
 				          << std::endl;
@@ -3430,17 +3385,15 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		} else if (req.request_type() == managarm::posix::CntReqType::SIG_ACTION) {
 			if (logRequests)
 				std::cout << "posix: SIG_ACTION" << std::endl;
 
-			if (req.flags()
-			    & ~(SA_ONSTACK | SA_SIGINFO | SA_RESETHAND | SA_NODEFER | SA_RESTART
-			        | SA_NOCLDSTOP)) {
+			if (req.flags() & ~(SA_ONSTACK | SA_SIGINFO | SA_RESETHAND | SA_NODEFER | SA_RESTART | SA_NOCLDSTOP)) {
 				std::cout << "\e[31mposix: Unknown SIG_ACTION flags: 0x" << std::hex
 				          << req.flags() << std::dec << "\e[39m" << std::endl;
 				assert(!"Flags not implemented");
@@ -3454,9 +3407,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				resp.set_error(managarm::posix::Errors::ILLEGAL_ARGUMENTS);
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -3494,10 +3447,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					std::cout << "\e[31mposix: Ignoring SA_NOCLDSTOP\e[39m"
 					          << std::endl;
 
-				saved_handler = self->signalContext()->changeHandler(
-				        req.sig_number(),
-				        handler
-				);
+				saved_handler =
+				  self->signalContext()->changeHandler(req.sig_number(), handler);
 			} else {
 				saved_handler = self->signalContext()->getHandler(req.sig_number());
 			}
@@ -3527,9 +3478,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3548,12 +3499,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto pair = fifo::createPair(nonBlock);
 			auto r_fd = self->fileContext()->attachFile(
-			        std::get<0>(pair),
-			        req.flags() & O_CLOEXEC
+			  std::get<0>(pair),
+			  req.flags() & O_CLOEXEC
 			);
 			auto w_fd = self->fileContext()->attachFile(
-			        std::get<1>(pair),
-			        req.flags() & O_CLOEXEC
+			  std::get<1>(pair),
+			  req.flags() & O_CLOEXEC
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -3563,9 +3514,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3587,13 +3538,13 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size())
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size())
 			);
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::SocketRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SocketRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SocketRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -3611,45 +3562,47 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			smarter::shared_ptr<File, FileHandle> file;
 			if (req->domain() == AF_UNIX) {
-				assert(req->socktype() == SOCK_DGRAM
-				       || req->socktype() == SOCK_STREAM
-				       || req->socktype() == SOCK_SEQPACKET);
+				assert(
+				  req->socktype() == SOCK_DGRAM || req->socktype() == SOCK_STREAM
+				  || req->socktype() == SOCK_SEQPACKET
+				);
 				assert(!req->protocol());
 
 				file = un_socket::createSocketFile(req->flags() & SOCK_NONBLOCK);
 			} else if (req->domain() == AF_NETLINK) {
-				assert(req->socktype() == SOCK_RAW || req->socktype() == SOCK_DGRAM
+				assert(
+				  req->socktype() == SOCK_RAW || req->socktype() == SOCK_DGRAM
 				);
 				file = nl_socket::createSocketFile(
-				        req->protocol(),
-				        req->flags() & SOCK_NONBLOCK
+				  req->protocol(),
+				  req->flags() & SOCK_NONBLOCK
 				);
 			} else if (req->domain() == AF_INET) {
 				file = co_await extern_socket::createSocket(
-				        co_await net::getNetLane(),
-				        req->domain(),
-				        req->socktype(),
-				        req->protocol(),
-				        req->flags() & SOCK_NONBLOCK
+				  co_await net::getNetLane(),
+				  req->domain(),
+				  req->socktype(),
+				  req->protocol(),
+				  req->flags() & SOCK_NONBLOCK
 				);
 			} else {
 				throw std::runtime_error("posix: Handle unknown protocol families");
 			}
 
 			auto fd =
-			        self->fileContext()->attachFile(file, req->flags() & SOCK_CLOEXEC);
+			  self->fileContext()->attachFile(file, req->flags() & SOCK_CLOEXEC);
 
 			resp.set_fd(fd);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::SockpairRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SockpairRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SockpairRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -3668,18 +3621,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				          << std::endl;
 
 			assert(req->domain() == AF_UNIX);
-			assert(req->socktype() == SOCK_DGRAM || req->socktype() == SOCK_STREAM
-			       || req->socktype() == SOCK_SEQPACKET);
+			assert(
+			  req->socktype() == SOCK_DGRAM || req->socktype() == SOCK_STREAM
+			  || req->socktype() == SOCK_SEQPACKET
+			);
 			assert(!req->protocol());
 
 			auto pair = un_socket::createSocketPair(self.get());
 			auto fd0 = self->fileContext()->attachFile(
-			        std::get<0>(pair),
-			        req->flags() & SOCK_CLOEXEC
+			  std::get<0>(pair),
+			  req->flags() & SOCK_CLOEXEC
 			);
 			auto fd1 = self->fileContext()->attachFile(
-			        std::get<1>(pair),
-			        req->flags() & SOCK_CLOEXEC
+			  std::get<1>(pair),
+			  req->flags() & SOCK_CLOEXEC
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -3688,14 +3643,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.add_fds(fd1);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::AcceptRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::AcceptRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::AcceptRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -3726,8 +3681,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_fd(fd);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
@@ -3746,7 +3701,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			bool errorOut = false;
 			for (size_t i = 0; i < req.fds_size(); i++) {
-				auto [mapIt, inserted] = fdsToEvents.insert({ req.fds(i), 0 });
+				auto [mapIt, inserted] = fdsToEvents.insert({req.fds(i), 0});
 				if (!inserted)
 					continue;
 
@@ -3760,14 +3715,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				assert(locked);
 
 				// Translate POLL events to EPOLL events.
-				if (req.events(i)
-				    & ~(POLLIN | POLLPRI | POLLOUT | POLLRDHUP | POLLERR | POLLHUP
-				        | POLLNVAL)) {
+				if (req.events(i) & ~(POLLIN | POLLPRI | POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL)) {
 					std::cout
-					        << "\e[31mposix: Unexpected events for poll()\e[39m"
-					        << std::endl;
+					  << "\e[31mposix: Unexpected events for poll()\e[39m"
+					  << std::endl;
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+					  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 					);
 					errorOut = true;
 					break;
@@ -3790,12 +3743,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				// addItem() can fail with EEXIST but we check for duplicate FDs
 				// above so that cannot happen here.
 				Error ret = epoll::addItem(
-				        epfile.get(),
-				        self.get(),
-				        std::move(locked),
-				        req.fds(i),
-				        mask,
-				        req.fds(i)
+				  epfile.get(),
+				  self.get(),
+				  std::move(locked),
+				  req.fds(i),
+				  mask,
+				  req.fds(i)
 				);
 				assert(ret == Error::success);
 			}
@@ -3815,9 +3768,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				assert(req.timeout() > 0);
 				async::cancellation_event cancel_wait;
 				helix::TimeoutCancellation timer {
-					static_cast<uint64_t>(req.timeout()),
-					cancel_wait
-				};
+				  static_cast<uint64_t>(req.timeout()),
+				  cancel_wait};
 				k = co_await epoll::wait(epfile.get(), events, 16, cancel_wait);
 				co_await timer.retire();
 			}
@@ -3854,9 +3806,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3870,8 +3822,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto file = epoll::createFile();
 			auto fd = self->fileContext()->attachFile(
-			        file,
-			        req.flags() & managarm::posix::OpenFlags::OF_CLOEXEC
+			  file,
+			  req.flags() & managarm::posix::OpenFlags::OF_CLOEXEC
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -3880,9 +3832,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3902,12 +3854,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			auto locked = file->weakFile().lock();
 			assert(locked);
 			Error ret = epoll::addItem(
-			        epfile.get(),
-			        self.get(),
-			        std::move(locked),
-			        req.newfd(),
-			        req.flags(),
-			        req.cookie()
+			  epfile.get(),
+			  self.get(),
+			  std::move(locked),
+			  req.newfd(),
+			  req.flags(),
+			  req.cookie()
 			);
 			if (ret == Error::alreadyExists) {
 				co_await sendErrorResponse(managarm::posix::Errors::ALREADY_EXISTS);
@@ -3920,9 +3872,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3938,11 +3890,11 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			assert(file && "Illegal FD for EPOLL_MODIFY item");
 
 			Error ret = epoll::modifyItem(
-			        epfile.get(),
-			        file.get(),
-			        req.newfd(),
-			        req.flags(),
-			        req.cookie()
+			  epfile.get(),
+			  file.get(),
+			  req.newfd(),
+			  req.flags(),
+			  req.cookie()
 			);
 			if (ret == Error::noSuchFile) {
 				co_await sendErrorResponse(managarm::posix::Errors::FILE_NOT_FOUND);
@@ -3955,9 +3907,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -3975,12 +3927,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				continue;
 			}
 
-			Error ret = epoll::deleteItem(
-			        epfile.get(),
-			        file.get(),
-			        req.newfd(),
-			        req.flags()
-			);
+			Error ret =
+			  epoll::deleteItem(epfile.get(), file.get(), req.newfd(), req.flags());
 			if (ret == Error::noSuchFile) {
 				co_await sendErrorResponse(managarm::posix::Errors::FILE_NOT_FOUND);
 				continue;
@@ -3992,9 +3940,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -4019,27 +3967,26 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			size_t k;
 			if (req.timeout() < 0) {
 				k = co_await epoll::wait(
-				        epfile.get(),
-				        events,
-				        std::min(req.size(), uint32_t(16))
+				  epfile.get(),
+				  events,
+				  std::min(req.size(), uint32_t(16))
 				);
 			} else if (!req.timeout()) {
 				// Do not bother to set up a timer for zero timeouts.
 				async::cancellation_event cancel_wait;
 				cancel_wait.cancel();
 				k = co_await epoll::wait(
-				        epfile.get(),
-				        events,
-				        std::min(req.size(), uint32_t(16)),
-				        cancel_wait
+				  epfile.get(),
+				  events,
+				  std::min(req.size(), uint32_t(16)),
+				  cancel_wait
 				);
 			} else {
 				assert(req.timeout() > 0);
 				async::cancellation_event cancel_wait;
 				helix::TimeoutCancellation timer {
-					static_cast<uint64_t>(req.timeout()),
-					cancel_wait
-				};
+				  static_cast<uint64_t>(req.timeout()),
+				  cancel_wait};
 				k = co_await epoll::wait(epfile.get(), events, 16, cancel_wait);
 				co_await timer.retire();
 			}
@@ -4052,10 +3999,10 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_data, events, k * sizeof(struct epoll_event))
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_data, events, k * sizeof(struct epoll_event))
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -4076,9 +4023,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -4091,11 +4038,11 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			auto file = self->fileContext()->getFile(req.fd());
 			assert(file && "Illegal FD for TIMERFD_SETTIME");
 			timerfd::setTime(
-			        file.get(),
-			        { static_cast<time_t>(req.time_secs()),
-			          static_cast<long>(req.time_nanos()) },
-			        { static_cast<time_t>(req.interval_secs()),
-			          static_cast<long>(req.interval_nanos()) }
+			  file.get(),
+			  {static_cast<time_t>(req.time_secs()),
+			   static_cast<long>(req.time_nanos())},
+			  {static_cast<time_t>(req.interval_secs()),
+			   static_cast<long>(req.interval_nanos())}
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -4103,9 +4050,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -4115,22 +4062,20 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			helix::SendBuffer send_resp;
 
-			if (req.flags()
-			    & ~(managarm::posix::OpenFlags::OF_CLOEXEC
-			        | managarm::posix::OpenFlags::OF_NONBLOCK)) {
+			if (req.flags() & ~(managarm::posix::OpenFlags::OF_CLOEXEC | managarm::posix::OpenFlags::OF_NONBLOCK)) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
 
 			auto file = createSignalFile(
-			        req.sigset(),
-			        req.flags() & managarm::posix::OpenFlags::OF_NONBLOCK
+			  req.sigset(),
+			  req.flags() & managarm::posix::OpenFlags::OF_NONBLOCK
 			);
 			auto fd = self->fileContext()->attachFile(
-			        file,
-			        req.flags() & managarm::posix::OpenFlags::OF_CLOEXEC
+			  file,
+			  req.flags() & managarm::posix::OpenFlags::OF_CLOEXEC
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -4139,16 +4084,15 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::InotifyCreateRequest::message_id) {
-			auto req = bragi::parse_head_only<managarm::posix::InotifyCreateRequest>(
-			        recv_head
-			);
+			auto req =
+			  bragi::parse_head_only<managarm::posix::InotifyCreateRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -4163,8 +4107,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto file = inotify::createFile();
 			auto fd = self->fileContext()->attachFile(
-			        file,
-			        req->flags() & managarm::posix::OpenFlags::OF_CLOEXEC
+			  file,
+			  req->flags() & managarm::posix::OpenFlags::OF_CLOEXEC
 			);
 
 			managarm::posix::SvrResponse resp;
@@ -4172,22 +4116,22 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_fd(fd);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::InotifyAddRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
 			auto req = bragi::parse_head_tail<managarm::posix::InotifyAddRequest>(
-			        recv_head,
-			        tail
+			  recv_head,
+			  tail
 			);
 
 			if (!req) {
@@ -4209,21 +4153,21 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        self->fsContext()->getWorkingDirectory(),
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  self->fsContext()->getWorkingDirectory(),
+			  req->path(),
+			  self.get()
 			);
 			auto resolveResult = co_await resolver.resolve();
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -4234,24 +4178,23 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			auto wd = inotify::addWatch(
-			        ifile.get(),
-			        resolver.currentLink()->getTarget(),
-			        req->flags()
+			  ifile.get(),
+			  resolver.currentLink()->getTarget(),
+			  req->flags()
 			);
 
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 			resp.set_wd(wd);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::EventfdCreateRequest::message_id) {
-			auto req = bragi::parse_head_only<managarm::posix::EventfdCreateRequest>(
-			        recv_head
-			);
+			auto req =
+			  bragi::parse_head_only<managarm::posix::EventfdCreateRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -4264,9 +4207,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			managarm::posix::SvrResponse resp;
 
-			if (req->flags()
-			    & ~(managarm::posix::OpenFlags::OF_CLOEXEC
-			        | managarm::posix::OpenFlags::OF_NONBLOCK)) {
+			if (req->flags() & ~(managarm::posix::OpenFlags::OF_CLOEXEC | managarm::posix::OpenFlags::OF_NONBLOCK)) {
 				std::cout << "posix: invalid flag specified (EFD_SEMAPHORE?)"
 				          << std::endl;
 				std::cout << "posix: flags specified: " << req->flags()
@@ -4274,12 +4215,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				resp.set_error(managarm::posix::Errors::ILLEGAL_ARGUMENTS);
 			} else {
 				auto file = eventfd::createFile(
-				        req->initval(),
-				        req->flags() & managarm::posix::OpenFlags::OF_NONBLOCK
+				  req->initval(),
+				  req->flags() & managarm::posix::OpenFlags::OF_NONBLOCK
 				);
 				auto fd = self->fileContext()->attachFile(
-				        file,
-				        req->flags() & managarm::posix::OpenFlags::OF_CLOEXEC
+				  file,
+				  req->flags() & managarm::posix::OpenFlags::OF_CLOEXEC
 				);
 
 				resp.set_error(managarm::posix::Errors::SUCCESS);
@@ -4287,23 +4228,21 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			}
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::MknodAtRequest::message_id) {
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
-			auto req = bragi::parse_head_tail<managarm::posix::MknodAtRequest>(
-			        recv_head,
-			        tail
-			);
+			auto req =
+			  bragi::parse_head_tail<managarm::posix::MknodAtRequest>(recv_head, tail);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -4323,7 +4262,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (!req->path().size()) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
@@ -4338,27 +4277,27 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 					continue;
 				}
 
-				relative_to = { file->associatedMount(), file->associatedLink() };
+				relative_to = {file->associatedMount(), file->associatedLink()};
 			}
 
 			// TODO: Add resolveNoTrailingSlash if not making a directory?
 			PathResolver resolver;
 			resolver.setup(
-			        self->fsContext()->getRoot(),
-			        relative_to,
-			        req->path(),
-			        self.get()
+			  self->fsContext()->getRoot(),
+			  relative_to,
+			  req->path(),
+			  self.get()
 			);
 			auto resolveResult = co_await resolver.resolve(resolvePrefix);
 			if (!resolveResult) {
 				if (resolveResult.error() == protocols::fs::Error::fileNotFound) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::FILE_NOT_FOUND
+					  managarm::posix::Errors::FILE_NOT_FOUND
 					);
 					continue;
 				} else if (resolveResult.error() == protocols::fs::Error::notDirectory) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NOT_A_DIRECTORY
+					  managarm::posix::Errors::NOT_A_DIRECTORY
 					);
 					continue;
 				} else {
@@ -4403,35 +4342,33 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				dev.second = minor(req->device());
 
 				auto result =
-				        co_await parent->mkdev(resolver.nextComponent(), type, dev);
+				  co_await parent->mkdev(resolver.nextComponent(), type, dev);
 				if (!result) {
 					if (result.error() == Error::illegalOperationTarget) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+						  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 						);
 						continue;
 					} else {
 						std::cout
-						        << "posix: Unexpected failure from mkdev()"
-						        << std::endl;
+						  << "posix: Unexpected failure from mkdev()"
+						  << std::endl;
 						co_return;
 					}
 				}
 			} else if (type == VfsType::fifo) {
-				auto result = co_await parent->mkfifo(
-				        resolver.nextComponent(),
-				        req->mode()
-				);
+				auto result =
+				  co_await parent->mkfifo(resolver.nextComponent(), req->mode());
 				if (!result) {
 					if (result.error() == Error::illegalOperationTarget) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+						  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 						);
 						continue;
 					} else {
 						std::cout
-						        << "posix: Unexpected failure from mkfifo()"
-						        << std::endl;
+						  << "posix: Unexpected failure from mkfifo()"
+						  << std::endl;
 						co_return;
 					}
 				}
@@ -4440,7 +4377,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				if (!result) {
 					if (result.error() == Error::illegalOperationTarget) {
 						co_await sendErrorResponse(
-						        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+						  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 						);
 						continue;
 					} else {
@@ -4456,21 +4393,21 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				             "not supported.\e[39m"
 				          << std::endl;
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::GetPgidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetPgidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetPgidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -4486,7 +4423,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				target = Process::findProcess(req->pid());
 				if (!target) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NO_SUCH_RESOURCE
+					  managarm::posix::Errors::NO_SUCH_RESOURCE
 					);
 					continue;
 				}
@@ -4499,14 +4436,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_pid(target->pgPointer()->getHull()->getPid());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::SetPgidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::SetPgidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::SetPgidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -4522,7 +4459,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				target = Process::findProcess(req->pid());
 				if (!target) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NO_SUCH_RESOURCE
+					  managarm::posix::Errors::NO_SUCH_RESOURCE
 					);
 					continue;
 				}
@@ -4532,7 +4469,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (target->pgPointer()->getSession() != self->pgPointer()->getSession()) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::INSUFFICIENT_PERMISSION
+				  managarm::posix::Errors::INSUFFICIENT_PERMISSION
 				);
 				continue;
 			}
@@ -4540,7 +4477,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			// We can't change the process group ID of the session leader
 			if (target->pid() == target->pgPointer()->getSession()->getSessionId()) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::INSUFFICIENT_PERMISSION
+				  managarm::posix::Errors::INSUFFICIENT_PERMISSION
 				);
 				continue;
 			}
@@ -4548,7 +4485,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			if (target->getParent()->pid() == self->pid()) {
 				if (target->didExecute()) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::ACCESS_DENIED
+					  managarm::posix::Errors::ACCESS_DENIED
 					);
 					continue;
 				}
@@ -4558,9 +4495,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			// If pgid is 0, we're going to set it to the calling process's pid, use the
 			// target group.
 			if (req->pgid()) {
-				group = target->pgPointer()->getSession()->getProcessGroupById(
-				        req->pgid()
-				);
+				group =
+				  target->pgPointer()->getSession()->getProcessGroupById(req->pgid()
+				  );
 			} else {
 				group = target->pgPointer();
 			}
@@ -4573,12 +4510,12 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				// indicating that we should make one
 				if (target->pid() == req->pgid() || !req->pgid()) {
 					target->pgPointer()->getSession()->spawnProcessGroup(
-					        target.get()
+					  target.get()
 					);
 				} else {
 					// Doesn't exists, and not requesting a make?
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NO_SUCH_RESOURCE
+					  managarm::posix::Errors::NO_SUCH_RESOURCE
 					);
 					continue;
 				}
@@ -4588,14 +4525,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_error(managarm::posix::Errors::SUCCESS);
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
 		} else if (preamble.id() == managarm::posix::GetSidRequest::message_id) {
 			auto req =
-			        bragi::parse_head_only<managarm::posix::GetSidRequest>(recv_head);
+			  bragi::parse_head_only<managarm::posix::GetSidRequest>(recv_head);
 
 			if (!req) {
 				std::cout << "posix: Rejecting request due to decoding failure"
@@ -4611,7 +4548,7 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 				target = Process::findProcess(req->pid());
 				if (!target) {
 					co_await sendErrorResponse(
-					        managarm::posix::Errors::NO_SUCH_RESOURCE
+					  managarm::posix::Errors::NO_SUCH_RESOURCE
 					);
 					continue;
 				}
@@ -4623,8 +4560,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_pid(target->pgPointer()->getSession()->getSessionId());
 
 			auto [send_resp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 
 			HEL_CHECK(send_resp.error());
@@ -4632,14 +4569,14 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			managarm::posix::SvrResponse resp;
 			std::vector<std::byte> tail(preamble.tail_size());
 			auto [recv_tail] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::recvBuffer(tail.data(), tail.size())
+			  conversation,
+			  helix_ng::recvBuffer(tail.data(), tail.size())
 			);
 			HEL_CHECK(recv_tail.error());
 
 			auto req = bragi::parse_head_tail<managarm::posix::MemFdCreateRequest>(
-			        recv_head,
-			        tail
+			  recv_head,
+			  tail
 			);
 
 			if (!req) {
@@ -4653,16 +4590,16 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			if (req->flags() & ~(MFD_CLOEXEC | MFD_ALLOW_SEALING)) {
 				co_await sendErrorResponse(
-				        managarm::posix::Errors::ILLEGAL_ARGUMENTS
+				  managarm::posix::Errors::ILLEGAL_ARGUMENTS
 				);
 				continue;
 			}
 
 			auto link = SpecialLink::makeSpecialLink(VfsType::regular, 0777);
 			auto memFile = smarter::make_shared<MemoryFile>(
-			        nullptr,
-			        link,
-			        (req->flags() & MFD_ALLOW_SEALING) == true
+			  nullptr,
+			  link,
+			  (req->flags() & MFD_ALLOW_SEALING) == true
 			);
 			MemoryFile::serve(memFile);
 			auto file = File::constructHandle(std::move(memFile));
@@ -4679,8 +4616,8 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 			resp.set_fd(fd);
 
 			auto [sendResp] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
+			  conversation,
+			  helix_ng::sendBragiHeadOnly(resp, frg::stl_allocator {})
 			);
 			HEL_CHECK(sendResp.error());
 		} else {
@@ -4692,9 +4629,9 @@ serveRequests(std::shared_ptr<Process> self, std::shared_ptr<Generation> generat
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -4711,13 +4648,13 @@ async::result<void> serve(std::shared_ptr<Process> self, std::shared_ptr<Generat
 
 	std::array<char, 16> creds;
 	HEL_CHECK(helGetCredentials(thread.getHandle(), 0, creds.data()));
-	auto res = globalCredentialsMap.insert({ creds, self });
+	auto res = globalCredentialsMap.insert({creds, self});
 	assert(res.second);
 
 	co_await async::when_all(
-	        observeThread(self, generation),
-	        serveSignals(self, generation),
-	        serveRequests(self, generation)
+	  observeThread(self, generation),
+	  serveSignals(self, generation),
+	  serveRequests(self, generation)
 	);
 }
 
@@ -4740,12 +4677,12 @@ struct CmdlineNode final : public procfs::RegularNode {
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		        kerncfgLane,
-		        helix::Dispatcher::global(),
-		        helix::action(&offer, kHelItemAncillary),
-		        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-		        helix::action(&recv_resp, kHelItemChain),
-		        helix::action(&recv_cmdline)
+		  kerncfgLane,
+		  helix::Dispatcher::global(),
+		  helix::action(&offer, kHelItemAncillary),
+		  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+		  helix::action(&recv_resp, kHelItemChain),
+		  helix::action(&recv_cmdline)
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(offer.error());
@@ -4756,8 +4693,8 @@ struct CmdlineNode final : public procfs::RegularNode {
 		managarm::kerncfg::SvrResponse resp;
 		resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 		assert(resp.error() == managarm::kerncfg::Error::SUCCESS);
-		co_return std::string { (const char *) recv_cmdline.data(), recv_cmdline.length() }
-		        + '\n';
+		co_return std::string {(const char *) recv_cmdline.data(), recv_cmdline.length()}
+		  + '\n';
 	}
 
 	async::result<void> store(std::string) override {
@@ -4768,22 +4705,22 @@ struct CmdlineNode final : public procfs::RegularNode {
 async::result<void> enumerateKerncfg() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("class", "kerncfg") });
+	auto filter = mbus::Conjunction({mbus::EqualsFilter("class", "kerncfg")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	        [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		        std::cout << "POSIX: Found kerncfg" << std::endl;
+	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+		  std::cout << "POSIX: Found kerncfg" << std::endl;
 
-		        kerncfgLane = helix::UniqueLane(co_await entity.bind());
-		        foundKerncfg.raise();
-	        }
+		  kerncfgLane = helix::UniqueLane(co_await entity.bind());
+		  foundKerncfg.raise();
+	  }
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 	co_await foundKerncfg.wait();
 
 	auto procfs_root =
-	        std::static_pointer_cast<procfs::DirectoryNode>(getProcfs()->getTarget());
+	  std::static_pointer_cast<procfs::DirectoryNode>(getProcfs()->getTarget());
 	procfs_root->directMkregular("cmdline", std::make_shared<CmdlineNode>());
 }
 

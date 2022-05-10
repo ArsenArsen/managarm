@@ -7,22 +7,22 @@
 
 namespace protocols::ostrace {
 
-Context::Context() : enabled_ { false } {}
+Context::Context() : enabled_ {false} {}
 
 Context::Context(helix::UniqueLane lane, bool enabled)
-        : lane_ { std::move(lane) }
-        , enabled_ { enabled } {}
+: lane_ {std::move(lane)}
+, enabled_ {enabled} {}
 
 async::result<EventId> Context::announceEvent(std::string_view name) {
 	managarm::ostrace::AnnounceEventReq req;
-	req.set_name(std::string { name });
+	req.set_name(std::string {name});
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	        lane_,
-	        helix_ng::offer(
-	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	                helix_ng::recvInline()
-	        )
+	  lane_,
+	  helix_ng::offer(
+	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	    helix_ng::recvInline()
+	  )
 	);
 
 	HEL_CHECK(offer.error());
@@ -35,19 +35,19 @@ async::result<EventId> Context::announceEvent(std::string_view name) {
 	auto &resp = maybeResp.value();
 	assert(resp.error() == managarm::ostrace::Error::SUCCESS);
 
-	co_return EventId { resp.id() };
+	co_return EventId {resp.id()};
 }
 
 async::result<ItemId> Context::announceItem(std::string_view name) {
 	managarm::ostrace::AnnounceItemReq req;
-	req.set_name(std::string { name });
+	req.set_name(std::string {name});
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	        lane_,
-	        helix_ng::offer(
-	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	                helix_ng::recvInline()
-	        )
+	  lane_,
+	  helix_ng::offer(
+	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	    helix_ng::recvInline()
+	  )
 	);
 
 	HEL_CHECK(offer.error());
@@ -60,10 +60,10 @@ async::result<ItemId> Context::announceItem(std::string_view name) {
 	auto &resp = maybeResp.value();
 	assert(resp.error() == managarm::ostrace::Error::SUCCESS);
 
-	co_return ItemId { resp.id() };
+	co_return ItemId {resp.id()};
 }
 
-Event::Event(Context *ctx, EventId id) : ctx_ { ctx } {
+Event::Event(Context *ctx, EventId id) : ctx_ {ctx} {
 	live_ = ctx->isActive();
 	req_.set_id(static_cast<uint64_t>(id));
 }
@@ -83,11 +83,11 @@ async::result<void> Event::emit() {
 		co_return;
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	        ctx_->getLane(),
-	        helix_ng::offer(
-	                helix_ng::sendBragiHeadOnly(req_, frg::stl_allocator {}),
-	                helix_ng::recvInline()
-	        )
+	  ctx_->getLane(),
+	  helix_ng::offer(
+	    helix_ng::sendBragiHeadOnly(req_, frg::stl_allocator {}),
+	    helix_ng::recvInline()
+	  )
 	);
 
 	HEL_CHECK(offer.error());
@@ -106,19 +106,19 @@ async::result<Context> createContext() {
 
 	// Find ostrace in mbus.
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("class", "ostrace") });
+	auto filter = mbus::Conjunction({mbus::EqualsFilter("class", "ostrace")});
 
 	helix::UniqueLane lane;
 	async::oneshot_event foundObject;
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	        [&lane, &foundObject](mbus::Entity entity, mbus::Properties properties)
-	                -> async::detached {
-		        std::cout << "ostrace: Found ostrace" << std::endl;
+	  [&lane,
+	   &foundObject](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+		  std::cout << "ostrace: Found ostrace" << std::endl;
 
-		        lane = helix::UniqueLane(co_await entity.bind());
-		        foundObject.raise();
-	        }
+		  lane = helix::UniqueLane(co_await entity.bind());
+		  foundObject.raise();
+	  }
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
@@ -129,11 +129,11 @@ async::result<Context> createContext() {
 	managarm::ostrace::AnnounceItemReq req;
 
 	auto [offer, sendReq, recvResp] = co_await helix_ng::exchangeMsgs(
-	        lane,
-	        helix_ng::offer(
-	                helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
-	                helix_ng::recvInline()
-	        )
+	  lane,
+	  helix_ng::offer(
+	    helix_ng::sendBragiHeadOnly(req, frg::stl_allocator {}),
+	    helix_ng::recvInline()
+	  )
 	);
 
 	HEL_CHECK(offer.error());
@@ -146,10 +146,10 @@ async::result<Context> createContext() {
 	auto &resp = maybeResp.value();
 
 	if (resp.error() == managarm::ostrace::Error::OSTRACE_GLOBALLY_DISABLED)
-		co_return Context { std::move(lane), false };
+		co_return Context {std::move(lane), false};
 
 	assert(resp.error() == managarm::ostrace::Error::SUCCESS);
-	co_return Context { std::move(lane), true };
+	co_return Context {std::move(lane), true};
 }
 
 }  // namespace protocols::ostrace

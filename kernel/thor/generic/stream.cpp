@@ -160,8 +160,8 @@ void Stream::Submitter::run() {
 			assert(branch.ctr()->check_count() == 1);
 			branch.ctr()->increment();
 			branch.ctr()->increment();
-			u->_lane = LaneHandle { adoptLane, branch, 0 };
-			v->_lane = LaneHandle { adoptLane, branch, 1 };
+			u->_lane = LaneHandle {adoptLane, branch, 0};
+			v->_lane = LaneHandle {adoptLane, branch, 1};
 
 			enqueue(u->_lane, u->ancillaryChain);
 			enqueue(v->_lane, v->ancillaryChain);
@@ -257,12 +257,12 @@ bool Stream::decrementPeers(Stream *stream, int lane) {
 	std::atomic_thread_fence(std::memory_order_acquire);
 
 	frg::intrusive_list<
-	        StreamNode,
-	        frg::locate_member<
-	                StreamNode,
-	                frg::default_list_hook<StreamNode>,
-	                &StreamNode::processQueueItem>>
-	        pending;
+	  StreamNode,
+	  frg::locate_member<
+	    StreamNode,
+	    frg::default_list_hook<StreamNode>,
+	    &StreamNode::processQueueItem>>
+	  pending;
 
 	{
 		auto irq_lock = frg::guard(&irqMutex());
@@ -281,7 +281,7 @@ bool Stream::decrementPeers(Stream *stream, int lane) {
 	return true;
 }
 
-Stream::Stream() : _laneBroken { false, false }, _laneShutDown { false, false } {
+Stream::Stream() : _laneBroken {false, false}, _laneShutDown {false, false} {
 	_peerCount[0].store(1, std::memory_order_relaxed);
 	_peerCount[1].store(1, std::memory_order_relaxed);
 }
@@ -293,12 +293,12 @@ Stream::~Stream() {
 
 void Stream::shutdownLane(int lane) {
 	frg::intrusive_list<
-	        StreamNode,
-	        frg::locate_member<
-	                StreamNode,
-	                frg::default_list_hook<StreamNode>,
-	                &StreamNode::processQueueItem>>
-	        pendingOnThisLane, pendingOnOtherLane;
+	  StreamNode,
+	  frg::locate_member<
+	    StreamNode,
+	    frg::default_list_hook<StreamNode>,
+	    &StreamNode::processQueueItem>>
+	  pendingOnThisLane, pendingOnOtherLane;
 
 	{
 		auto irq_lock = frg::guard(&irqMutex());

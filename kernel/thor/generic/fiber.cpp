@@ -5,7 +5,7 @@
 namespace thor {
 
 initgraph::Stage *getFibersAvailableStage() {
-	static initgraph::Stage s { &globalInitEngine, "generic.fibers-available" };
+	static initgraph::Stage s {&globalInitEngine, "generic.fibers-available"};
 	return &s;
 }
 
@@ -33,21 +33,23 @@ void KernelFiber::blockCurrent(FiberBlocker *blocker) {
 		localScheduler()->forceReschedule();
 
 		forkExecutor(
-		        [&] {
-			        runOnStack(
-			                [](Continuation cont,
-			                   Executor *executor,
-			                   frg::unique_lock<frg::ticket_spinlock> lock) {
-				                scrubStack(executor, cont);
-				                lock.unlock();
-				                localScheduler()->commitReschedule();
-			                },
-			                getCpuData()->detachedStack.base(),
-			                &this_fiber->_executor,
-			                std::move(lock)
-			        );
-		        },
-		        &this_fiber->_executor
+		  [&] {
+			  runOnStack(
+			    [](
+			      Continuation cont,
+			      Executor *executor,
+			      frg::unique_lock<frg::ticket_spinlock> lock
+			    ) {
+				    scrubStack(executor, cont);
+				    lock.unlock();
+				    localScheduler()->commitReschedule();
+			    },
+			    getCpuData()->detachedStack.base(),
+			    &this_fiber->_executor,
+			    std::move(lock)
+			  );
+		  },
+		  &this_fiber->_executor
 		);
 	}
 }
@@ -96,11 +98,11 @@ KernelFiber *KernelFiber::post(UniqueKernelStack stack, void (*function)(void *)
 }
 
 KernelFiber::KernelFiber(UniqueKernelStack stack, AbiParameters abi)
-        : _blocked { false }
-        , _fiberContext { std::move(stack) }
-        , _executor { &_fiberContext, abi } {
+: _blocked {false}
+, _fiberContext {std::move(stack)}
+, _executor {&_fiberContext, abi} {
 	_associatedWorkQueue = smarter::allocate_shared<AssociatedWorkQueue>(*kernelAlloc, this);
-	_associatedWorkQueue->selfPtr = smarter::shared_ptr<WorkQueue> { _associatedWorkQueue };
+	_associatedWorkQueue->selfPtr = smarter::shared_ptr<WorkQueue> {_associatedWorkQueue};
 }
 
 void KernelFiber::invoke() {

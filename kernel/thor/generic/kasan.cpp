@@ -12,17 +12,17 @@ constexpr int kasanShift = 3;
 constexpr uintptr_t kasanShadowDelta = 0xdfffe00000000000;
 constexpr bool debugKasan = false;
 
-constexpr size_t kasanScale = size_t { 1 } << kasanShift;
+constexpr size_t kasanScale = size_t {1} << kasanShift;
 
 int8_t *kasanShadowOf(void *ptr) {
 	return reinterpret_cast<int8_t *>(
-	        kasanShadowDelta + (reinterpret_cast<uintptr_t>(ptr) >> kasanShift)
+	  kasanShadowDelta + (reinterpret_cast<uintptr_t>(ptr) >> kasanShift)
 	);
 }
 
 void *kasanPointerOf(int8_t *shadow) {
 	return reinterpret_cast<void *>(
-	        ((reinterpret_cast<uintptr_t>(shadow) - kasanShadowDelta) << kasanShift)
+	  ((reinterpret_cast<uintptr_t>(shadow) - kasanShadowDelta) << kasanShift)
 	);
 }
 }  // namespace
@@ -106,8 +106,8 @@ void scrubStackFrom(uintptr_t top, Continuation cont) {
 	cleanKasanShadow(cont.sp, top - bottom);
 	// Perform some sanity checking.
 	validateKasanClean(
-	        reinterpret_cast<void *>(bottom & ~(kPageSize - 1)),
-	        bottom & (kPageSize - 1)
+	  reinterpret_cast<void *>(bottom & ~(kPageSize - 1)),
+	  bottom & (kPageSize - 1)
 	);
 }
 
@@ -142,8 +142,8 @@ namespace {
 	auto l = reinterpret_cast<uintptr_t>(shadow) & 15;
 	auto validBehind = (reinterpret_cast<uintptr_t>(shadow) - l) & (thor::kPageSize - 1);
 	auto validAhead = thor::kPageSize - validBehind;
-	auto shownBehind = frg::min(validBehind, size_t { 2 * 16 });
-	auto shownAhead = frg::min(validAhead, size_t { 2 * 16 });
+	auto shownBehind = frg::min(validBehind, size_t {2 * 16});
+	auto shownAhead = frg::min(validAhead, size_t {2 * 16});
 	ptrdiff_t i = -static_cast<ptrdiff_t>(shownBehind);
 	while (i < static_cast<ptrdiff_t>(16 + shownAhead)) {
 		auto msg = thor::infoLogger();

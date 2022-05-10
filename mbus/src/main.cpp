@@ -26,13 +26,13 @@ struct Observer;
 
 struct Entity {
 	explicit Entity(
-	        int64_t id,
-	        std::weak_ptr<Group> parent,
-	        std::unordered_map<std::string, std::string> properties
+	  int64_t id,
+	  std::weak_ptr<Group> parent,
+	  std::unordered_map<std::string, std::string> properties
 	)
-	        : _id(id)
-	        , _parent(std::move(parent))
-	        , _properties(std::move(properties)) {}
+	: _id(id)
+	, _parent(std::move(parent))
+	, _properties(std::move(properties)) {}
 
 	virtual ~Entity() {}
 
@@ -52,11 +52,11 @@ private:
 
 struct Group final : Entity {
 	explicit Group(
-	        int64_t id,
-	        std::weak_ptr<Group> parent,
-	        std::unordered_map<std::string, std::string> properties
+	  int64_t id,
+	  std::weak_ptr<Group> parent,
+	  std::unordered_map<std::string, std::string> properties
 	)
-	        : Entity(id, std::move(parent), std::move(properties)) {}
+	: Entity(id, std::move(parent), std::move(properties)) {}
 
 	void addChild(std::shared_ptr<Entity> child) { _children.insert(std::move(child)); }
 
@@ -75,13 +75,13 @@ private:
 
 struct Object final : Entity {
 	explicit Object(
-	        int64_t id,
-	        std::weak_ptr<Group> parent,
-	        std::unordered_map<std::string, std::string> properties,
-	        helix::UniqueLane lane
+	  int64_t id,
+	  std::weak_ptr<Group> parent,
+	  std::unordered_map<std::string, std::string> properties,
+	  helix::UniqueLane lane
 	)
-	        : Entity(id, std::move(parent), std::move(properties))
-	        , _lane(std::move(lane)) {}
+	: Entity(id, std::move(parent), std::move(properties))
+	, _lane(std::move(lane)) {}
 
 	async::result<helix::UniqueDescriptor> bind();
 
@@ -101,12 +101,12 @@ async::result<helix::UniqueDescriptor> Object::bind() {
 	auto ser = req.SerializeAsString();
 	uint8_t buffer[128];
 	auto &&transmit = helix::submitAsync(
-	        _lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&offer, kHelItemAncillary),
-	        helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
-	        helix::action(&recv_resp, buffer, 128, kHelItemChain),
-	        helix::action(&pull_desc)
+	  _lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&offer, kHelItemAncillary),
+	  helix::action(&send_req, ser.data(), ser.size(), kHelItemChain),
+	  helix::action(&recv_resp, buffer, 128, kHelItemChain),
+	  helix::action(&pull_desc)
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(offer.error());
@@ -128,8 +128,8 @@ using AnyFilter = std::variant<EqualsFilter, Conjunction>;
 
 struct EqualsFilter {
 	explicit EqualsFilter(std::string property, std::string value)
-	        : _property(std::move(property))
-	        , _value(std::move(value)) {}
+	: _property(std::move(property))
+	, _value(std::move(value)) {}
 
 	std::string getProperty() const { return _property; }
 
@@ -151,8 +151,8 @@ private:
 
 struct Observer {
 	explicit Observer(AnyFilter filter, helix::UniqueLane lane)
-	        : _filter(std::move(filter))
-	        , _lane(std::move(lane)) {}
+	: _filter(std::move(filter))
+	, _lane(std::move(lane)) {}
 
 	async::detached traverse(std::shared_ptr<Entity> root);
 
@@ -213,9 +213,9 @@ async::detached Observer::traverse(std::shared_ptr<Entity> root) {
 
 		auto ser = req.SerializeAsString();
 		auto &&transmit = helix::submitAsync(
-		        _lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&send_req, ser.data(), ser.size())
+		  _lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&send_req, ser.data(), ser.size())
 		);
 		co_await transmit.async_wait();
 		HEL_CHECK(send_req.error());
@@ -239,9 +239,9 @@ async::detached Observer::onAttach(std::shared_ptr<Entity> entity) {
 
 	auto ser = req.SerializeAsString();
 	auto &&transmit = helix::submitAsync(
-	        _lane,
-	        helix::Dispatcher::global(),
-	        helix::action(&send_req, ser.data(), ser.size())
+	  _lane,
+	  helix::Dispatcher::global(),
+	  helix::action(&send_req, ser.data(), ser.size())
 	);
 	co_await transmit.async_wait();
 	HEL_CHECK(send_req.error());
@@ -260,8 +260,8 @@ std::shared_ptr<Entity> getEntityById(int64_t id) {
 static AnyFilter decodeFilter(const managarm::mbus::AnyFilter &proto_filter) {
 	if (proto_filter.type_case() == managarm::mbus::AnyFilter::kEqualsFilter) {
 		return EqualsFilter(
-		        proto_filter.equals_filter().path(),
-		        proto_filter.equals_filter().value()
+		  proto_filter.equals_filter().path(),
+		  proto_filter.equals_filter().value()
 		);
 	} else if (proto_filter.type_case() == managarm::mbus::AnyFilter::kConjunction) {
 		std::vector<AnyFilter> operands;
@@ -280,10 +280,10 @@ async::detached serve(helix::UniqueLane lane) {
 
 		char buffer[1024];
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&accept, kHelItemAncillary),
-		        helix::action(&recv_req, buffer, 1024)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&accept, kHelItemAncillary),
+		  helix::action(&recv_req, buffer, 1024)
 		);
 		co_await header.async_wait();
 		HEL_CHECK(accept.error());
@@ -302,9 +302,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -318,9 +318,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -337,9 +337,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -354,9 +354,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -371,18 +371,18 @@ async::detached serve(helix::UniqueLane lane) {
 			std::unordered_map<std::string, std::string> properties;
 			for (auto &kv : req.properties()) {
 				assert(kv.has_item() && kv.item().has_string_item());
-				properties.insert({ kv.name(), kv.item().string_item().value() });
+				properties.insert({kv.name(), kv.item().string_item().value()});
 			}
 
 			helix::UniqueLane local_lane, remote_lane;
 			std::tie(local_lane, remote_lane) = helix::createStream();
 			auto child = std::make_shared<Object>(
-			        nextEntityId++,
-			        group,
-			        std::move(properties),
-			        std::move(local_lane)
+			  nextEntityId++,
+			  group,
+			  std::move(properties),
+			  std::move(local_lane)
 			);
-			allEntities.insert({ child->getId(), child });
+			allEntities.insert({child->getId(), child});
 
 			group->addChild(child);
 
@@ -399,10 +399,10 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_lane, remote_lane)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_lane, remote_lane)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -418,9 +418,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -435,8 +435,8 @@ async::detached serve(helix::UniqueLane lane) {
 			helix::UniqueLane local_lane, remote_lane;
 			std::tie(local_lane, remote_lane) = helix::createStream();
 			auto observer = std::make_shared<Observer>(
-			        decodeFilter(req.filter()),
-			        std::move(local_lane)
+			  decodeFilter(req.filter()),
+			  std::move(local_lane)
 			);
 			group->linkObserver(observer);
 
@@ -447,10 +447,10 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_lane, remote_lane)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_lane, remote_lane)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -466,9 +466,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 				auto ser = resp.SerializeAsString();
 				auto &&transmit = helix::submitAsync(
-				        conversation,
-				        helix::Dispatcher::global(),
-				        helix::action(&send_resp, ser.data(), ser.size())
+				  conversation,
+				  helix::Dispatcher::global(),
+				  helix::action(&send_resp, ser.data(), ser.size())
 				);
 				co_await transmit.async_wait();
 				HEL_CHECK(send_resp.error());
@@ -486,10 +486,10 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_desc, descriptor)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_desc, descriptor)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -508,11 +508,11 @@ int main() {
 	std::cout << "Entering mbus" << std::endl;
 
 	auto root = std::make_shared<Group>(
-	        nextEntityId++,
-	        std::weak_ptr<Group>(),
-	        std::unordered_map<std::string, std::string>()
+	  nextEntityId++,
+	  std::weak_ptr<Group>(),
+	  std::unordered_map<std::string, std::string>()
 	);
-	allEntities.insert({ root->getId(), root });
+	allEntities.insert({root->getId(), root});
 
 	unsigned long xpipe;
 	if (peekauxval(AT_XPIPE, &xpipe))

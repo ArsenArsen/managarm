@@ -148,10 +148,10 @@ extern "C" void __ubsan_handle_type_mismatch_v1(struct type_mismatch_data_v1 *da
 		thor::infoLogger() << "thor: UBSAN failure, null pointer access" << frg::endlog;
 	} else if (ptr & ((1 << data->log_alignment) - 1)) {
 		thor::infoLogger()
-		        << "thor: UBSAN failure, use of misaligned pointer" << frg::endlog;
+		  << "thor: UBSAN failure, use of misaligned pointer" << frg::endlog;
 	} else {
 		thor::infoLogger()
-		        << "thor: UBSAN failure, insufficient space for object" << frg::endlog;
+		  << "thor: UBSAN failure, insufficient space for object" << frg::endlog;
 	}
 	log_location(data->loc);
 	if (thor::ubsanAbort.load(std::memory_order_relaxed))

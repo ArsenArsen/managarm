@@ -72,22 +72,26 @@ int main() {
 #if defined(__x86_64__)
 	auto input_ps2 = fork();
 	if (!input_ps2) {
-		execl("/usr/bin/runsvr",
-		      "/usr/bin/runsvr",
-		      "run",
-		      "/usr/lib/managarm/server/input-atkbd.bin",
-		      nullptr);
+		execl(
+		  "/usr/bin/runsvr",
+		  "/usr/bin/runsvr",
+		  "run",
+		  "/usr/lib/managarm/server/input-atkbd.bin",
+		  nullptr
+		);
 	} else
 		assert(input_ps2 != -1);
 #endif
 
 	auto input_hid = fork();
 	if (!input_hid) {
-		execl("/usr/bin/runsvr",
-		      "/usr/bin/runsvr",
-		      "run",
-		      "/usr/lib/managarm/server/input-usbhid.bin",
-		      nullptr);
+		execl(
+		  "/usr/bin/runsvr",
+		  "/usr/bin/runsvr",
+		  "run",
+		  "/usr/lib/managarm/server/input-usbhid.bin",
+		  nullptr
+		);
 	} else
 		assert(input_hid != -1);
 

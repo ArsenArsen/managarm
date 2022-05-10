@@ -15,16 +15,15 @@ void Command::setupBuffer(arch::dma_buffer_view view) {
 
 	if (offset + view.size() <= pageSize * 2) {
 		// Inline
-		command_.common.dataPtr.prp1 = convert_endian<endian::little, endian::native>(
-		        helix::ptrToPhysical(view.data())
-		);
+		command_.common.dataPtr.prp1 =
+		  convert_endian<endian::little, endian::native>(helix::ptrToPhysical(view.data()));
 
 		auto firstPrpLen = pageSize - offset;
 		if (view.size() > firstPrpLen) {
 			command_.common.dataPtr.prp2 =
-			        convert_endian<endian::little, endian::native>(
-			                helix::ptrToPhysical(view.subview(firstPrpLen).data())
-			        );
+			  convert_endian<endian::little, endian::native>(
+			    helix::ptrToPhysical(view.subview(firstPrpLen).data())
+			  );
 		}
 
 		return;
@@ -37,7 +36,7 @@ void Command::setupBuffer(arch::dma_buffer_view view) {
 
 	if (offset + view.size() <= pageSize) {
 		command_.readWrite.dataPtr.prp1 =
-		        convert_endian<endian::little, endian::native>(prp1);
+		  convert_endian<endian::little, endian::native>(prp1);
 		command_.readWrite.dataPtr.prp2 = 0;
 		return;
 	}
@@ -46,14 +45,14 @@ void Command::setupBuffer(arch::dma_buffer_view view) {
 
 	if (size <= pageSize) {
 		command_.readWrite.dataPtr.prp1 =
-		        convert_endian<endian::little, endian::native>(prp1);
-		command_.readWrite.dataPtr.prp2 = convert_endian<endian::little, endian::native>(
-		        helix::addressToPhysical(virtStart)
-		);
+		  convert_endian<endian::little, endian::native>(prp1);
+		command_.readWrite.dataPtr.prp2 =
+		  convert_endian<endian::little, endian::native>(helix::addressToPhysical(virtStart)
+		  );
 		return;
 	}
 
-	auto prpObj = arch::dma_array<uint64_t> { nullptr, pageSize >> 3 };
+	auto prpObj = arch::dma_array<uint64_t> {nullptr, pageSize >> 3};
 	auto *prpList = prpObj.data();
 
 	prp2 = helix::ptrToPhysical(prpList);
@@ -63,19 +62,19 @@ void Command::setupBuffer(arch::dma_buffer_view view) {
 	for (;;) {
 		if (i == pageSize >> 3) {
 			auto *oldPrpList = prpList;
-			prpObj = arch::dma_array<uint64_t> { nullptr, pageSize >> 3 };
+			prpObj = arch::dma_array<uint64_t> {nullptr, pageSize >> 3};
 			prpList = prpObj.data();
 			prpLists.push_back(std::move(prpObj));
 
 			prpList[0] = oldPrpList[i - 1];
 			oldPrpList[i - 1] = convert_endian<endian::little, endian::native>(
-			        helix::ptrToPhysical(prpList)
+			  helix::ptrToPhysical(prpList)
 			);
 			i = 1;
 		}
-		prpList[i++] = convert_endian<endian::little, endian::native>(
-		        helix::addressToPhysical(virtStart)
-		);
+		prpList[i++] =
+		  convert_endian<endian::little, endian::native>(helix::addressToPhysical(virtStart)
+		  );
 		virtStart += pageSize;
 
 		if (size <= pageSize)

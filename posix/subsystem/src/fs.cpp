@@ -41,7 +41,7 @@ void FsNode::addObserver(std::shared_ptr<FsObserver> observer) {
 
 	// TODO: For increased efficiency, Observers could be stored in an intrusive list.
 	auto borrowed = observer.get();
-	auto [it, inserted] = _observers.insert({ borrowed, std::move(observer) });
+	auto [it, inserted] = _observers.insert({borrowed, std::move(observer)});
 	(void) it;
 	assert(inserted);  // Registering observers twice is an error.
 }
@@ -122,10 +122,10 @@ async::result<Error> FsNode::chmod(int mode) {
 }
 
 async::result<Error> FsNode::utimensat(
-        uint64_t atime_sec,
-        uint64_t atime_nsec,
-        uint64_t mtime_sec,
-        uint64_t mtime_nsec
+  uint64_t atime_sec,
+  uint64_t atime_nsec,
+  uint64_t mtime_sec,
+  uint64_t mtime_nsec
 ) {
 	std::cout << "\e[31m"
 	             "posix: utimensat() is not implemented for this FsNode"

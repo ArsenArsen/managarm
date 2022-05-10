@@ -40,17 +40,17 @@ void RegularFile::serve(smarter::shared_ptr<RegularFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	        std::move(lane),
-	        file,
-	        &File::fileOperations,
-	        file->_cancelServe
+	  std::move(lane),
+	  file,
+	  &File::fileOperations,
+	  file->_cancelServe
 	));
 }
 
 RegularFile::RegularFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-        : File { StructName::get("procfs.attr"), std::move(mount), std::move(link) }
-        , _cached { false }
-        , _offset { 0 } {}
+: File {StructName::get("procfs.attr"), std::move(mount), std::move(link)}
+, _cached {false}
+, _offset {0} {}
 
 void RegularFile::handleClose() {
 	_cancelServe.cancel();
@@ -84,7 +84,7 @@ RegularFile::writeAll(Process *, const void *data, size_t length) {
 	assert(length > 0);
 
 	auto node = static_cast<RegularNode *>(associatedLink()->getTarget().get());
-	co_await node->store(std::string { reinterpret_cast<const char *>(data), length });
+	co_await node->store(std::string {reinterpret_cast<const char *>(data), length});
 	co_return length;
 }
 
@@ -102,17 +102,17 @@ void DirectoryFile::serve(smarter::shared_ptr<DirectoryFile> file) {
 	helix::UniqueLane lane;
 	std::tie(lane, file->_passthrough) = helix::createStream();
 	async::detach(protocols::fs::servePassthrough(
-	        std::move(lane),
-	        file,
-	        &File::fileOperations,
-	        file->_cancelServe
+	  std::move(lane),
+	  file,
+	  &File::fileOperations,
+	  file->_cancelServe
 	));
 }
 
 DirectoryFile::DirectoryFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-        : File { StructName::get("procfs.dir"), std::move(mount), std::move(link) }
-        , _node { static_cast<DirectoryNode *>(associatedLink()->getTarget().get()) }
-        , _iter { _node->_entries.begin() } {}
+: File {StructName::get("procfs.dir"), std::move(mount), std::move(link)}
+, _node {static_cast<DirectoryNode *>(associatedLink()->getTarget().get())}
+, _iter {_node->_entries.begin()} {}
 
 void DirectoryFile::handleClose() {
 	_cancelServe.cancel();
@@ -137,12 +137,12 @@ helix::BorrowedDescriptor DirectoryFile::getPassthroughLane() {
 // Link implementation.
 // ----------------------------------------------------------------------------
 
-Link::Link(std::shared_ptr<FsNode> target) : _target { std::move(target) } {}
+Link::Link(std::shared_ptr<FsNode> target) : _target {std::move(target)} {}
 
 Link::Link(std::shared_ptr<FsNode> owner, std::string name, std::shared_ptr<FsNode> target)
-        : _owner { std::move(owner) }
-        , _name { std::move(name) }
-        , _target { std::move(target) } {
+: _owner {std::move(owner)}
+, _name {std::move(name)}
+, _target {std::move(target)} {
 	assert(_owner);
 	assert(!_name.empty());
 }
@@ -192,9 +192,9 @@ async::result<frg::expected<Error, FileStats>> RegularNode::getStats() {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> RegularNode::open(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        SemanticFlags semantic_flags
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
@@ -235,15 +235,15 @@ std::shared_ptr<Link> DirectoryNode::createRootDirectory() {
 	the_node->_treeLink = link.get();
 
 	auto self_link = std::make_shared<Link>(
-	        the_node->shared_from_this(),
-	        "self",
-	        std::make_shared<SelfLink>()
+	  the_node->shared_from_this(),
+	  "self",
+	  std::make_shared<SelfLink>()
 	);
 	the_node->_entries.insert(std::move(self_link));
 	return link;
 }
 
-DirectoryNode::DirectoryNode() : FsNode { &procfs_superblock }, _treeLink { nullptr } {}
+DirectoryNode::DirectoryNode() : FsNode {&procfs_superblock}, _treeLink {nullptr} {}
 
 std::shared_ptr<Link>
 DirectoryNode::directMkregular(std::string name, std::shared_ptr<RegularNode> regular) {
@@ -300,9 +300,9 @@ std::shared_ptr<FsLink> DirectoryNode::treeLink() {
 }
 
 async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> DirectoryNode::open(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        SemanticFlags semantic_flags
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  SemanticFlags semantic_flags
 ) {
 	if (semantic_flags & ~(semanticNonBlock | semanticRead | semanticWrite)) {
 		std::cout << "\e[31mposix: open() received illegal arguments:"
@@ -381,12 +381,12 @@ async::result<std::string> MapNode::show() {
 			stream << std::setfill('0') << std::setw(8) << area.backingFileOffset();
 			stream << " ";
 			auto fsNode = backingFile->associatedLink()->getTarget();
-			ViewPath viewPath = { backingFile->associatedMount(),
-				              backingFile->associatedLink() };
+			ViewPath viewPath = {
+			  backingFile->associatedMount(),
+			  backingFile->associatedLink()};
 			auto fileStats = co_await fsNode->getStats();
 			DeviceId deviceId {};
-			if (fsNode->getType() == VfsType::charDevice
-			    || fsNode->getType() == VfsType::blockDevice)
+			if (fsNode->getType() == VfsType::charDevice || fsNode->getType() == VfsType::blockDevice)
 				deviceId = fsNode->readDevice();
 			assert(fileStats);
 

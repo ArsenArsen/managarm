@@ -52,21 +52,19 @@ void Thread::migrateCurrent() {
 	localScheduler()->forceReschedule();
 
 	forkExecutor(
-	        [&] {
-		        runOnStack(
-		                [](Continuation cont,
-		                   Executor *executor,
-		                   frg::unique_lock<Mutex> lock) {
-			                scrubStack(executor, cont);
-			                lock.unlock();
-			                localScheduler()->commitReschedule();
-		                },
-		                getCpuData()->detachedStack.base(),
-		                &this_thread->_executor,
-		                std::move(lock)
-		        );
-	        },
-	        &this_thread->_executor
+	  [&] {
+		  runOnStack(
+		    [](Continuation cont, Executor *executor, frg::unique_lock<Mutex> lock) {
+			    scrubStack(executor, cont);
+			    lock.unlock();
+			    localScheduler()->commitReschedule();
+		    },
+		    getCpuData()->detachedStack.base(),
+		    &this_thread->_executor,
+		    std::move(lock)
+		  );
+	  },
+	  &this_thread->_executor
 	);
 }
 
@@ -98,21 +96,19 @@ void Thread::blockCurrent() {
 	thisThread->_uninvoke();
 
 	forkExecutor(
-	        [&] {
-		        runOnStack(
-		                [](Continuation cont,
-		                   Executor *executor,
-		                   frg::unique_lock<Mutex> lock) {
-			                scrubStack(executor, cont);
-			                lock.unlock();
-			                localScheduler()->commitReschedule();
-		                },
-		                getCpuData()->detachedStack.base(),
-		                &thisThread->_executor,
-		                std::move(lock)
-		        );
-	        },
-	        &thisThread->_executor
+	  [&] {
+		  runOnStack(
+		    [](Continuation cont, Executor *executor, frg::unique_lock<Mutex> lock) {
+			    scrubStack(executor, cont);
+			    lock.unlock();
+			    localScheduler()->commitReschedule();
+		    },
+		    getCpuData()->detachedStack.base(),
+		    &thisThread->_executor,
+		    std::move(lock)
+		  );
+	  },
+	  &thisThread->_executor
 	);
 }
 
@@ -133,12 +129,12 @@ void Thread::deferCurrent() {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	        [](Continuation, frg::unique_lock<Mutex> lock) {
-		        lock.unlock();
-		        localScheduler()->commitReschedule();
-	        },
-	        getCpuData()->detachedStack.base(),
-	        std::move(lock)
+	  [](Continuation, frg::unique_lock<Mutex> lock) {
+		  lock.unlock();
+		  localScheduler()->commitReschedule();
+	  },
+	  getCpuData()->detachedStack.base(),
+	  std::move(lock)
 	);
 }
 
@@ -159,14 +155,14 @@ void Thread::deferCurrent(IrqImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	        [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
-		        scrubStack(image, cont);
-		        lock.unlock();
-		        localScheduler()->commitReschedule();
-	        },
-	        getCpuData()->detachedStack.base(),
-	        image,
-	        std::move(lock)
+	  [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
+		  scrubStack(image, cont);
+		  lock.unlock();
+		  localScheduler()->commitReschedule();
+	  },
+	  getCpuData()->detachedStack.base(),
+	  image,
+	  std::move(lock)
 	);
 }
 
@@ -187,14 +183,14 @@ void Thread::suspendCurrent(IrqImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	        [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
-		        scrubStack(image, cont);
-		        lock.unlock();
-		        localScheduler()->commitReschedule();
-	        },
-	        getCpuData()->detachedStack.base(),
-	        image,
-	        std::move(lock)
+	  [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
+		  scrubStack(image, cont);
+		  lock.unlock();
+		  localScheduler()->commitReschedule();
+	  },
+	  getCpuData()->detachedStack.base(),
+	  image,
+	  std::move(lock)
 	);
 }
 
@@ -218,33 +214,35 @@ void Thread::interruptCurrent(Interrupt interrupt, FaultImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	        [](Continuation cont,
-	           FaultImageAccessor image,
-	           Interrupt interrupt,
-	           Thread *thread,
-	           frg::unique_lock<Mutex> lock) {
-		        ObserveQueue queue;
-		        queue.splice(queue.end(), thread->_observeQueue);
-		        auto sequence = thread->_stateSeq;
+	  [](
+	    Continuation cont,
+	    FaultImageAccessor image,
+	    Interrupt interrupt,
+	    Thread *thread,
+	    frg::unique_lock<Mutex> lock
+	  ) {
+		  ObserveQueue queue;
+		  queue.splice(queue.end(), thread->_observeQueue);
+		  auto sequence = thread->_stateSeq;
 
-		        scrubStack(image, cont);
-		        lock.unlock();
+		  scrubStack(image, cont);
+		  lock.unlock();
 
-		        while (!queue.empty()) {
-			        auto node = queue.pop_front();
-			        async::execution::set_value(
-			                node->receiver,
-			                frg::make_tuple(Error::success, sequence, interrupt)
-			        );
-		        }
+		  while (!queue.empty()) {
+			  auto node = queue.pop_front();
+			  async::execution::set_value(
+			    node->receiver,
+			    frg::make_tuple(Error::success, sequence, interrupt)
+			  );
+		  }
 
-		        localScheduler()->commitReschedule();
-	        },
-	        getCpuData()->detachedStack.base(),
-	        image,
-	        interrupt,
-	        this_thread.get(),
-	        std::move(lock)
+		  localScheduler()->commitReschedule();
+	  },
+	  getCpuData()->detachedStack.base(),
+	  image,
+	  interrupt,
+	  this_thread.get(),
+	  std::move(lock)
 	);
 }
 
@@ -268,33 +266,35 @@ void Thread::interruptCurrent(Interrupt interrupt, SyscallImageAccessor image) {
 	this_thread->_uninvoke();
 
 	runOnStack(
-	        [](Continuation cont,
-	           SyscallImageAccessor image,
-	           Interrupt interrupt,
-	           Thread *thread,
-	           frg::unique_lock<Mutex> lock) {
-		        ObserveQueue queue;
-		        queue.splice(queue.end(), thread->_observeQueue);
-		        auto sequence = thread->_stateSeq;
+	  [](
+	    Continuation cont,
+	    SyscallImageAccessor image,
+	    Interrupt interrupt,
+	    Thread *thread,
+	    frg::unique_lock<Mutex> lock
+	  ) {
+		  ObserveQueue queue;
+		  queue.splice(queue.end(), thread->_observeQueue);
+		  auto sequence = thread->_stateSeq;
 
-		        scrubStack(image, cont);
-		        lock.unlock();
+		  scrubStack(image, cont);
+		  lock.unlock();
 
-		        while (!queue.empty()) {
-			        auto node = queue.pop_front();
-			        async::execution::set_value(
-			                node->receiver,
-			                frg::make_tuple(Error::success, sequence, interrupt)
-			        );
-		        }
+		  while (!queue.empty()) {
+			  auto node = queue.pop_front();
+			  async::execution::set_value(
+			    node->receiver,
+			    frg::make_tuple(Error::success, sequence, interrupt)
+			  );
+		  }
 
-		        localScheduler()->commitReschedule();
-	        },
-	        getCpuData()->detachedStack.base(),
-	        image,
-	        interrupt,
-	        this_thread.get(),
-	        std::move(lock)
+		  localScheduler()->commitReschedule();
+	  },
+	  getCpuData()->detachedStack.base(),
+	  image,
+	  interrupt,
+	  this_thread.get(),
+	  std::move(lock)
 	);
 }
 
@@ -316,8 +316,8 @@ void Thread::raiseSignals(SyscallImageAccessor image) {
 		this_thread->_runState = kRunTerminated;
 		++this_thread->_stateSeq;
 		saveExecutor(
-		        &this_thread->_executor,
-		        image
+		  &this_thread->_executor,
+		  image
 		);  // FIXME: Why do we save the state here?
 		getCpuData()->scheduler.update();
 		Scheduler::suspendCurrent();
@@ -326,30 +326,32 @@ void Thread::raiseSignals(SyscallImageAccessor image) {
 		this_thread->_uninvoke();
 
 		runOnStack(
-		        [](Continuation cont,
-		           SyscallImageAccessor image,
-		           Thread *thread,
-		           frg::unique_lock<Mutex> lock) {
-			        ObserveQueue queue;
-			        queue.splice(queue.end(), thread->_observeQueue);
+		  [](
+		    Continuation cont,
+		    SyscallImageAccessor image,
+		    Thread *thread,
+		    frg::unique_lock<Mutex> lock
+		  ) {
+			  ObserveQueue queue;
+			  queue.splice(queue.end(), thread->_observeQueue);
 
-			        scrubStack(image, cont);
-			        lock.unlock();
+			  scrubStack(image, cont);
+			  lock.unlock();
 
-			        while (!queue.empty()) {
-				        auto node = queue.pop_front();
-				        async::execution::set_value(
-				                node->receiver,
-				                frg::make_tuple(Error::threadExited, 0, kIntrNull)
-				        );
-			        }
+			  while (!queue.empty()) {
+				  auto node = queue.pop_front();
+				  async::execution::set_value(
+				    node->receiver,
+				    frg::make_tuple(Error::threadExited, 0, kIntrNull)
+				  );
+			  }
 
-			        localScheduler()->commitReschedule();
-		        },
-		        getCpuData()->detachedStack.base(),
-		        image,
-		        this_thread.get(),
-		        std::move(lock)
+			  localScheduler()->commitReschedule();
+		  },
+		  getCpuData()->detachedStack.base(),
+		  image,
+		  this_thread.get(),
+		  std::move(lock)
 		);
 	}
 
@@ -369,35 +371,33 @@ void Thread::raiseSignals(SyscallImageAccessor image) {
 		this_thread->_uninvoke();
 
 		runOnStack(
-		        [](Continuation cont,
-		           SyscallImageAccessor image,
-		           Thread *thread,
-		           frg::unique_lock<Mutex> lock) {
-			        ObserveQueue queue;
-			        queue.splice(queue.end(), thread->_observeQueue);
-			        auto sequence = thread->_stateSeq;
+		  [](
+		    Continuation cont,
+		    SyscallImageAccessor image,
+		    Thread *thread,
+		    frg::unique_lock<Mutex> lock
+		  ) {
+			  ObserveQueue queue;
+			  queue.splice(queue.end(), thread->_observeQueue);
+			  auto sequence = thread->_stateSeq;
 
-			        scrubStack(image, cont);
-			        lock.unlock();
+			  scrubStack(image, cont);
+			  lock.unlock();
 
-			        while (!queue.empty()) {
-				        auto node = queue.pop_front();
-				        async::execution::set_value(
-				                node->receiver,
-				                frg::make_tuple(
-				                        Error::success,
-				                        sequence,
-				                        kIntrRequested
-				                )
-				        );
-			        }
+			  while (!queue.empty()) {
+				  auto node = queue.pop_front();
+				  async::execution::set_value(
+				    node->receiver,
+				    frg::make_tuple(Error::success, sequence, kIntrRequested)
+				  );
+			  }
 
-			        localScheduler()->commitReschedule();
-		        },
-		        getCpuData()->detachedStack.base(),
-		        image,
-		        this_thread.get(),
-		        std::move(lock)
+			  localScheduler()->commitReschedule();
+		  },
+		  getCpuData()->detachedStack.base(),
+		  image,
+		  this_thread.get(),
+		  std::move(lock)
 		);
 	}
 }
@@ -457,23 +457,23 @@ Error Thread::resumeOther(smarter::borrowed_ptr<Thread> thread) {
 }
 
 Thread::Thread(
-        smarter::shared_ptr<Universe> universe,
-        smarter::shared_ptr<AddressSpace, BindableHandle> address_space,
-        AbiParameters abi
+  smarter::shared_ptr<Universe> universe,
+  smarter::shared_ptr<AddressSpace, BindableHandle> address_space,
+  AbiParameters abi
 )
-        : flags { 0 }
-        , _mainWorkQueue { this }
-        , _pagingWorkQueue { this }
-        , _runState { kRunInterrupted }
-        , _lastInterrupt { kIntrNull }
-        , _stateSeq { 1 }
-        , _pendingKill { false }
-        , _pendingSignal { kSigNone }
-        , _runCount { 1 }
-        , _executor { &_userContext, abi }
-        , _universe { std::move(universe) }
-        , _addressSpace { std::move(address_space) }
-        , _affinityMask { *kernelAlloc } {
+: flags {0}
+, _mainWorkQueue {this}
+, _pagingWorkQueue {this}
+, _runState {kRunInterrupted}
+, _lastInterrupt {kIntrNull}
+, _stateSeq {1}
+, _pendingKill {false}
+, _pendingSignal {kSigNone}
+, _runCount {1}
+, _executor {&_userContext, abi}
+, _universe {std::move(universe)}
+, _addressSpace {std::move(address_space)}
+, _affinityMask {*kernelAlloc} {
 	// TODO: Generate real UUIDs instead of ascending numbers.
 	uint64_t id = globalThreadId.fetch_add(1, std::memory_order_relaxed) + 1;
 	memset(_credentials, 0, 16);
@@ -517,14 +517,14 @@ void Thread::observe_(uint64_t inSeq, ObserveNode *node) {
 	switch (state) {
 	case kRunInterrupted:
 		async::execution::set_value(
-		        node->receiver,
-		        frg::make_tuple(Error::success, sequence, interrupt)
+		  node->receiver,
+		  frg::make_tuple(Error::success, sequence, interrupt)
 		);
 		break;
 	case kRunTerminated:
 		async::execution::set_value(
-		        node->receiver,
-		        frg::make_tuple(Error::threadExited, 0, kIntrNull)
+		  node->receiver,
+		  frg::make_tuple(Error::threadExited, 0, kIntrNull)
 		);
 		break;
 	default:
@@ -596,15 +596,14 @@ void Thread::handlePreemption(IrqImageAccessor image) {
 		_uninvoke();
 
 		runOnStack(
-		        [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock
-		        ) {
-			        scrubStack(image, cont);
-			        lock.unlock();
-			        localScheduler()->commitReschedule();
-		        },
-		        getCpuData()->detachedStack.base(),
-		        image,
-		        std::move(lock)
+		  [](Continuation cont, IrqImageAccessor image, frg::unique_lock<Mutex> lock) {
+			  scrubStack(image, cont);
+			  lock.unlock();
+			  localScheduler()->commitReschedule();
+		  },
+		  getCpuData()->detachedStack.base(),
+		  image,
+		  std::move(lock)
 		);
 	} else {
 		localScheduler()->renewSchedule();
@@ -635,8 +634,8 @@ void Thread::_kill() {
 		while (!queue.empty()) {
 			auto node = queue.pop_front();
 			async::execution::set_value(
-			        node->receiver,
-			        frg::make_tuple(Error::threadExited, 0, kIntrNull)
+			  node->receiver,
+			  frg::make_tuple(Error::threadExited, 0, kIntrNull)
 			);
 		}
 	} else {

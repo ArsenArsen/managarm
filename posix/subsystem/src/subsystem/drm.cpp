@@ -23,23 +23,22 @@ struct Subsystem {
 } subsystem;
 
 struct Device final
-        : UnixDevice
-        , drvcore::ClassDevice {
+: UnixDevice
+, drvcore::ClassDevice {
 	Device(int index, helix::UniqueLane lane, std::shared_ptr<drvcore::Device> parent)
-	        : UnixDevice { VfsType::charDevice }
-	        , drvcore::ClassDevice { sysfsSubsystem,
-		                         std::move(parent),
-		                         "card" + std::to_string(index),
-		                         this }
-	        , _index { index }
-	        , _lane { std::move(lane) } {}
+	: UnixDevice {VfsType::charDevice}
+	, drvcore::
+	    ClassDevice {sysfsSubsystem, std::move(parent), "card" + std::to_string(index), this}
+	, _index {index}
+	, _lane {std::move(lane)} {}
 
 	std::string nodePath() override { return "dri/card" + std::to_string(_index); }
 
-	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>>
-	open(std::shared_ptr<MountView> mount,
-	     std::shared_ptr<FsLink> link,
-	     SemanticFlags semantic_flags) override {
+	async::result<frg::expected<Error, smarter::shared_ptr<File, FileHandle>>> open(
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  SemanticFlags semantic_flags
+	) override {
 		return openExternalDevice(_lane, std::move(mount), std::move(link), semantic_flags);
 	}
 
@@ -53,35 +52,35 @@ private:
 }  // namespace
 
 async::detached run() {
-	sysfsSubsystem = new drvcore::ClassSubsystem { "drm" };
+	sysfsSubsystem = new drvcore::ClassSubsystem {"drm"};
 
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("unix.subsystem", "drm") });
+	auto filter = mbus::Conjunction({mbus::EqualsFilter("unix.subsystem", "drm")});
 
 	auto handler = mbus::ObserverHandler {}.withAttach(
-	        [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
-		        int index = minorAllocator.allocate();
-		        std::cout << "POSIX: Installing DRM device "
-		                  << std::get<mbus::StringItem>(properties.at("unix.devname")).value
-		                  << std::endl;
-		        auto parent_property =
-		                std::get<mbus::StringItem>(properties.at("drvcore.mbus-parent"));
-		        auto mbus_parent = std::stoi(parent_property.value);
+	  [](mbus::Entity entity, mbus::Properties properties) -> async::detached {
+		  int index = minorAllocator.allocate();
+		  std::cout << "POSIX: Installing DRM device "
+		            << std::get<mbus::StringItem>(properties.at("unix.devname")).value
+		            << std::endl;
+		  auto parent_property =
+		    std::get<mbus::StringItem>(properties.at("drvcore.mbus-parent"));
+		  auto mbus_parent = std::stoi(parent_property.value);
 
-		        auto lane = helix::UniqueLane(co_await entity.bind());
-		        auto device = std::make_shared<Device>(
-		                index,
-		                std::move(lane),
-		                pci_subsystem::getDeviceByMbus(mbus_parent)
-		        );
-		        // The minor is only correct for card* devices but not for control* and
-		        // render*.
-		        device->assignId({ 226, index });
+		  auto lane = helix::UniqueLane(co_await entity.bind());
+		  auto device = std::make_shared<Device>(
+		    index,
+		    std::move(lane),
+		    pci_subsystem::getDeviceByMbus(mbus_parent)
+		  );
+		  // The minor is only correct for card* devices but not for control* and
+		  // render*.
+		  device->assignId({226, index});
 
-		        charRegistry.install(device);
-		        drvcore::installDevice(device);
-	        }
+		  charRegistry.install(device);
+		  drvcore::installDevice(device);
+	  }
 	);
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));

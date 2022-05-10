@@ -161,10 +161,10 @@ void setupEarlyInterruptHandlers() {
 	asm volatile("lgdt (%0)" : : "r"(&gdtr));
 
 	asm volatile(
-	        "pushq $0x8\n"
-	        "\rpushq $.L_reloadEarlyCs\n"
-	        "\rlretq\n"
-	        ".L_reloadEarlyCs:"
+	  "pushq $0x8\n"
+	  "\rpushq $.L_reloadEarlyCs\n"
+	  "\rlretq\n"
+	  ".L_reloadEarlyCs:"
 	);
 
 	// setup the idt
@@ -318,8 +318,7 @@ extern "C" void onPlatformFault(FaultImageAccessor image, int number) {
 		panicLogger() << "Fault #" << number << " in stub section, cs: 0x"
 		              << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip()
 		              << frg::endlog;
-	if (cs != kSelSystemIrqCode && cs != kSelClientUserCode && cs != kSelExecutorFaultCode
-	    && cs != kSelExecutorSyscallCode)
+	if (cs != kSelSystemIrqCode && cs != kSelClientUserCode && cs != kSelExecutorFaultCode && cs != kSelExecutorSyscallCode)
 		panicLogger() << "Fault #" << number << ", from unexpected cs: 0x"
 		              << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << "\n"
 		              << "Error code: 0x" << frg::hex_fmt(*image.code()) << ", SS: 0x"
@@ -368,8 +367,10 @@ extern "C" void onPlatformIrq(IrqImageAccessor image, int number) {
 		              << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
+	assert(
+	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
+	);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -384,8 +385,10 @@ extern "C" void onPlatformLegacyIrq(IrqImageAccessor image, int number) {
 		              << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
+	assert(
+	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
+	);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -419,8 +422,10 @@ extern "C" void onPlatformPreemption(IrqImageAccessor image) {
 		infoLogger() << "thor [CPU " << getLocalApicId() << "]: Preemption from cs: 0x"
 		             << frg::hex_fmt(cs) << ", ip: " << (void *) *image.ip() << frg::endlog;
 
-	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
+	assert(
+	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
+	);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -452,8 +457,10 @@ extern "C" void onPlatformShootdown(IrqImageAccessor image) {
 		              << ", ip: " << (void *) *image.ip() << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
+	assert(
+	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
+	);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -473,8 +480,10 @@ extern "C" void onPlatformPing(IrqImageAccessor image) {
 		              << ", ip: " << (void *) *image.ip() << frg::endlog;
 
 	uint16_t cs = *image.cs();
-	assert(cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
-	       || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode);
+	assert(
+	  cs == kSelSystemIdleCode || cs == kSelSystemFiberCode || cs == kSelClientUserCode
+	  || cs == kSelExecutorSyscallCode || cs == kSelExecutorFaultCode
+	);
 
 	assert(!irqMutex().nesting());
 	disableUserAccess();
@@ -503,8 +512,8 @@ extern "C" void onPlatformNmi(NmiImageAccessor image) {
 	// If we interrupted user space or a kernel stub, we might need to update GS.
 	auto gs = common::x86::rdmsr(common::x86::kMsrIndexGsBase);
 	common::x86::wrmsr(
-	        common::x86::kMsrIndexGsBase,
-	        reinterpret_cast<uintptr_t>(*image.expectedGs())
+	  common::x86::kMsrIndexGsBase,
+	  reinterpret_cast<uintptr_t>(*image.expectedGs())
 	);
 
 	auto cpuData = getCpuData();

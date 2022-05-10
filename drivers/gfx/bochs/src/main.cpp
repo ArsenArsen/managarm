@@ -32,11 +32,11 @@ constexpr bool logCommits = false;
 // ----------------------------------------------------------------
 
 GfxDevice::GfxDevice(protocols::hw::Device hw_device, helix::UniqueDescriptor video_ram, void *)
-        : _videoRam { std::move(video_ram) }
-        , _hwDevice { std::move(hw_device) }
-        , _vramAllocator { 24, 12 }
-        , _claimedDevice { false } {
-	uintptr_t ports[] = { 0x01CE, 0x01CF, 0x01D0 };
+: _videoRam {std::move(video_ram)}
+, _hwDevice {std::move(hw_device)}
+, _vramAllocator {24, 12}
+, _claimedDevice {false} {
+	uintptr_t ports[] = {0x01CE, 0x01CF, 0x01D0};
 	HelHandle handle;
 	HEL_CHECK(helAccessIo(ports, 3, &handle));
 	HEL_CHECK(helEnableIo(handle));
@@ -75,7 +75,7 @@ async::detached GfxDevice::initialize() {
 
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, planeTypeProperty(), 1));
 	assignments.push_back(
-	        drm_core::Assignment::withModeObj(_primaryPlane, crtcIdProperty(), _theCrtc)
+	  drm_core::Assignment::withModeObj(_primaryPlane, crtcIdProperty(), _theCrtc)
 	);
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, srcHProperty(), 0));
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, srcWProperty(), 0));
@@ -86,20 +86,20 @@ async::detached GfxDevice::initialize() {
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, crtcXProperty(), 0));
 	assignments.push_back(drm_core::Assignment::withInt(_primaryPlane, crtcYProperty(), 0));
 	assignments.push_back(
-	        drm_core::Assignment::withModeObj(_primaryPlane, fbIdProperty(), nullptr)
+	  drm_core::Assignment::withModeObj(_primaryPlane, fbIdProperty(), nullptr)
 	);
 
 	assignments.push_back(drm_core::Assignment::withInt(_theConnector, dpmsProperty(), 3));
 	assignments.push_back(
-	        drm_core::Assignment::withModeObj(_theConnector, crtcIdProperty(), _theCrtc)
+	  drm_core::Assignment::withModeObj(_theConnector, crtcIdProperty(), _theCrtc)
 	);
 
 	_theEncoder->setCurrentCrtc(_theCrtc.get());
-	_theConnector->setupPossibleEncoders({ _theEncoder.get() });
+	_theConnector->setupPossibleEncoders({_theEncoder.get()});
 	_theConnector->setCurrentEncoder(_theEncoder.get());
 	_theConnector->setCurrentStatus(1);
-	_theEncoder->setupPossibleCrtcs({ _theCrtc.get() });
-	_theEncoder->setupPossibleClones({ _theEncoder.get() });
+	_theEncoder->setupPossibleCrtcs({_theCrtc.get()});
+	_theEncoder->setupPossibleClones({_theEncoder.get()});
 
 	setupCrtc(_theCrtc.get());
 	setupEncoder(_theEncoder.get());
@@ -130,11 +130,11 @@ std::unique_ptr<drm_core::Configuration> GfxDevice::createConfiguration() {
 }
 
 std::shared_ptr<drm_core::FrameBuffer> GfxDevice::createFrameBuffer(
-        std::shared_ptr<drm_core::BufferObject> base_bo,
-        uint32_t width,
-        uint32_t height,
-        uint32_t,
-        uint32_t pitch
+  std::shared_ptr<drm_core::BufferObject> base_bo,
+  uint32_t width,
+  uint32_t height,
+  uint32_t,
+  uint32_t pitch
 ) {
 	auto bo = std::static_pointer_cast<GfxDevice::BufferObject>(base_bo);
 
@@ -152,11 +152,11 @@ std::shared_ptr<drm_core::FrameBuffer> GfxDevice::createFrameBuffer(
 }
 
 std::tuple<int, int, int> GfxDevice::driverVersion() {
-	return { 1, 0, 0 };
+	return {1, 0, 0};
 }
 
 std::tuple<std::string, std::string, std::string> GfxDevice::driverInfo() {
-	return { "bochs-drm", "bochs dispi vga interface (qemu stdvga)", "20130925" };
+	return {"bochs-drm", "bochs dispi vga interface (qemu stdvga)", "20130925"};
 }
 
 std::pair<std::shared_ptr<drm_core::BufferObject>, uint32_t>
@@ -212,8 +212,8 @@ GfxDevice::createDumb(uint32_t width, uint32_t height, uint32_t bpp) {
 // ----------------------------------------------------------------
 
 bool GfxDevice::Configuration::capture(
-        std::vector<drm_core::Assignment> assignment,
-        std::unique_ptr<drm_core::AtomicState> &state
+  std::vector<drm_core::Assignment> assignment,
+  std::unique_ptr<drm_core::AtomicState> &state
 ) {
 	for (auto &assign : assignment) {
 		assert(assign.property->validate(assign));
@@ -259,9 +259,11 @@ async::detached GfxDevice::Configuration::_doCommit(std::unique_ptr<drm_core::At
 	drm_mode_modeinfo last_mode;
 	memset(&last_mode, 0, sizeof(drm_mode_modeinfo));
 	if (_device->_theCrtc->drmState()->mode)
-		memcpy(&last_mode,
-		       _device->_theCrtc->drmState()->mode->data(),
-		       sizeof(drm_mode_modeinfo));
+		memcpy(
+		  &last_mode,
+		  _device->_theCrtc->drmState()->mode->data(),
+		  sizeof(drm_mode_modeinfo)
+		);
 
 	auto switch_mode = last_mode.hdisplay != primary_plane_state->src_w
 	                || last_mode.vdisplay != primary_plane_state->src_h;
@@ -276,8 +278,8 @@ async::detached GfxDevice::Configuration::_doCommit(std::unique_ptr<drm_core::At
 			// The resolution registers must be written while the device is disabled.
 			_device->_operational.store(regs::index, (uint16_t) RegisterIndex::enable);
 			_device->_operational.store(
-			        regs::data,
-			        enable_bits::noMemClear | enable_bits::lfb
+			  regs::data,
+			  enable_bits::noMemClear | enable_bits::lfb
 			);
 
 			_device->_operational.store(regs::index, (uint16_t) RegisterIndex::resX);
@@ -289,8 +291,8 @@ async::detached GfxDevice::Configuration::_doCommit(std::unique_ptr<drm_core::At
 
 			_device->_operational.store(regs::index, (uint16_t) RegisterIndex::enable);
 			_device->_operational.store(
-			        regs::data,
-			        enable_bits::enable | enable_bits::noMemClear | enable_bits::lfb
+			  regs::data,
+			  enable_bits::enable | enable_bits::noMemClear | enable_bits::lfb
 			);
 		}
 
@@ -309,8 +311,8 @@ async::detached GfxDevice::Configuration::_doCommit(std::unique_ptr<drm_core::At
 		_device->_operational.store(regs::data, 0);
 		_device->_operational.store(regs::index, (uint16_t) RegisterIndex::offY);
 		_device->_operational.store(
-		        regs::data,
-		        fb->getBufferObject()->getAddress() / (fb->getPixelPitch() * 4)
+		  regs::data,
+		  fb->getBufferObject()->getAddress() / (fb->getPixelPitch() * 4)
 		);
 	} else {
 		_device->_operational.store(regs::index, (uint16_t) RegisterIndex::enable);
@@ -325,7 +327,7 @@ async::detached GfxDevice::Configuration::_doCommit(std::unique_ptr<drm_core::At
 // ----------------------------------------------------------------
 
 GfxDevice::Connector::Connector(GfxDevice *device)
-        : drm_core::Connector { device->allocator.allocate() } {
+: drm_core::Connector {device->allocator.allocate()} {
 	_encoders.push_back(device->_theEncoder.get());
 }
 
@@ -333,14 +335,13 @@ GfxDevice::Connector::Connector(GfxDevice *device)
 // GfxDevice::Encoder.
 // ----------------------------------------------------------------
 
-GfxDevice::Encoder::Encoder(GfxDevice *device)
-        : drm_core::Encoder { device->allocator.allocate() } {}
+GfxDevice::Encoder::Encoder(GfxDevice *device) : drm_core::Encoder {device->allocator.allocate()} {}
 
 // ----------------------------------------------------------------
 // GfxDevice::Crtc.
 // ----------------------------------------------------------------
 
-GfxDevice::Crtc::Crtc(GfxDevice *device) : drm_core::Crtc { device->allocator.allocate() } {
+GfxDevice::Crtc::Crtc(GfxDevice *device) : drm_core::Crtc {device->allocator.allocate()} {
 	_device = device;
 }
 
@@ -353,11 +354,11 @@ drm_core::Plane *GfxDevice::Crtc::primaryPlane() {
 // ----------------------------------------------------------------
 
 GfxDevice::FrameBuffer::FrameBuffer(
-        GfxDevice *device,
-        std::shared_ptr<GfxDevice::BufferObject> bo,
-        uint32_t pixel_pitch
+  GfxDevice *device,
+  std::shared_ptr<GfxDevice::BufferObject> bo,
+  uint32_t pixel_pitch
 )
-        : drm_core::FrameBuffer { device->allocator.allocate() } {
+: drm_core::FrameBuffer {device->allocator.allocate()} {
 	_bo = bo;
 	_pixelPitch = pixel_pitch;
 }
@@ -377,36 +378,36 @@ void GfxDevice::FrameBuffer::notifyDirty() {}
 // ----------------------------------------------------------------
 
 GfxDevice::Plane::Plane(GfxDevice *device, PlaneType type)
-        : drm_core::Plane { device->allocator.allocate(), type } {}
+: drm_core::Plane {device->allocator.allocate(), type} {}
 
 // ----------------------------------------------------------------
 // GfxDevice: BufferObject.
 // ----------------------------------------------------------------
 
 GfxDevice::BufferObject::BufferObject(
-        GfxDevice *device,
-        size_t alignment,
-        size_t size,
-        uintptr_t offset,
-        ptrdiff_t displacement
+  GfxDevice *device,
+  size_t alignment,
+  size_t size,
+  uintptr_t offset,
+  ptrdiff_t displacement
 )
-        : _device { device }
-        , _alignment { alignment }
-        , _size { size }
-        , _offset { offset }
-        , _displacement { displacement } {
+: _device {device}
+, _alignment {alignment}
+, _size {size}
+, _offset {offset}
+, _displacement {displacement} {
 	assert(!((_offset + _displacement) % 0x1000));
 	assert(!((_offset + _displacement) % _alignment));
 
 	HelHandle handle;
 	HEL_CHECK(helCreateSliceView(
-	        _device->_videoRam.getHandle(),
-	        _offset + _displacement,
-	        _size,
-	        0,
-	        &handle
+	  _device->_videoRam.getHandle(),
+	  _offset + _displacement,
+	  _size,
+	  0,
+	  &handle
 	));
-	_memoryView = helix::UniqueDescriptor { handle };
+	_memoryView = helix::UniqueDescriptor {handle};
 };
 
 std::shared_ptr<drm_core::BufferObject> GfxDevice::BufferObject::sharedBufferObject() {
@@ -418,7 +419,7 @@ size_t GfxDevice::BufferObject::getSize() {
 }
 
 std::pair<helix::BorrowedDescriptor, uint64_t> GfxDevice::BufferObject::getMemory() {
-	return std::make_pair(helix::BorrowedDescriptor { _memoryView }, 0);
+	return std::make_pair(helix::BorrowedDescriptor {_memoryView}, 0);
 }
 
 size_t GfxDevice::BufferObject::getAlignment() {
@@ -441,35 +442,35 @@ async::detached bindController(mbus::Entity entity) {
 
 	void *actual_pointer;
 	HEL_CHECK(helMapMemory(
-	        bar.getHandle(),
-	        kHelNullHandle,
-	        nullptr,
-	        0,
-	        info.barInfo[0].length,
-	        kHelMapProtRead | kHelMapProtWrite,
-	        &actual_pointer
+	  bar.getHandle(),
+	  kHelNullHandle,
+	  nullptr,
+	  0,
+	  info.barInfo[0].length,
+	  kHelMapProtRead | kHelMapProtWrite,
+	  &actual_pointer
 	));
 
 	auto gfx_device =
-	        std::make_shared<GfxDevice>(std::move(pci_device), std::move(bar), actual_pointer);
+	  std::make_shared<GfxDevice>(std::move(pci_device), std::move(bar), actual_pointer);
 	gfx_device->initialize();
 
 	// Create an mbus object for the device.
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	mbus::Properties descriptor { { "drvcore.mbus-parent",
-		                        mbus::StringItem { std::to_string(entity.getId()) } },
-		                      { "unix.subsystem", mbus::StringItem { "drm" } },
-		                      { "unix.devname", mbus::StringItem { "dri/card0" } } };
+	mbus::Properties descriptor {
+	  {"drvcore.mbus-parent", mbus::StringItem {std::to_string(entity.getId())}},
+	  {"unix.subsystem", mbus::StringItem {"drm"}},
+	  {"unix.devname", mbus::StringItem {"dri/card0"}}};
 
 	auto handler =
-	        mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		        helix::UniqueLane local_lane, remote_lane;
-		        std::tie(local_lane, remote_lane) = helix::createStream();
-		        drm_core::serveDrmDevice(gfx_device, std::move(local_lane));
+	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+		  helix::UniqueLane local_lane, remote_lane;
+		  std::tie(local_lane, remote_lane) = helix::createStream();
+		  drm_core::serveDrmDevice(gfx_device, std::move(local_lane));
 
-		        co_return std::move(remote_lane);
-	        });
+		  co_return std::move(remote_lane);
+	  });
 
 	co_await root.createObject("gfx_bochs", descriptor, std::move(handler));
 }
@@ -477,13 +478,13 @@ async::detached bindController(mbus::Entity entity) {
 async::detached observeControllers() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	auto filter = mbus::Conjunction({ mbus::EqualsFilter("pci-vendor", "1234") });
+	auto filter = mbus::Conjunction({mbus::EqualsFilter("pci-vendor", "1234")});
 
 	auto handler =
-	        mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
-		        std::cout << "gfx/bochs: Detected device" << std::endl;
-		        bindController(std::move(entity));
-	        });
+	  mbus::ObserverHandler {}.withAttach([](mbus::Entity entity, mbus::Properties) {
+		  std::cout << "gfx/bochs: Detected device" << std::endl;
+		  bindController(std::move(entity));
+	  });
 
 	co_await root.linkObserver(std::move(filter), std::move(handler));
 }

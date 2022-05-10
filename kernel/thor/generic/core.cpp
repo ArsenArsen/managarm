@@ -53,17 +53,17 @@ KernelVirtualMemory::KernelVirtualMemory() {
 		PhysicalAddr physical = physicalAllocator->allocate(0x1000);
 		assert(physical != static_cast<PhysicalAddr>(-1) && "OOM");
 		KernelPageSpace::global().mapSingle4k(
-		        vmBase + availableSize + pg,
-		        physical,
-		        page_access::write,
-		        CachingMode::null
+		  vmBase + availableSize + pg,
+		  physical,
+		  page_access::write,
+		  CachingMode::null
 		);
 	}
 	auto tablePtr = reinterpret_cast<int8_t *>(vmBase + availableSize);
 	unpoisonKasanShadow(tablePtr, overhead);
 	BuddyAccessor::initialize(tablePtr, availableRoots, tableOrder);
 
-	buddy_ = BuddyAccessor { vmBase, kPageShift, tablePtr, availableRoots, tableOrder };
+	buddy_ = BuddyAccessor {vmBase, kPageShift, tablePtr, availableRoots, tableOrder};
 }
 
 void *KernelVirtualMemory::allocate(size_t length) {
@@ -72,7 +72,7 @@ void *KernelVirtualMemory::allocate(size_t length) {
 
 	// TODO: use a smarter implementation here.
 	int order = 0;
-	while (length > (size_t { 1 } << (kPageShift + order)))
+	while (length > (size_t {1} << (kPageShift + order)))
 		++order;
 
 	if (order > buddy_.tableOrder())
@@ -102,10 +102,10 @@ void *KernelVirtualMemory::allocate(size_t length) {
 		                 "\e[39m"
 		              << frg::endlog;
 	}
-	kernelVirtualUsage += (size_t { 1 } << (kPageShift + order));
+	kernelVirtualUsage += (size_t {1} << (kPageShift + order));
 
 	auto pointer = reinterpret_cast<void *>(address);
-	unpoisonKasanShadow(pointer, size_t { 1 } << (kPageShift + order));
+	unpoisonKasanShadow(pointer, size_t {1} << (kPageShift + order));
 
 	return pointer;
 }
@@ -116,13 +116,13 @@ void KernelVirtualMemory::deallocate(void *pointer, size_t length) {
 
 	// TODO: use a smarter implementation here.
 	int order = 0;
-	while (length > (size_t { 1 } << (kPageShift + order)))
+	while (length > (size_t {1} << (kPageShift + order)))
 		++order;
 
-	poisonKasanShadow(pointer, size_t { 1 } << (kPageShift + order));
+	poisonKasanShadow(pointer, size_t {1} << (kPageShift + order));
 	buddy_.free(reinterpret_cast<uintptr_t>(pointer), order);
-	assert(kernelVirtualUsage >= (size_t { 1 } << (kPageShift + order)));
-	kernelVirtualUsage -= (size_t { 1 } << (kPageShift + order));
+	assert(kernelVirtualUsage >= (size_t {1} << (kPageShift + order)));
+	kernelVirtualUsage -= (size_t {1} << (kPageShift + order));
 }
 
 frg::manual_box<KernelVirtualMemory> kernelVirtualMemory;
@@ -148,10 +148,10 @@ uintptr_t KernelVirtualAlloc::map(size_t length) {
 		PhysicalAddr physical = physicalAllocator->allocate(kPageSize);
 		assert(physical != static_cast<PhysicalAddr>(-1) && "OOM");
 		KernelPageSpace::global().mapSingle4k(
-		        VirtualAddr(p) + offset,
-		        physical,
-		        page_access::write,
-		        CachingMode::null
+		  VirtualAddr(p) + offset,
+		  physical,
+		  page_access::write,
+		  CachingMode::null
 		);
 	}
 	kernelMemoryUsage += length;
@@ -176,8 +176,8 @@ void KernelVirtualAlloc::unmap(uintptr_t address, size_t length) {
 	struct Closure final : ShootNode {
 		void complete() override {
 			KernelVirtualMemory::global().deallocate(
-			        reinterpret_cast<void *>(address),
-			        size
+			  reinterpret_cast<void *>(address),
+			  size
 			);
 			auto physical = thisPage;
 			Closure::~Closure();
@@ -194,7 +194,7 @@ void KernelVirtualAlloc::unmap(uintptr_t address, size_t length) {
 	// For now, our stategy consists of allocating one page of *physical* memory
 	// and accessing it through the global physical mapping.
 	auto physical = physicalAllocator->allocate(kPageSize);
-	PageAccessor accessor { physical };
+	PageAccessor accessor {physical};
 	auto p = new (accessor.get()) Closure;
 	p->thisPage = physical;
 	p->address = address;
@@ -207,25 +207,23 @@ frg::manual_box<LogRingBuffer> allocLog;
 
 namespace {
 initgraph::Task initAllocTraceSink {
-	&globalInitEngine,
-	"generic.init-alloc-trace-sink",
-	initgraph::Requires { getFibersAvailableStage(), getIoChannelsDiscoveredStage() },
-	[] {
+  &globalInitEngine,
+  "generic.init-alloc-trace-sink",
+  initgraph::Requires {getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
+  [] {
 #ifndef KERNEL_LOG_ALLOCATIONS
-	        return;
+	  return;
 #endif  // KERNEL_LOG_ALLOCATIONS
 
-	        auto channel = solicitIoChannel("kernel-alloc-trace");
-	        if (channel) {
-		        infoLogger()
-		                << "thor: Connecting alloc-trace to I/O channel" << frg::endlog;
-		        async::detach_with_allocator(
-		                *kernelAlloc,
-		                dumpRingToChannel(allocLog.get(), std::move(channel), 2048)
-		        );
-	        }
-	}
-};
+	  auto channel = solicitIoChannel("kernel-alloc-trace");
+	  if (channel) {
+		  infoLogger() << "thor: Connecting alloc-trace to I/O channel" << frg::endlog;
+		  async::detach_with_allocator(
+		    *kernelAlloc,
+		    dumpRingToChannel(allocLog.get(), std::move(channel), 2048)
+		  );
+	  }
+  }};
 }  // namespace
 
 void KernelVirtualAlloc::unpoison(void *pointer, size_t size) {
@@ -261,6 +259,6 @@ constinit frg::manual_box<KernelAlloc> kernelAlloc = {};
 
 ExecutorContext::ExecutorContext() {}
 
-CpuData::CpuData() : scheduler { this }, activeFiber { nullptr }, heartbeat { 0 } {}
+CpuData::CpuData() : scheduler {this}, activeFiber {nullptr}, heartbeat {0} {}
 
 }  // namespace thor

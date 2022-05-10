@@ -33,17 +33,17 @@ async::result<void> doBind(mbus::Entity base_entity, virtio_core::DiscoverMode d
 	auto device = nic::virtio::makeShared(std::move(transport));
 	if (baseDeviceMap.empty()) {
 		// default via 10.0.2.2 src 10.10.2.15
-		Ip4Router::Route wan { { 0, 0 }, device };
+		Ip4Router::Route wan {{0, 0}, device};
 		wan.gateway = 0x0a000202;
 		wan.source = 0x0a0a020f;
 		ip4Router().addRoute(std::move(wan));
 
 		// 10.0.2.0/24
-		ip4Router().addRoute({ { 0x0a000200, 24 }, device });
+		ip4Router().addRoute({{0x0a000200, 24}, device});
 		// inet 10.10.2.15/24
-		ip4().setLink({ 0x0a0a020f, 24 }, device);
+		ip4().setLink({0x0a0a020f, 24}, device);
 	}
-	baseDeviceMap.insert({ base_entity.getId(), device });
+	baseDeviceMap.insert({base_entity.getId(), device});
 	nic::runDevice(device);
 }
 
@@ -80,10 +80,8 @@ async::result<protocols::svrctl::Error> bindDevice(int64_t base_id) {
 
 async::detached serve(helix::UniqueLane lane) {
 	while (true) {
-		auto [accept, recv_req] = co_await helix_ng::exchangeMsgs(
-		        lane,
-		        helix_ng::accept(helix_ng::recvInline())
-		);
+		auto [accept, recv_req] =
+		  co_await helix_ng::exchangeMsgs(lane, helix_ng::accept(helix_ng::recvInline()));
 		HEL_CHECK(accept.error());
 		HEL_CHECK(recv_req.error());
 
@@ -93,8 +91,8 @@ async::detached serve(helix::UniqueLane lane) {
 			resp.set_error(err);
 			auto buff = resp.SerializeAsString();
 			auto [send] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(buff.data(), buff.size())
+			  conversation,
+			  helix_ng::sendBuffer(buff.data(), buff.size())
 			);
 			HEL_CHECK(send.error());
 		};
@@ -113,10 +111,10 @@ async::detached serve(helix::UniqueLane lane) {
 			}
 
 			auto err = ip4().serveSocket(
-			        std::move(local_lane),
-			        req.type(),
-			        req.protocol(),
-			        req.flags()
+			  std::move(local_lane),
+			  req.type(),
+			  req.protocol(),
+			  req.flags()
 			);
 			if (err != managarm::fs::Errors::SUCCESS) {
 				co_await sendError(err);
@@ -125,9 +123,9 @@ async::detached serve(helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto [send_resp, push_socket] = co_await helix_ng::exchangeMsgs(
-			        conversation,
-			        helix_ng::sendBuffer(ser.data(), ser.size()),
-			        helix_ng::pushDescriptor(remote_lane)
+			  conversation,
+			  helix_ng::sendBuffer(ser.data(), ser.size()),
+			  helix_ng::pushDescriptor(remote_lane)
 			);
 			HEL_CHECK(send_resp.error());
 			HEL_CHECK(push_socket.error());
@@ -135,7 +133,7 @@ async::detached serve(helix::UniqueLane lane) {
 			std::cout << "netserver: received unknown request type: "
 			          << (int32_t) req.req_type() << std::endl;
 			auto [dismiss] =
-			        co_await helix_ng::exchangeMsgs(conversation, helix_ng::dismiss());
+			  co_await helix_ng::exchangeMsgs(conversation, helix_ng::dismiss());
 			HEL_CHECK(dismiss.error());
 		}
 	}
@@ -144,20 +142,20 @@ async::detached serve(helix::UniqueLane lane) {
 async::detached advertise() {
 	auto root = co_await mbus::Instance::global().getRoot();
 
-	mbus::Properties descriptor { { "class", mbus::StringItem { "netserver" } } };
+	mbus::Properties descriptor {{"class", mbus::StringItem {"netserver"}}};
 
 	auto handler =
-	        mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
-		        auto [local_lane, remote_lane] = helix::createStream();
+	  mbus::ObjectHandler {}.withBind([=]() -> async::result<helix::UniqueDescriptor> {
+		  auto [local_lane, remote_lane] = helix::createStream();
 
-		        serve(std::move(local_lane));
-		        co_return std::move(remote_lane);
-	        });
+		  serve(std::move(local_lane));
+		  co_return std::move(remote_lane);
+	  });
 
 	co_await root.createObject("netserver", descriptor, std::move(handler));
 }
 
-constexpr static protocols::svrctl::ControlOperations controlOps = { .bind = bindDevice };
+constexpr static protocols::svrctl::ControlOperations controlOps = {.bind = bindDevice};
 
 // --------------------------------------------------------
 // main() function

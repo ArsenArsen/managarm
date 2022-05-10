@@ -34,7 +34,7 @@ arch::dma_pool *Link::dmaPool() {
 Link::AllocatedBuffer Link::allocateFrame(MacAddress to, EtherType type, size_t payloadSize) {
 	// default implementation assume an Ethernet II frame
 	using namespace arch;
-	Link::AllocatedBuffer buf { dma_buffer { dmaPool(), 14 + payloadSize }, {} };
+	Link::AllocatedBuffer buf {dma_buffer {dmaPool(), 14 + payloadSize}, {}};
 
 	uint16_t et = static_cast<uint16_t>(type);
 	et = convert_endian<endian::big>(et);
@@ -49,7 +49,7 @@ Link::AllocatedBuffer Link::allocateFrame(MacAddress to, EtherType type, size_t 
 async::detached runDevice(std::shared_ptr<nic::Link> dev) {
 	using namespace arch;
 	while (true) {
-		dma_buffer frameBuffer { dev->dmaPool(), 1514 };
+		dma_buffer frameBuffer {dev->dmaPool(), 1514};
 		co_await dev->receive(frameBuffer);
 		auto capsule = frameBuffer.subview(14);
 		auto data = reinterpret_cast<uint8_t *>(frameBuffer.data());

@@ -20,32 +20,31 @@ extern frg::manual_box<LaneHandle> mbusClient;
 
 bool wantOsTrace = false;
 
-constinit std::atomic<bool> osTraceInUse { false };
+constinit std::atomic<bool> osTraceInUse {false};
 
 initgraph::Stage *getOsTraceAvailableStage() {
-	static initgraph::Stage s { &globalInitEngine, "generic.ostrace-available" };
+	static initgraph::Stage s {&globalInitEngine, "generic.ostrace-available"};
 	return &s;
 }
 
 namespace {
 
-std::atomic<uint64_t> nextId { 1 };
+std::atomic<uint64_t> nextId {1};
 frg::manual_box<LogRingBuffer> globalOsTraceRing;
 
 initgraph::Task initOsTraceCore {
-	&globalInitEngine,
-	"generic.init-ostrace-core",
-	initgraph::Entails { getOsTraceAvailableStage() },
-	[] {
-	        if (!wantOsTrace)
-		        return;
+  &globalInitEngine,
+  "generic.init-ostrace-core",
+  initgraph::Entails {getOsTraceAvailableStage()},
+  [] {
+	  if (!wantOsTrace)
+		  return;
 
-	        void *osTraceMemory = kernelAlloc->allocate(1 << 20);
-	        globalOsTraceRing.initialize(reinterpret_cast<uintptr_t>(osTraceMemory), 1 << 20);
+	  void *osTraceMemory = kernelAlloc->allocate(1 << 20);
+	  globalOsTraceRing.initialize(reinterpret_cast<uintptr_t>(osTraceMemory), 1 << 20);
 
-	        osTraceInUse.store(true);
-	}
-};
+	  osTraceInUse.store(true);
+  }};
 
 template<typename R>
 void commitOsTrace(R record) {
@@ -56,9 +55,9 @@ void commitOsTrace(R record) {
 	frg::small_vector<char, 64, KernelAlloc> ser(*kernelAlloc);
 	ser.resize(8 + ts);
 	bool encodeSuccess = bragi::write_head_tail(
-	        record,
-	        frg::span<char>(ser.data(), 8),
-	        frg::span<char>(ser.data() + 8, ts)
+	  record,
+	  frg::span<char>(ser.data(), 8),
+	  frg::span<char>(ser.data() + 8, ts)
 	);
 	assert(encodeSuccess);
 
@@ -72,9 +71,9 @@ void commitOsTrace(R record) {
 OsTraceEventId announceOsTraceEvent(frg::string_view name) {
 	auto id = nextId.fetch_add(1, std::memory_order_relaxed);
 
-	managarm::ostrace::AnnounceEventRecord<KernelAlloc> record { *kernelAlloc };
+	managarm::ostrace::AnnounceEventRecord<KernelAlloc> record {*kernelAlloc};
 	record.set_id(id);
-	record.set_name(frg::string<KernelAlloc> { *kernelAlloc, name });
+	record.set_name(frg::string<KernelAlloc> {*kernelAlloc, name});
 	commitOsTrace(std::move(record));
 
 	return static_cast<OsTraceEventId>(id);
@@ -100,7 +99,7 @@ coroutine<void> handleBind(LaneHandle objectLane);
 coroutine<Error> handleReq(LaneHandle boundLane);
 
 coroutine<void> createObject(LaneHandle mbusLane) {
-	auto [offerError, lane] = co_await OfferSender { mbusLane };
+	auto [offerError, lane] = co_await OfferSender {mbusLane};
 	assert(offerError == Error::success && "Unexpected mbus transaction");
 
 	managarm::mbus::Property<KernelAlloc> cls_prop(*kernelAlloc);
@@ -115,18 +114,18 @@ coroutine<void> createObject(LaneHandle mbusLane) {
 
 	frg::string<KernelAlloc> ser(*kernelAlloc);
 	req.SerializeToString(&ser);
-	frg::unique_memory<KernelAlloc> reqBuffer { *kernelAlloc, ser.size() };
+	frg::unique_memory<KernelAlloc> reqBuffer {*kernelAlloc, ser.size()};
 	memcpy(reqBuffer.data(), ser.data(), ser.size());
-	auto reqError = co_await SendBufferSender { lane, std::move(reqBuffer) };
+	auto reqError = co_await SendBufferSender {lane, std::move(reqBuffer)};
 	assert(reqError == Error::success && "Unexpected mbus transaction");
 
-	auto [respError, respBuffer] = co_await RecvBufferSender { lane };
+	auto [respError, respBuffer] = co_await RecvBufferSender {lane};
 	assert(respError == Error::success && "Unexpected mbus transaction");
 	managarm::mbus::SvrResponse<KernelAlloc> resp(*kernelAlloc);
 	resp.ParseFromArray(respBuffer.data(), respBuffer.size());
 	assert(resp.error() == managarm::mbus::Error::SUCCESS);
 
-	auto [objectError, objectDescriptor] = co_await PullDescriptorSender { lane };
+	auto [objectError, objectDescriptor] = co_await PullDescriptorSender {lane};
 	assert(objectError == Error::success && "Unexpected mbus transaction");
 	assert(objectDescriptor.is<LaneDescriptor>());
 	auto objectLane = objectDescriptor.get<LaneDescriptor>().handle;
@@ -135,10 +134,10 @@ coroutine<void> createObject(LaneHandle mbusLane) {
 }
 
 coroutine<void> handleBind(LaneHandle objectLane) {
-	auto [acceptError, lane] = co_await AcceptSender { objectLane };
+	auto [acceptError, lane] = co_await AcceptSender {objectLane};
 	assert(acceptError == Error::success && "Unexpected mbus transaction");
 
-	auto [reqError, reqBuffer] = co_await RecvBufferSender { lane };
+	auto [reqError, reqBuffer] = co_await RecvBufferSender {lane};
 	assert(reqError == Error::success && "Unexpected mbus transaction");
 	managarm::mbus::SvrRequest<KernelAlloc> req(*kernelAlloc);
 	req.ParseFromArray(reqBuffer.data(), reqBuffer.size());
@@ -149,14 +148,13 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 
 	frg::string<KernelAlloc> ser(*kernelAlloc);
 	resp.SerializeToString(&ser);
-	frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+	frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 	memcpy(respBuffer.data(), ser.data(), ser.size());
-	auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+	auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 	assert(respError == Error::success && "Unexpected mbus transaction");
 
 	auto stream = createStream();
-	auto boundError =
-	        co_await PushDescriptorSender { lane, LaneDescriptor { stream.get<1>() } };
+	auto boundError = co_await PushDescriptorSender {lane, LaneDescriptor {stream.get<1>()}};
 	assert(boundError == Error::success && "Unexpected mbus transaction");
 	auto boundLane = stream.get<0>();
 
@@ -177,7 +175,7 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 }
 
 coroutine<Error> handleReq(LaneHandle boundLane) {
-	auto [acceptError, lane] = co_await AcceptSender { boundLane };
+	auto [acceptError, lane] = co_await AcceptSender {boundLane};
 	if (acceptError == Error::endOfLane)
 		co_return Error::endOfLane;
 	if (acceptError != Error::success) {
@@ -185,13 +183,14 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 		co_return Error::protocolViolation;
 	}
 
-	auto [reqError, reqBuffer] = co_await RecvBufferSender { lane };
+	auto [reqError, reqBuffer] = co_await RecvBufferSender {lane};
 	if (reqError != Error::success) {
 		assert(isRemoteIpcError(reqError));
 		co_return Error::protocolViolation;
 	}
-	frg::span<const char> reqSpan { reinterpret_cast<const char *>(reqBuffer.data()),
-		                        reqBuffer.size() };
+	frg::span<const char> reqSpan {
+	  reinterpret_cast<const char *>(reqBuffer.data()),
+	  reqBuffer.size()};
 
 	auto preamble = bragi::read_preamble(reqSpan);
 	if (preamble.error())
@@ -204,9 +203,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	switch (preamble.id()) {
 	case bragi::message_id<managarm::ostrace::NegotiateReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::NegotiateReq>(
-		        headSpan,
-		        tailSpan,
-		        *kernelAlloc
+		  headSpan,
+		  tailSpan,
+		  *kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -220,9 +219,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 		if (respError != Error::success) {
 			assert(isRemoteIpcError(respError));
 			co_return Error::protocolViolation;
@@ -230,15 +229,15 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	} break;
 	case bragi::message_id<managarm::ostrace::EmitEventReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::EmitEventReq>(
-		        headSpan,
-		        tailSpan,
-		        *kernelAlloc
+		  headSpan,
+		  tailSpan,
+		  *kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
 		auto &req = maybeReq.value();
 
-		managarm::ostrace::EventRecord<KernelAlloc> record { *kernelAlloc };
+		managarm::ostrace::EventRecord<KernelAlloc> record {*kernelAlloc};
 		record.set_id(req.id());
 		for (size_t i = 0; i < req.ctrs_size(); ++i)
 			record.add_ctrs(std::move(req.ctrs(i)));
@@ -249,9 +248,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 		if (respError != Error::success) {
 			assert(isRemoteIpcError(respError));
 			co_return Error::protocolViolation;
@@ -259,9 +258,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	} break;
 	case bragi::message_id<managarm::ostrace::AnnounceEventReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::AnnounceEventReq>(
-		        headSpan,
-		        tailSpan,
-		        *kernelAlloc
+		  headSpan,
+		  tailSpan,
+		  *kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -269,7 +268,7 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		auto id = nextId.fetch_add(1, std::memory_order_relaxed);
 
-		managarm::ostrace::AnnounceEventRecord<KernelAlloc> record { *kernelAlloc };
+		managarm::ostrace::AnnounceEventRecord<KernelAlloc> record {*kernelAlloc};
 		record.set_id(id);
 		record.set_name(std::move(req.name()));
 		commitOsTrace(std::move(record));
@@ -280,9 +279,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 		if (respError != Error::success) {
 			assert(isRemoteIpcError(respError));
 			co_return Error::protocolViolation;
@@ -290,9 +289,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 	} break;
 	case bragi::message_id<managarm::ostrace::AnnounceItemReq>: {
 		auto maybeReq = bragi::parse_head_tail<managarm::ostrace::AnnounceItemReq>(
-		        headSpan,
-		        tailSpan,
-		        *kernelAlloc
+		  headSpan,
+		  tailSpan,
+		  *kernelAlloc
 		);
 		if (!maybeReq)
 			co_return Error::protocolViolation;
@@ -300,7 +299,7 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		auto id = nextId.fetch_add(1, std::memory_order_relaxed);
 
-		managarm::ostrace::AnnounceItemRecord<KernelAlloc> record { *kernelAlloc };
+		managarm::ostrace::AnnounceItemRecord<KernelAlloc> record {*kernelAlloc};
 		record.set_id(id);
 		record.set_name(std::move(req.name()));
 		commitOsTrace(std::move(record));
@@ -311,9 +310,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 		if (respError != Error::success) {
 			assert(isRemoteIpcError(respError));
 			co_return Error::protocolViolation;
@@ -325,9 +324,9 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 
 		frg::string<KernelAlloc> ser(*kernelAlloc);
 		resp.SerializeToString(&ser);
-		frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+		frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 		memcpy(respBuffer.data(), ser.data(), ser.size());
-		auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+		auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 		if (respError != Error::success) {
 			assert(isRemoteIpcError(respError));
 			co_return Error::protocolViolation;
@@ -338,37 +337,34 @@ coroutine<Error> handleReq(LaneHandle boundLane) {
 }
 
 initgraph::Task initOsTraceMbus {
-	&globalInitEngine,
-	"generic.init-ostrace-sinks",
-	initgraph::Requires { &initOsTraceCore,
-	                      getFibersAvailableStage(),
-	                      getIoChannelsDiscoveredStage() },
-	[] {
-	        // Create a fiber to manage requests to the ostrace mbus object.
-	        KernelFiber::run([=] {
-		        // We unconditionally create the mbus object since userspace might use it.
-		        async::detach_with_allocator(*kernelAlloc, createObject(*mbusClient));
+  &globalInitEngine,
+  "generic.init-ostrace-sinks",
+  initgraph::Requires {&initOsTraceCore, getFibersAvailableStage(), getIoChannelsDiscoveredStage()},
+  [] {
+	  // Create a fiber to manage requests to the ostrace mbus object.
+	  KernelFiber::run([=] {
+		  // We unconditionally create the mbus object since userspace might use it.
+		  async::detach_with_allocator(*kernelAlloc, createObject(*mbusClient));
 
-		        // Only dump to an I/O channel if ostrace is supported (otherwise, the ring
-		        // buffer does not even exist).
-		        if (wantOsTrace) {
-			        auto channel = solicitIoChannel("ostrace");
-			        if (channel) {
-				        infoLogger() << "thor: Connecting ostrace to I/O channel"
-				                     << frg::endlog;
-				        async::detach_with_allocator(
-				                *kernelAlloc,
-				                dumpRingToChannel(
-				                        globalOsTraceRing.get(),
-				                        std::move(channel),
-				                        256
-				                )
-				        );
-			        }
-		        }
-	        });
-	}
-};
+		  // Only dump to an I/O channel if ostrace is supported (otherwise, the ring
+		  // buffer does not even exist).
+		  if (wantOsTrace) {
+			  auto channel = solicitIoChannel("ostrace");
+			  if (channel) {
+				  infoLogger()
+				    << "thor: Connecting ostrace to I/O channel" << frg::endlog;
+				  async::detach_with_allocator(
+				    *kernelAlloc,
+				    dumpRingToChannel(
+				      globalOsTraceRing.get(),
+				      std::move(channel),
+				      256
+				    )
+				  );
+			  }
+		  }
+	  });
+  }};
 
 }  // anonymous namespace
 

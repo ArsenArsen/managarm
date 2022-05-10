@@ -24,7 +24,7 @@ struct Packet {
 };
 
 struct Channel {
-	Channel() : writerCount { 0 }, readerCount { 0 } {}
+	Channel() : writerCount {0}, readerCount {0} {}
 
 	// Status management for poll().
 	async::recurring_event statusBell;
@@ -51,19 +51,19 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        smarter::shared_ptr<File> { file },
-		        &File::fileOperations
+		  std::move(lane),
+		  smarter::shared_ptr<File> {file},
+		  &File::fileOperations
 		));
 	}
 
 	ReaderFile(
-	        std::shared_ptr<MountView> mount,
-	        std::shared_ptr<FsLink> link,
-	        bool nonBlock = false
+	  std::shared_ptr<MountView> mount,
+	  std::shared_ptr<FsLink> link,
+	  bool nonBlock = false
 	)
-	        : File { StructName::get("fifo.read"), mount, link, File::defaultPipeLikeSeek }
-	        , nonBlock_ { nonBlock } {}
+	: File {StructName::get("fifo.read"), mount, link, File::defaultPipeLikeSeek}
+	, nonBlock_ {nonBlock} {}
 
 	void connectChannel(std::shared_ptr<Channel> channel) {
 		assert(!_channel);
@@ -113,7 +113,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t pastSeq, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		(void) mask;  // TODO: utilize mask.
 		// TODO: Return Error::fileClosed as appropriate.
 		assert(pastSeq <= _channel->currentSeq);
@@ -182,14 +182,14 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        smarter::shared_ptr<File> { file },
-		        &File::fileOperations
+		  std::move(lane),
+		  smarter::shared_ptr<File> {file},
+		  &File::fileOperations
 		));
 	}
 
 	WriterFile(std::shared_ptr<MountView> mount, std::shared_ptr<FsLink> link)
-	        : File { StructName::get("fifo.write"), mount, link, File::defaultPipeLikeSeek } {}
+	: File {StructName::get("fifo.write"), mount, link, File::defaultPipeLikeSeek} {}
 
 	void connectChannel(std::shared_ptr<Channel> channel) {
 		assert(!_channel);
@@ -199,8 +199,8 @@ public:
 
 	void handleClose() override {
 		std::cout
-		        << "\e[35mposix: Cancel passthrough on fifo WriterFile::handleClose()\e[39m"
-		        << std::endl;
+		  << "\e[35mposix: Cancel passthrough on fifo WriterFile::handleClose()\e[39m"
+		  << std::endl;
 		if (_channel->writerCount-- == 1) {
 			_channel->noWriterSeq = ++_channel->currentSeq;
 			_channel->statusBell.raise();
@@ -223,7 +223,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t pastSeq, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		// TODO: Return Error::fileClosed as appropriate.
 		assert(pastSeq <= _channel->currentSeq);
 		while (pastSeq == _channel->currentSeq && !cancellation.is_cancellation_requested())
@@ -272,10 +272,10 @@ void unlinkNamedChannel(FsNode *node) {
 }
 
 async::result<smarter::shared_ptr<File, FileHandle>> openNamedChannel(
-        std::shared_ptr<MountView> mount,
-        std::shared_ptr<FsLink> link,
-        FsNode *node,
-        SemanticFlags flags
+  std::shared_ptr<MountView> mount,
+  std::shared_ptr<FsLink> link,
+  FsNode *node,
+  SemanticFlags flags
 ) {
 	if (globalChannelMap.find(node) == globalChannelMap.end())
 		co_return nullptr;
@@ -325,8 +325,7 @@ std::array<smarter::shared_ptr<File, FileHandle>, 2> createPair(bool nonBlock) {
 	w_file->connectChannel(channel);
 	ReaderFile::serve(r_file);
 	WriterFile::serve(w_file);
-	return { File::constructHandle(std::move(r_file)),
-		 File::constructHandle(std::move(w_file)) };
+	return {File::constructHandle(std::move(r_file)), File::constructHandle(std::move(w_file))};
 }
 
 }  // namespace fifo

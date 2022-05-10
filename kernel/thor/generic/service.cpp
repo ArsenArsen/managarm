@@ -16,7 +16,7 @@ namespace thor {
 extern frg::manual_box<LaneHandle> mbusClient;
 
 struct OpenFile {
-	OpenFile() : isTerminal { false } {};
+	OpenFile() : isTerminal {false} {};
 
 	bool isTerminal;
 	LaneHandle clientLane;
@@ -28,17 +28,17 @@ struct StdioFile : OpenFile {
 
 namespace stdio {
 coroutine<void> runStdioRequests(LaneHandle lane) {
-	frg::string<KernelAlloc> lineBuffer { *kernelAlloc };
+	frg::string<KernelAlloc> lineBuffer {*kernelAlloc};
 
 	while (true) {
-		auto [acceptError, conversation] = co_await AcceptSender { lane };
+		auto [acceptError, conversation] = co_await AcceptSender {lane};
 		if (acceptError == Error::endOfLane)
 			break;
 		if (acceptError != Error::success) {
 			infoLogger() << "thor: Could not accept stdio lane" << frg::endlog;
 			co_return;
 		}
-		auto [reqError, reqBuffer] = co_await RecvBufferSender { conversation };
+		auto [reqError, reqBuffer] = co_await RecvBufferSender {conversation};
 		if (reqError != Error::success) {
 			infoLogger() << "thor: Could not receive stdio request" << frg::endlog;
 			co_return;
@@ -49,13 +49,13 @@ coroutine<void> runStdioRequests(LaneHandle lane) {
 
 		if (req.req_type() == managarm::fs::CntReqType::WRITE) {
 			auto [credsError, credentials] =
-			        co_await ExtractCredentialsSender { conversation };
+			  co_await ExtractCredentialsSender {conversation};
 			if (credsError != Error::success) {
-				infoLogger() << "thor: Could not receive stdio credentials"
-				             << frg::endlog;
+				infoLogger()
+				  << "thor: Could not receive stdio credentials" << frg::endlog;
 				co_return;
 			}
-			auto [dataError, dataBuffer] = co_await RecvBufferSender { conversation };
+			auto [dataError, dataBuffer] = co_await RecvBufferSender {conversation};
 			if (dataError != Error::success) {
 				infoLogger() << "thor: Could not receive stdio data" << frg::endlog;
 				co_return;
@@ -77,10 +77,10 @@ coroutine<void> runStdioRequests(LaneHandle lane) {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else if (req.req_type() == managarm::fs::CntReqType::SEEK_REL) {
@@ -89,10 +89,10 @@ coroutine<void> runStdioRequests(LaneHandle lane) {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else {
@@ -103,7 +103,7 @@ coroutine<void> runStdioRequests(LaneHandle lane) {
 			                "\e[39m"
 			             << frg::endlog;
 
-			auto dismissError = co_await DismissSender { conversation };
+			auto dismissError = co_await DismissSender {conversation};
 			// TODO: improve error handling here.
 			assert(dismissError == Error::success);
 		}
@@ -121,7 +121,7 @@ struct OpenRegular : OpenFile {
 };
 
 struct OpenDirectory : OpenFile {
-	OpenDirectory(MfsDirectory *node) : node { node }, index(0) {}
+	OpenDirectory(MfsDirectory *node) : node {node}, index(0) {}
 
 	MfsDirectory *node;
 	size_t index;
@@ -133,14 +133,14 @@ struct OpenDirectory : OpenFile {
 
 coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 	while (true) {
-		auto [acceptError, conversation] = co_await AcceptSender { lane };
+		auto [acceptError, conversation] = co_await AcceptSender {lane};
 		if (acceptError == Error::endOfLane)
 			break;
 		if (acceptError != Error::success) {
 			infoLogger() << "thor: Could not accept regular lane" << frg::endlog;
 			co_return;
 		}
-		auto [reqError, reqBuffer] = co_await RecvBufferSender { conversation };
+		auto [reqError, reqBuffer] = co_await RecvBufferSender {conversation};
 		if (reqError != Error::success) {
 			infoLogger() << "thor: Could not receive regular request" << frg::endlog;
 			co_return;
@@ -151,22 +151,21 @@ coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 
 		if (req.req_type() == managarm::fs::CntReqType::READ) {
 			auto [credsError, credentials] =
-			        co_await ExtractCredentialsSender { conversation };
+			  co_await ExtractCredentialsSender {conversation};
 			if (credsError != Error::success) {
-				infoLogger() << "thor: Could not receive stdio credentials"
-				             << frg::endlog;
+				infoLogger()
+				  << "thor: Could not receive stdio credentials" << frg::endlog;
 				co_return;
 			}
 
 			frg::unique_memory<KernelAlloc> dataBuffer {
-				*kernelAlloc,
-				frg::min(size_t(req.size()), file->module->size() - file->offset)
-			};
+			  *kernelAlloc,
+			  frg::min(size_t(req.size()), file->module->size() - file->offset)};
 			auto copyOutcome = co_await file->module->getMemory()->copyFrom(
-			        file->offset,
-			        dataBuffer.data(),
-			        dataBuffer.size(),
-			        WorkQueue::generalQueue()->take()
+			  file->offset,
+			  dataBuffer.data(),
+			  dataBuffer.size(),
+			  WorkQueue::generalQueue()->take()
 			);
 			assert(copyOutcome);
 			file->offset += dataBuffer.size();
@@ -176,15 +175,15 @@ coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 
 			auto dataError =
-			        co_await SendBufferSender { conversation, std::move(dataBuffer) };
+			  co_await SendBufferSender {conversation, std::move(dataBuffer)};
 			// TODO: improve error handling here.
 			assert(dataError == Error::success);
 		} else if (req.req_type() == managarm::fs::CntReqType::SEEK_ABS) {
@@ -195,10 +194,10 @@ coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else if (req.req_type() == managarm::fs::CntReqType::MMAP) {
@@ -207,17 +206,16 @@ coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 
 			auto memoryError = co_await PushDescriptorSender {
-				conversation,
-				MemoryViewDescriptor { file->module->getMemory() }
-			};
+			  conversation,
+			  MemoryViewDescriptor {file->module->getMemory()}};
 			// TODO: improve error handling here.
 			assert(memoryError == Error::success);
 		} else {
@@ -228,7 +226,7 @@ coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 			                "\e[39m"
 			             << frg::endlog;
 
-			auto dismissError = co_await DismissSender { conversation };
+			auto dismissError = co_await DismissSender {conversation};
 			// TODO: improve error handling here.
 			assert(dismissError == Error::success);
 		}
@@ -237,14 +235,14 @@ coroutine<void> runRegularRequests(OpenRegular *file, LaneHandle lane) {
 
 coroutine<void> runDirectoryRequests(OpenDirectory *file, LaneHandle lane) {
 	while (true) {
-		auto [acceptError, conversation] = co_await AcceptSender { lane };
+		auto [acceptError, conversation] = co_await AcceptSender {lane};
 		if (acceptError == Error::endOfLane)
 			break;
 		if (acceptError != Error::success) {
 			infoLogger() << "thor: Could not accept directory lane" << frg::endlog;
 			co_return;
 		}
-		auto [reqError, reqBuffer] = co_await RecvBufferSender { conversation };
+		auto [reqError, reqBuffer] = co_await RecvBufferSender {conversation};
 		if (reqError != Error::success) {
 			infoLogger() << "thor: Could not receive directory request" << frg::endlog;
 			co_return;
@@ -271,12 +269,12 @@ coroutine<void> runDirectoryRequests(OpenDirectory *file, LaneHandle lane) {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 			} else {
@@ -285,12 +283,12 @@ coroutine<void> runDirectoryRequests(OpenDirectory *file, LaneHandle lane) {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 			}
@@ -302,7 +300,7 @@ coroutine<void> runDirectoryRequests(OpenDirectory *file, LaneHandle lane) {
 			                "\e[39m"
 			             << frg::endlog;
 
-			auto dismissError = co_await DismissSender { conversation };
+			auto dismissError = co_await DismissSender {conversation};
 			// TODO: improve error handling here.
 			assert(dismissError == Error::success);
 		}
@@ -317,9 +315,9 @@ namespace posix {
 
 struct Process {
 	Process(frg::string<KernelAlloc> name, smarter::shared_ptr<Thread, ActiveHandle> thread)
-	        : _name { std::move(name) }
-	        , _thread(std::move(thread))
-	        , openFiles(*kernelAlloc) {
+	: _name {std::move(name)}
+	, _thread(std::move(thread))
+	, openFiles(*kernelAlloc) {
 		fileTableMemory = smarter::allocate_shared<AllocatedMemory>(*kernelAlloc, 0x1000);
 		fileTableMemory->selfPtr = fileTableMemory;
 
@@ -330,29 +328,25 @@ struct Process {
 		Universe::Guard universeLock(_thread->getUniverse()->lock);
 
 		posixHandle = _thread->getUniverse()->attachDescriptor(
-		        universeLock,
-		        LaneDescriptor { std::move(posixStream.get<1>()) }
+		  universeLock,
+		  LaneDescriptor {std::move(posixStream.get<1>())}
 		);
 
 		mbusHandle = _thread->getUniverse()->attachDescriptor(
-		        universeLock,
-		        LaneDescriptor { *mbusClient }
+		  universeLock,
+		  LaneDescriptor {*mbusClient}
 		);
 	}
 
 	coroutine<void> setupAddressSpace() {
-		auto view = smarter::allocate_shared<MemorySlice>(
-		        *kernelAlloc,
-		        fileTableMemory,
-		        0,
-		        0x1000
-		);
+		auto view =
+		  smarter::allocate_shared<MemorySlice>(*kernelAlloc, fileTableMemory, 0, 0x1000);
 		auto result = co_await _thread->getAddressSpace()->map(
-		        std::move(view),
-		        0,
-		        0,
-		        0x1000,
-		        AddressSpace::kMapPreferTop | AddressSpace::kMapProtRead
+		  std::move(view),
+		  0,
+		  0,
+		  0x1000,
+		  AddressSpace::kMapPreferTop | AddressSpace::kMapProtRead
 		);
 		assert(result);
 		clientFileTable = result.value();
@@ -367,10 +361,8 @@ struct Process {
 		auto irq_lock = frg::guard(&irqMutex());
 		Universe::Guard universe_guard(_thread->getUniverse()->lock);
 
-		controlHandle = _thread->getUniverse()->attachDescriptor(
-		        universe_guard,
-		        LaneDescriptor { lane }
-		);
+		controlHandle =
+		  _thread->getUniverse()->attachDescriptor(universe_guard, LaneDescriptor {lane});
 	}
 
 	coroutine<int> attachFile(OpenFile *file) {
@@ -380,8 +372,8 @@ struct Process {
 			Universe::Guard universe_guard(_thread->getUniverse()->lock);
 
 			handle = _thread->getUniverse()->attachDescriptor(
-			        universe_guard,
-			        LaneDescriptor(file->clientLane)
+			  universe_guard,
+			  LaneDescriptor(file->clientLane)
 			);
 		}
 
@@ -390,10 +382,10 @@ struct Process {
 				continue;
 			openFiles[fd] = file;
 			auto copyOutcome = co_await fileTableMemory->copyTo(
-			        sizeof(Handle) * fd,
-			        &handle,
-			        sizeof(Handle),
-			        WorkQueue::generalQueue()->take()
+			  sizeof(Handle) * fd,
+			  &handle,
+			  sizeof(Handle),
+			  WorkQueue::generalQueue()->take()
 			);
 			assert(copyOutcome);
 			co_return fd;
@@ -402,10 +394,10 @@ struct Process {
 		int fd = openFiles.size();
 		openFiles.push(file);
 		auto copyOutcome = co_await fileTableMemory->copyTo(
-		        sizeof(Handle) * fd,
-		        &handle,
-		        sizeof(Handle),
-		        WorkQueue::generalQueue()->take()
+		  sizeof(Handle) * fd,
+		  &handle,
+		  sizeof(Handle),
+		  WorkQueue::generalQueue()->take()
 		);
 		assert(copyOutcome);
 		co_return fd;
@@ -425,12 +417,12 @@ struct Process {
 
 coroutine<void> Process::runPosixRequests() {
 	while (true) {
-		auto [acceptError, conversation] = co_await AcceptSender { posixLane };
+		auto [acceptError, conversation] = co_await AcceptSender {posixLane};
 		if (acceptError != Error::success) {
 			infoLogger() << "thor: Could not accept POSIX lane" << frg::endlog;
 			co_return;
 		}
-		auto [reqError, reqBuffer] = co_await RecvBufferSender { conversation };
+		auto [reqError, reqBuffer] = co_await RecvBufferSender {conversation};
 		if (reqError != Error::success) {
 			infoLogger() << "thor: Could not receive POSIX request" << frg::endlog;
 			co_return;
@@ -444,12 +436,12 @@ coroutine<void> Process::runPosixRequests() {
 			// since mlibc tries to install a signal handler to support cancellation.
 
 			auto req = bragi::parse_head_only<managarm::posix::CntRequest>(
-			        reqBuffer,
-			        *kernelAlloc
+			  reqBuffer,
+			  *kernelAlloc
 			);
 			if (!req) {
 				infoLogger()
-				        << "thor: Could not parse POSIX request" << frg::endlog;
+				  << "thor: Could not parse POSIX request" << frg::endlog;
 				co_return;
 			}
 
@@ -462,20 +454,20 @@ coroutine<void> Process::runPosixRequests() {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else if (preamble.id() == bragi::message_id<managarm::posix::GetTidRequest>) {
 			auto req = bragi::parse_head_only<managarm::posix::GetTidRequest>(
-			        reqBuffer,
-			        *kernelAlloc
+			  reqBuffer,
+			  *kernelAlloc
 			);
 			if (!req) {
 				infoLogger()
-				        << "thor: Could not parse POSIX request" << frg::endlog;
+				  << "thor: Could not parse POSIX request" << frg::endlog;
 				co_return;
 			}
 
@@ -485,32 +477,32 @@ coroutine<void> Process::runPosixRequests() {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else if (preamble.id() == bragi::message_id<managarm::posix::OpenAtRequest>) {
-			auto [tailError, tailBuffer] = co_await RecvBufferSender { conversation };
+			auto [tailError, tailBuffer] = co_await RecvBufferSender {conversation};
 			if (tailError != Error::success) {
 				infoLogger() << "thor: Could not receive POSIX tail" << frg::endlog;
 				co_return;
 			}
 
 			auto req = bragi::parse_head_tail<managarm::posix::OpenAtRequest>(
-			        reqBuffer,
-			        tailBuffer,
-			        *kernelAlloc
+			  reqBuffer,
+			  tailBuffer,
+			  *kernelAlloc
 			);
 			if (!req) {
 				infoLogger()
-				        << "thor: Could not parse POSIX request" << frg::endlog;
+				  << "thor: Could not parse POSIX request" << frg::endlog;
 				co_return;
 			}
 			if (req->fd() != -100) {
 				infoLogger()
-				        << "thor: OpenAt does not support dirfds" << frg::endlog;
+				  << "thor: OpenAt does not support dirfds" << frg::endlog;
 				co_return;
 			}
 
@@ -521,12 +513,12 @@ coroutine<void> Process::runPosixRequests() {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 				continue;
@@ -535,14 +527,14 @@ coroutine<void> Process::runPosixRequests() {
 			if (module->type == MfsType::directory) {
 				auto stream = createStream();
 				auto file = frg::construct<initrd::OpenDirectory>(
-				        *kernelAlloc,
-				        static_cast<MfsDirectory *>(module)
+				  *kernelAlloc,
+				  static_cast<MfsDirectory *>(module)
 				);
 				file->clientLane = std::move(stream.get<1>());
 
 				async::detach_with_allocator(
-				        *kernelAlloc,
-				        runDirectoryRequests(file, std::move(stream.get<0>()))
+				  *kernelAlloc,
+				  runDirectoryRequests(file, std::move(stream.get<0>()))
 				);
 
 				auto fd = co_await attachFile(file);
@@ -553,12 +545,12 @@ coroutine<void> Process::runPosixRequests() {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 			} else {
@@ -566,14 +558,14 @@ coroutine<void> Process::runPosixRequests() {
 
 				auto stream = createStream();
 				auto file = frg::construct<initrd::OpenRegular>(
-				        *kernelAlloc,
-				        static_cast<MfsRegular *>(module)
+				  *kernelAlloc,
+				  static_cast<MfsRegular *>(module)
 				);
 				file->clientLane = std::move(stream.get<1>());
 
 				async::detach_with_allocator(
-				        *kernelAlloc,
-				        runRegularRequests(file, std::move(stream.get<0>()))
+				  *kernelAlloc,
+				  runRegularRequests(file, std::move(stream.get<0>()))
 				);
 
 				auto fd = co_await attachFile(file);
@@ -584,23 +576,23 @@ coroutine<void> Process::runPosixRequests() {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 			}
 		} else if (preamble.id() == bragi::message_id<managarm::posix::IsTtyRequest>) {
 			auto req = bragi::parse_head_only<managarm::posix::IsTtyRequest>(
-			        reqBuffer,
-			        *kernelAlloc
+			  reqBuffer,
+			  *kernelAlloc
 			);
 			if (!req) {
 				infoLogger()
-				        << "thor: Could not parse POSIX request" << frg::endlog;
+				  << "thor: Could not parse POSIX request" << frg::endlog;
 				co_return;
 			}
 
@@ -613,20 +605,20 @@ coroutine<void> Process::runPosixRequests() {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else if (preamble.id() == bragi::message_id<managarm::posix::CloseRequest>) {
 			auto req = bragi::parse_head_only<managarm::posix::CloseRequest>(
-			        reqBuffer,
-			        *kernelAlloc
+			  reqBuffer,
+			  *kernelAlloc
 			);
 			if (!req) {
 				infoLogger()
-				        << "thor: Could not parse POSIX request" << frg::endlog;
+				  << "thor: Could not parse POSIX request" << frg::endlog;
 				co_return;
 			}
 
@@ -636,20 +628,20 @@ coroutine<void> Process::runPosixRequests() {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else if (preamble.id() == bragi::message_id<managarm::posix::VmMapRequest>) {
 			auto req = bragi::parse_head_only<managarm::posix::VmMapRequest>(
-			        reqBuffer,
-			        *kernelAlloc
+			  reqBuffer,
+			  *kernelAlloc
 			);
 			if (!req) {
 				infoLogger()
-				        << "thor: Could not parse POSIX request" << frg::endlog;
+				  << "thor: Could not parse POSIX request" << frg::endlog;
 				co_return;
 			}
 
@@ -659,12 +651,12 @@ coroutine<void> Process::runPosixRequests() {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 				continue;
@@ -688,12 +680,12 @@ coroutine<void> Process::runPosixRequests() {
 
 				frg::string<KernelAlloc> ser(*kernelAlloc);
 				resp.SerializeToString(&ser);
-				frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc,
-					                                     ser.size() };
+				frg::unique_memory<KernelAlloc> respBuffer {
+				  *kernelAlloc,
+				  ser.size()};
 				memcpy(respBuffer.data(), ser.data(), ser.size());
 				auto respError =
-				        co_await SendBufferSender { conversation,
-					                            std::move(respBuffer) };
+				  co_await SendBufferSender {conversation, std::move(respBuffer)};
 				// TODO: improve error handling here.
 				assert(respError == Error::success);
 
@@ -706,8 +698,8 @@ coroutine<void> Process::runPosixRequests() {
 					fileMemory = getZeroMemory();
 				} else {
 					auto memory = smarter::allocate_shared<AllocatedMemory>(
-					        *kernelAlloc,
-					        req->size()
+					  *kernelAlloc,
+					  req->size()
 					);
 					memory->selfPtr = memory;
 					fileMemory = std::move(memory);
@@ -723,30 +715,26 @@ coroutine<void> Process::runPosixRequests() {
 			smarter::shared_ptr<MemorySlice> slice;
 			if (req->flags() & 1) {  // MAP_PRIVATE.
 				auto cowMemory = smarter::allocate_shared<CopyOnWriteMemory>(
-				        *kernelAlloc,
-				        std::move(fileMemory),
-				        req->rel_offset(),
-				        req->size()
+				  *kernelAlloc,
+				  std::move(fileMemory),
+				  req->rel_offset(),
+				  req->size()
 				);
 				cowMemory->selfPtr = cowMemory;
 				slice = smarter::allocate_shared<MemorySlice>(
-				        *kernelAlloc,
-				        std::move(cowMemory),
-				        0,
-				        req->size()
+				  *kernelAlloc,
+				  std::move(cowMemory),
+				  0,
+				  req->size()
 				);
 			} else {
 				assert(!"TODO: implement shared mappings");
 			}
 
 			auto space = _thread->getAddressSpace();
-			auto mapResult = co_await space->map(
-			        std::move(slice),
-			        req->address_hint(),
-			        0,
-			        req->size(),
-			        protFlags
-			);
+			auto mapResult =
+			  co_await space
+			    ->map(std::move(slice), req->address_hint(), 0, req->size(), protFlags);
 			// TODO: improve error handling here.
 			assert(mapResult);
 
@@ -756,15 +744,15 @@ coroutine<void> Process::runPosixRequests() {
 
 			frg::string<KernelAlloc> ser(*kernelAlloc);
 			resp.SerializeToString(&ser);
-			frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+			frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 			memcpy(respBuffer.data(), ser.data(), ser.size());
 			auto respError =
-			        co_await SendBufferSender { conversation, std::move(respBuffer) };
+			  co_await SendBufferSender {conversation, std::move(respBuffer)};
 			// TODO: improve error handling here.
 			assert(respError == Error::success);
 		} else {
-			infoLogger() << "thor: Illegal POSIX request type " << preamble.id()
-			             << frg::endlog;
+			infoLogger()
+			  << "thor: Illegal POSIX request type " << preamble.id() << frg::endlog;
 			co_return;
 		}
 	}
@@ -797,30 +785,30 @@ coroutine<void> Process::runObserveLoop() {
 			// TODO: Use some always-zero memory for private anonymous mappings.
 			auto size = *_thread->_executor.arg0();
 			auto fileMemory =
-			        smarter::allocate_shared<AllocatedMemory>(*kernelAlloc, size);
+			  smarter::allocate_shared<AllocatedMemory>(*kernelAlloc, size);
 			fileMemory->selfPtr = fileMemory;
 			auto cowMemory = smarter::allocate_shared<CopyOnWriteMemory>(
-			        *kernelAlloc,
-			        std::move(fileMemory),
-			        0,
-			        size
+			  *kernelAlloc,
+			  std::move(fileMemory),
+			  0,
+			  size
 			);
 			cowMemory->selfPtr = cowMemory;
 			auto slice = smarter::allocate_shared<MemorySlice>(
-			        *kernelAlloc,
-			        std::move(cowMemory),
-			        0,
-			        size
+			  *kernelAlloc,
+			  std::move(cowMemory),
+			  0,
+			  size
 			);
 
 			auto space = _thread->getAddressSpace();
 			auto mapResult = co_await space->map(
-			        std::move(slice),
-			        0,
-			        0,
-			        size,
-			        AddressSpace::kMapPreferTop | AddressSpace::kMapProtRead
-			                | AddressSpace::kMapProtWrite
+			  std::move(slice),
+			  0,
+			  0,
+			  size,
+			  AddressSpace::kMapPreferTop | AddressSpace::kMapProtRead
+			    | AddressSpace::kMapProtWrite
 			);
 			// TODO: improve error handling here.
 			assert(mapResult);
@@ -848,18 +836,17 @@ coroutine<void> Process::runObserveLoop() {
 				panicLogger() << "thor: Failed to resume server" << frg::endlog;
 		} else if (interrupt == kIntrSuperCall + 1) {
 			::posix::ManagarmProcessData data = {
-				posixHandle,
-				mbusHandle,
-				nullptr,
-				reinterpret_cast<HelHandle *>(clientFileTable),
-				nullptr
-			};
+			  posixHandle,
+			  mbusHandle,
+			  nullptr,
+			  reinterpret_cast<HelHandle *>(clientFileTable),
+			  nullptr};
 
 			auto outcome = co_await _thread->getAddressSpace()->writeSpace(
-			        *_thread->_executor.arg0(),
-			        &data,
-			        sizeof(::posix::ManagarmProcessData),
-			        WorkQueue::generalQueue()->take()
+			  *_thread->_executor.arg0(),
+			  &data,
+			  sizeof(::posix::ManagarmProcessData),
+			  WorkQueue::generalQueue()->take()
 			);
 			if (!outcome) {
 				*_thread->_executor.result0() = kHelErrFault;
@@ -870,13 +857,13 @@ coroutine<void> Process::runObserveLoop() {
 			    e != Error::success)
 				panicLogger() << "thor: Failed to resume server" << frg::endlog;
 		} else if (interrupt == kIntrSuperCall + 64) {
-			::posix::ManagarmServerData data = { controlHandle };
+			::posix::ManagarmServerData data = {controlHandle};
 
 			auto outcome = co_await _thread->getAddressSpace()->writeSpace(
-			        *_thread->_executor.arg0(),
-			        &data,
-			        sizeof(::posix::ManagarmServerData),
-			        WorkQueue::generalQueue()->take()
+			  *_thread->_executor.arg0(),
+			  &data,
+			  sizeof(::posix::ManagarmServerData),
+			  WorkQueue::generalQueue()->take()
 			);
 			if (!outcome) {
 				*_thread->_executor.result0() = kHelErrFault;
@@ -893,17 +880,17 @@ coroutine<void> Process::runObserveLoop() {
 			    e != Error::success)
 				panicLogger() << "thor: Failed to resume server" << frg::endlog;
 		} else {
-			panicLogger() << "thor: Unexpected observation " << (uint32_t) interrupt
-			              << frg::endlog;
+			panicLogger()
+			  << "thor: Unexpected observation " << (uint32_t) interrupt << frg::endlog;
 		}
 	}
 }
 }  // namespace posix
 
 void runService(
-        frg::string<KernelAlloc> name,
-        LaneHandle controlLane,
-        smarter::shared_ptr<Thread, ActiveHandle> thread
+  frg::string<KernelAlloc> name,
+  LaneHandle controlLane,
+  smarter::shared_ptr<Thread, ActiveHandle> thread
 ) {
 	KernelFiber::run([name, thread, controlLane = std::move(controlLane)]() mutable {
 		auto stdioStream = createStream();
@@ -911,12 +898,12 @@ void runService(
 		stdioFile->clientLane = std::move(stdioStream.get<1>());
 
 		async::detach_with_allocator(
-		        *kernelAlloc,
-		        stdio::runStdioRequests(stdioStream.get<0>())
+		  *kernelAlloc,
+		  stdio::runStdioRequests(stdioStream.get<0>())
 		);
 
 		auto process =
-		        frg::construct<posix::Process>(*kernelAlloc, std::move(name), thread);
+		  frg::construct<posix::Process>(*kernelAlloc, std::move(name), thread);
 		KernelFiber::asyncBlockCurrent(process->setupAddressSpace());
 		process->attachControl(std::move(controlLane));
 		KernelFiber::asyncBlockCurrent(process->attachFile(stdioFile));

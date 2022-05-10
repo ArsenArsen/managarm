@@ -44,17 +44,19 @@ private:
 	};
 
 	struct Item : boost::intrusive::list_base_hook<> {
-		Item(smarter::shared_ptr<OpenFile> epoll,
-		     Process *process,
-		     smarter::shared_ptr<File> file,
-		     int mask,
-		     uint64_t cookie)
-		        : epoll { epoll }
-		        , state { stateActive }
-		        , process { process }
-		        , file { std::move(file) }
-		        , eventMask { mask }
-		        , cookie { cookie } {}
+		Item(
+		  smarter::shared_ptr<OpenFile> epoll,
+		  Process *process,
+		  smarter::shared_ptr<File> file,
+		  int mask,
+		  uint64_t cookie
+		)
+		: epoll {epoll}
+		, state {stateActive}
+		, process {process}
+		, file {std::move(file)}
+		, eventMask {mask}
+		, cookie {cookie} {}
 
 		smarter::shared_ptr<OpenFile> epoll;
 		State state;
@@ -68,9 +70,9 @@ private:
 		async::cancellation_event cancelPoll;
 
 		frg::manual_box<async::execution::operation_t<
-		        async::result<frg::expected<Error, PollWaitResult>>,
-		        Receiver>>
-		        pollOperation;
+		  async::result<frg::expected<Error, PollWaitResult>>,
+		  Receiver>>
+		  pollOperation;
 
 		std::optional<frg::expected<Error, PollWaitResult>> pollOutcome;
 
@@ -137,13 +139,13 @@ reRunImmediately:
 			item->cancelPoll.reset();
 			item->pollOperation.construct_with([&] {
 				return async::execution::connect(
-				        item->file->pollWait(
-				                item->process,
-				                std::get<0>(result),
-				                item->eventMask | EPOLLERR | EPOLLHUP,
-				                item->cancelPoll
-				        ),
-				        Receiver { item->self.lock() }
+				  item->file->pollWait(
+				    item->process,
+				    std::get<0>(result),
+				    item->eventMask | EPOLLERR | EPOLLHUP,
+				    item->cancelPoll
+				  ),
+				  Receiver {item->self.lock()}
 				);
 			});
 			// Poll should not return immediately; we use an ugly goto here in favor of
@@ -158,30 +160,34 @@ public:
 		// Nothing to do here.
 	}
 
-	Error
-	addItem(Process *process, smarter::shared_ptr<File> file, int fd, int mask, uint64_t cookie
+	Error addItem(
+	  Process *process,
+	  smarter::shared_ptr<File> file,
+	  int fd,
+	  int mask,
+	  uint64_t cookie
 	) {
 		if (logEpoll)
 			std::cout << "posix.epoll \e[1;34m" << structName()
 			          << "\e[0m: Adding item \e[1;34m" << file->structName()
 			          << "\e[0m. Mask is " << mask << std::endl;
 		// TODO: Fix the memory-leak.
-		if (_fileMap.find({ file.get(), fd }) != _fileMap.end()) {
+		if (_fileMap.find({file.get(), fd}) != _fileMap.end()) {
 			return Error::alreadyExists;
 		}
 
 		auto item = smarter::make_shared<Item>(
-		        smarter::static_pointer_cast<OpenFile>(weakFile().lock()),
-		        process,
-		        std::move(file),
-		        mask,
-		        cookie
+		  smarter::static_pointer_cast<OpenFile>(weakFile().lock()),
+		  process,
+		  std::move(file),
+		  mask,
+		  cookie
 		);
 		item->self = item;
 
 		item->state |= statePending;
 
-		_fileMap.insert({ { item->file.get(), fd }, item });
+		_fileMap.insert({{item->file.get(), fd}, item});
 
 		item.ctr()->increment();
 		_pendingQueue.push_back(*item);
@@ -195,7 +201,7 @@ public:
 			std::cout << "posix.epoll \e[1;34m" << structName()
 			          << "\e[0m: Modifying item \e[1;34m" << file->structName()
 			          << "\e[0m. New mask is " << mask << std::endl;
-		auto it = _fileMap.find({ file, fd });
+		auto it = _fileMap.find({file, fd});
 		if (it == _fileMap.end()) {
 			return Error::noSuchFile;
 		}
@@ -223,7 +229,7 @@ public:
 			std::cout << "posix.epoll \e[1;34m" << structName()
 			          << "\e[0m: Deleting item \e[1;34m" << file->structName()
 			          << "\e[0m" << std::endl;
-		auto it = _fileMap.find({ file, fd });
+		auto it = _fileMap.find({file, fd});
 		if (it == _fileMap.end()) {
 			return Error::noSuchFile;
 		}
@@ -238,9 +244,9 @@ public:
 	}
 
 	async::result<size_t> waitForEvents(
-	        struct epoll_event *events,
-	        size_t max_events,
-	        async::cancellation_token cancellation
+	  struct epoll_event *events,
+	  size_t max_events,
+	  async::cancellation_token cancellation
 	) {
 		assert(max_events);
 		if (logEpoll) {
@@ -283,7 +289,7 @@ public:
 					          << "\e[1;34m" << item->file->structName()
 					          << "\e[0m" << std::endl;
 				auto result_or_error =
-				        co_await item->file->pollStatus(item->process);
+				  co_await item->file->pollStatus(item->process);
 
 				// Discard closed items.
 				if (!result_or_error) {
@@ -311,8 +317,8 @@ public:
 					          << std::endl;
 
 				// Abort early (i.e before requeuing) if the item is not pending.
-				auto status = std::get<1>(result)
-				            & (item->eventMask | EPOLLERR | EPOLLHUP);
+				auto status =
+				  std::get<1>(result) & (item->eventMask | EPOLLERR | EPOLLHUP);
 				if (!status) {
 					item->state &= ~statePending;
 					if (!(item->state & statePolling)) {
@@ -323,18 +329,17 @@ public:
 						item->cancelPoll.reset();
 						item->pollOperation.construct_with([&] {
 							return async::execution::connect(
-							        item->file->pollWait(
-							                item->process,
-							                std::get<0>(result),
-							                item->eventMask | EPOLLERR
-							                        | EPOLLHUP,
-							                item->cancelPoll
-							        ),
-							        Receiver { item }
+							  item->file->pollWait(
+							    item->process,
+							    std::get<0>(result),
+							    item->eventMask | EPOLLERR | EPOLLHUP,
+							    item->cancelPoll
+							  ),
+							  Receiver {item}
 							);
 						});
 						if (async::execution::start_inline(
-						            *item->pollOperation
+						      *item->pollOperation
 						    ))
 							_awaitPoll(item.get());
 					}
@@ -411,7 +416,7 @@ public:
 
 	async::result<frg::expected<Error, PollWaitResult>>
 	pollWait(Process *, uint64_t past_seq, int mask, async::cancellation_token cancellation)
-	        override {
+	  override {
 		(void) mask;  // TODO: utilize mask.
 		assert(past_seq <= _currentSeq);
 		while (_currentSeq == past_seq && !cancellation.is_cancellation_requested()) {
@@ -422,11 +427,11 @@ public:
 			std::cout << "\e[33mposix: epoll::poll() cancellation is untested\e[39m"
 			          << std::endl;
 
-		co_return PollWaitResult { _currentSeq, _currentSeq ? EPOLLIN : 0 };
+		co_return PollWaitResult {_currentSeq, _currentSeq ? EPOLLIN : 0};
 	}
 
 	async::result<frg::expected<Error, PollStatusResult>> pollStatus(Process *) override {
-		co_return PollStatusResult { _currentSeq, _pendingQueue.empty() ? 0 : EPOLLIN };
+		co_return PollStatusResult {_currentSeq, _pendingQueue.empty() ? 0 : EPOLLIN};
 	}
 
 	helix::BorrowedDescriptor getPassthroughLane() override {
@@ -440,16 +445,14 @@ public:
 		helix::UniqueLane lane;
 		std::tie(lane, file->_passthrough) = helix::createStream();
 		async::detach(protocols::fs::servePassthrough(
-		        std::move(lane),
-		        file,
-		        &File::fileOperations,
-		        file->_cancelServe
+		  std::move(lane),
+		  file,
+		  &File::fileOperations,
+		  file->_cancelServe
 		));
 	}
 
-	OpenFile()
-	        : File { StructName::get("epoll"), File::defaultPipeLikeSeek }
-	        , _currentSeq { 0 } {}
+	OpenFile() : File {StructName::get("epoll"), File::defaultPipeLikeSeek}, _currentSeq {0} {}
 
 private:
 	helix::UniqueLane _passthrough;
@@ -485,12 +488,12 @@ smarter::shared_ptr<File, FileHandle> createFile() {
 }
 
 Error addItem(
-        File *epfile,
-        Process *process,
-        smarter::shared_ptr<File> file,
-        int fd,
-        int flags,
-        uint64_t cookie
+  File *epfile,
+  Process *process,
+  smarter::shared_ptr<File> file,
+  int fd,
+  int flags,
+  uint64_t cookie
 ) {
 	auto epoll = static_cast<OpenFile *>(epfile);
 	return epoll->addItem(process, std::move(file), fd, flags, cookie);
@@ -507,11 +510,12 @@ Error deleteItem(File *epfile, File *file, int fd, int flags) {
 	return epoll->deleteItem(file, fd);
 }
 
-async::result<size_t>
-wait(File *epfile,
-     struct epoll_event *events,
-     size_t max_events,
-     async::cancellation_token cancellation) {
+async::result<size_t> wait(
+  File *epfile,
+  struct epoll_event *events,
+  size_t max_events,
+  async::cancellation_token cancellation
+) {
 	auto epoll = static_cast<OpenFile *>(epfile);
 	return epoll->waitForEvents(events, max_events, cancellation);
 }

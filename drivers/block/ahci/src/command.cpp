@@ -11,27 +11,29 @@ constexpr bool logCommands = false;
 }  // namespace
 
 Command::Command(
-        uint64_t sector,
-        size_t numSectors,
-        size_t numBytes,
-        void *buffer,
-        CommandType type
+  uint64_t sector,
+  size_t numSectors,
+  size_t numBytes,
+  void *buffer,
+  CommandType type
 )
-        : sector_ { sector }
-        , numSectors_ { numSectors }
-        , numBytes_ { numBytes }
-        , buffer_ { buffer }
-        , type_ { type }
-        , event_ {} {
+: sector_ {sector}
+, numSectors_ {numSectors}
+, numBytes_ {numBytes}
+, buffer_ {buffer}
+, type_ {type}
+, event_ {} {
 	// TODO: Requests larger than 64k need to be split
 	assert(numBytes < 65536);
 
 	if (logCommands) {
-		printf("block/ahci: queueing %zu byte %s to %p at sector %" PRIu64 "\n",
-		       numBytes,
-		       cmdTypeToString(type_),
-		       reinterpret_cast<void *>(buffer),
-		       sector);
+		printf(
+		  "block/ahci: queueing %zu byte %s to %p at sector %" PRIu64 "\n",
+		  numBytes,
+		  cmdTypeToString(type_),
+		  reinterpret_cast<void *>(buffer),
+		  sector
+		);
 	}
 }
 
@@ -45,8 +47,10 @@ void Command::notifyCompletion() {
 
 void Command::prepare(commandTable &table, commandHeader &header) {
 	auto tablePhys = helix::ptrToPhysical(&table);
-	assert(tablePhys < std::numeric_limits<uint32_t>::max()
-	       && numSectors_ < std::numeric_limits<uint16_t>::max());
+	assert(
+	  tablePhys < std::numeric_limits<uint32_t>::max()
+	  && numSectors_ < std::numeric_limits<uint16_t>::max()
+	);
 
 	memset(&table, 0, sizeof(commandTable));
 	table.commandFis.fisType = 0x27;  // Host to Device FIS
@@ -87,11 +91,13 @@ void Command::prepare(commandTable &table, commandHeader &header) {
 	}
 
 	if (logCommands) {
-		printf("block/ahci: submitting %zu byte %s to %p at sector %" PRIu64 "\n",
-		       numBytes_,
-		       cmdTypeToString(type_),
-		       buffer_,
-		       sector_);
+		printf(
+		  "block/ahci: submitting %zu byte %s to %p at sector %" PRIu64 "\n",
+		  numBytes_,
+		  cmdTypeToString(type_),
+		  buffer_,
+		  sector_
+		);
 	}
 }
 
@@ -107,14 +113,16 @@ size_t Command::writeScatterGather_(commandTable &table) {
 
 	size_t prdtIndex = 0;
 	auto addEntry = [&](uintptr_t phys, size_t bytesToWrite) {
-		assert(prdtIndex < commandTable::prdtEntries
-		       && phys < std::numeric_limits<uint32_t>::max() && !(phys & 1));
+		assert(
+		  prdtIndex < commandTable::prdtEntries
+		  && phys < std::numeric_limits<uint32_t>::max() && !(phys & 1)
+		);
 
 		table.prdts[prdtIndex++] = prdtEntry {
-			static_cast<uint32_t>(phys),
-			0,
-			0,
-			static_cast<uint32_t>(std::min(pageSize, bytesToWrite)) - 1,
+		  static_cast<uint32_t>(phys),
+		  0,
+		  0,
+		  static_cast<uint32_t>(std::min(pageSize, bytesToWrite)) - 1,
 		};
 	};
 

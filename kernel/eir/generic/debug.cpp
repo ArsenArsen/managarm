@@ -41,16 +41,16 @@ void OutputSink::print(char c) {
 			// TODO: Scroll.
 		} else {
 			renderChars(
-			        displayFb,
-			        displayPitch / sizeof(uint32_t),
-			        outputX,
-			        outputY,
-			        &c,
-			        1,
-			        15,
-			        -1,
-			        std::integral_constant<int, fontWidth> {},
-			        std::integral_constant<int, fontHeight> {}
+			  displayFb,
+			  displayPitch / sizeof(uint32_t),
+			  outputX,
+			  outputY,
+			  &c,
+			  1,
+			  15,
+			  -1,
+			  std::integral_constant<int, fontWidth> {},
+			  std::integral_constant<int, fontHeight> {}
 			);
 			outputX++;
 		}

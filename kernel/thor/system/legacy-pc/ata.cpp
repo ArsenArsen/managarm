@@ -20,29 +20,29 @@ namespace {
 //       Print a log message on protocol errors.
 
 coroutine<Error> handleRequest(LaneHandle boundLane) {
-	auto sendResponse = [](LaneHandle &conversation,
-	                       managarm::hw::SvrResponse<KernelAlloc> &&resp
+	auto sendResponse = [](
+	                      LaneHandle &conversation,
+	                      managarm::hw::SvrResponse<KernelAlloc> &&resp
 	                    ) -> coroutine<frg::tuple<Error, Error>> {
-		frg::unique_memory<KernelAlloc> respHeadBuffer { *kernelAlloc, resp.head_size };
+		frg::unique_memory<KernelAlloc> respHeadBuffer {*kernelAlloc, resp.head_size};
 
-		frg::unique_memory<KernelAlloc> respTailBuffer { *kernelAlloc,
-			                                         resp.size_of_tail() };
+		frg::unique_memory<KernelAlloc> respTailBuffer {*kernelAlloc, resp.size_of_tail()};
 
 		bragi::write_head_tail(resp, respHeadBuffer, respTailBuffer);
 
 		auto respHeadError =
-		        co_await SendBufferSender { conversation, std::move(respHeadBuffer) };
+		  co_await SendBufferSender {conversation, std::move(respHeadBuffer)};
 		auto respTailError =
-		        co_await SendBufferSender { conversation, std::move(respTailBuffer) };
+		  co_await SendBufferSender {conversation, std::move(respTailBuffer)};
 
-		co_return { respHeadError, respTailError };
+		co_return {respHeadError, respTailError};
 	};
 
-	auto [acceptError, lane] = co_await AcceptSender { boundLane };
+	auto [acceptError, lane] = co_await AcceptSender {boundLane};
 	if (acceptError != Error::success)
 		co_return acceptError;
 
-	auto [reqError, reqBuffer] = co_await RecvBufferSender { lane };
+	auto [reqError, reqBuffer] = co_await RecvBufferSender {lane};
 	if (reqError != Error::success)
 		co_return reqError;
 
@@ -50,34 +50,32 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 	assert(!preamble.error());
 
 	if (preamble.id() == bragi::message_id<managarm::hw::GetPciInfoRequest>) {
-		auto req = bragi::parse_head_only<managarm::hw::GetPciInfoRequest>(
-		        reqBuffer,
-		        *kernelAlloc
-		);
+		auto req =
+		  bragi::parse_head_only<managarm::hw::GetPciInfoRequest>(reqBuffer, *kernelAlloc);
 
 		if (!req) {
 			infoLogger()
-			        << "thor: Closing lane due to illegal HW request." << frg::endlog;
+			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return Error::protocolViolation;
 		}
 
-		managarm::hw::SvrResponse<KernelAlloc> resp { *kernelAlloc };
+		managarm::hw::SvrResponse<KernelAlloc> resp {*kernelAlloc};
 		resp.set_error(managarm::hw::Errors::SUCCESS);
 
-		managarm::hw::PciBar<KernelAlloc> mainBar { *kernelAlloc };
+		managarm::hw::PciBar<KernelAlloc> mainBar {*kernelAlloc};
 		mainBar.set_io_type(managarm::hw::IoType::PORT);
 		mainBar.set_address(0x1F0);
 		mainBar.set_length(8);
 		resp.add_bars(std::move(mainBar));
 
-		managarm::hw::PciBar<KernelAlloc> altBar { *kernelAlloc };
+		managarm::hw::PciBar<KernelAlloc> altBar {*kernelAlloc};
 		altBar.set_io_type(managarm::hw::IoType::PORT);
 		altBar.set_address(0x3F6);
 		altBar.set_length(1);
 		resp.add_bars(std::move(altBar));
 
 		for (size_t k = 2; k < 6; k++) {
-			managarm::hw::PciBar<KernelAlloc> noBar { *kernelAlloc };
+			managarm::hw::PciBar<KernelAlloc> noBar {*kernelAlloc};
 			noBar.set_io_type(managarm::hw::IoType::NO_BAR);
 			resp.add_bars(std::move(noBar));
 		}
@@ -89,18 +87,16 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		if (tailError != Error::success)
 			co_return tailError;
 	} else if (preamble.id() == bragi::message_id<managarm::hw::AccessBarRequest>) {
-		auto req = bragi::parse_head_only<managarm::hw::AccessBarRequest>(
-		        reqBuffer,
-		        *kernelAlloc
-		);
+		auto req =
+		  bragi::parse_head_only<managarm::hw::AccessBarRequest>(reqBuffer, *kernelAlloc);
 
 		if (!req) {
 			infoLogger()
-			        << "thor: Closing lane due to illegal HW request." << frg::endlog;
+			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return Error::protocolViolation;
 		}
 
-		managarm::hw::SvrResponse<KernelAlloc> resp { *kernelAlloc };
+		managarm::hw::SvrResponse<KernelAlloc> resp {*kernelAlloc};
 
 		auto space = smarter::allocate_shared<IoSpace>(*kernelAlloc);
 		if (req->index() == 0) {
@@ -121,27 +117,25 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		if (tailError != Error::success)
 			co_return tailError;
 
-		auto ioError = co_await PushDescriptorSender { lane, IoDescriptor { space } };
+		auto ioError = co_await PushDescriptorSender {lane, IoDescriptor {space}};
 		if (ioError != Error::success)
 			co_return ioError;
 	} else if (preamble.id() == bragi::message_id<managarm::hw::AccessIrqRequest>) {
-		auto req = bragi::parse_head_only<managarm::hw::AccessIrqRequest>(
-		        reqBuffer,
-		        *kernelAlloc
-		);
+		auto req =
+		  bragi::parse_head_only<managarm::hw::AccessIrqRequest>(reqBuffer, *kernelAlloc);
 
 		if (!req) {
 			infoLogger()
-			        << "thor: Closing lane due to illegal HW request." << frg::endlog;
+			  << "thor: Closing lane due to illegal HW request." << frg::endlog;
 			co_return Error::protocolViolation;
 		}
 
-		managarm::hw::SvrResponse<KernelAlloc> resp { *kernelAlloc };
+		managarm::hw::SvrResponse<KernelAlloc> resp {*kernelAlloc};
 		resp.set_error(managarm::hw::Errors::SUCCESS);
 
 		auto object = smarter::allocate_shared<GenericIrqObject>(
-		        *kernelAlloc,
-		        frg::string<KernelAlloc> { *kernelAlloc, "isa-irq.ata" }
+		  *kernelAlloc,
+		  frg::string<KernelAlloc> {*kernelAlloc, "isa-irq.ata"}
 		);
 #ifdef __x86_64__
 		auto irqOverride = resolveIsaIrq(14);
@@ -155,13 +149,13 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 		if (tailError != Error::success)
 			co_return tailError;
 
-		auto irqError = co_await PushDescriptorSender { lane, IrqDescriptor { object } };
+		auto irqError = co_await PushDescriptorSender {lane, IrqDescriptor {object}};
 		if (irqError != Error::success)
 			co_return irqError;
 	} else {
 		infoLogger() << "thor: Dismissing conversation due to illegal HW request."
 		             << frg::endlog;
-		co_await DismissSender { lane };
+		co_await DismissSender {lane};
 		co_return Error::protocolViolation;
 	}
 
@@ -169,10 +163,10 @@ coroutine<Error> handleRequest(LaneHandle boundLane) {
 }
 
 coroutine<void> handleBind(LaneHandle objectLane) {
-	auto [acceptError, lane] = co_await AcceptSender { objectLane };
+	auto [acceptError, lane] = co_await AcceptSender {objectLane};
 	assert(acceptError == Error::success && "Unexpected mbus transaction");
 
-	auto [reqError, reqBuffer] = co_await RecvBufferSender { lane };
+	auto [reqError, reqBuffer] = co_await RecvBufferSender {lane};
 	assert(reqError == Error::success && "Unexpected mbus transaction");
 	managarm::mbus::SvrRequest<KernelAlloc> req(*kernelAlloc);
 	req.ParseFromArray(reqBuffer.data(), reqBuffer.size());
@@ -184,12 +178,11 @@ coroutine<void> handleBind(LaneHandle objectLane) {
 
 	frg::string<KernelAlloc> ser(*kernelAlloc);
 	resp.SerializeToString(&ser);
-	frg::unique_memory<KernelAlloc> respBuffer { *kernelAlloc, ser.size() };
+	frg::unique_memory<KernelAlloc> respBuffer {*kernelAlloc, ser.size()};
 	memcpy(respBuffer.data(), ser.data(), ser.size());
-	auto respError = co_await SendBufferSender { lane, std::move(respBuffer) };
+	auto respError = co_await SendBufferSender {lane, std::move(respBuffer)};
 	assert(respError == Error::success && "Unexpected mbus transaction");
-	auto boundError =
-	        co_await PushDescriptorSender { lane, LaneDescriptor { stream.get<1>() } };
+	auto boundError = co_await PushDescriptorSender {lane, LaneDescriptor {stream.get<1>()}};
 	assert(boundError == Error::success && "Unexpected mbus transaction");
 
 	auto boundLane = stream.get<0>();
@@ -218,22 +211,22 @@ coroutine<void> initializeAtaDevice() {
 	req.set_parent_id(1);
 	req.add_properties(std::move(legacy_prop));
 
-	frg::string<KernelAlloc> ser { *kernelAlloc };
+	frg::string<KernelAlloc> ser {*kernelAlloc};
 	req.SerializeToString(&ser);
-	frg::unique_memory<KernelAlloc> reqBuffer { *kernelAlloc, ser.size() };
+	frg::unique_memory<KernelAlloc> reqBuffer {*kernelAlloc, ser.size()};
 	memcpy(reqBuffer.data(), ser.data(), ser.size());
-	auto [offerError, lane] = co_await OfferSender { *mbusClient };
+	auto [offerError, lane] = co_await OfferSender {*mbusClient};
 	assert(offerError == Error::success && "Unexpected mbus transaction");
-	auto reqError = co_await SendBufferSender { lane, std::move(reqBuffer) };
+	auto reqError = co_await SendBufferSender {lane, std::move(reqBuffer)};
 	assert(reqError == Error::success && "Unexpected mbus transaction");
 
-	auto [respError, respBuffer] = co_await RecvBufferSender { lane };
+	auto [respError, respBuffer] = co_await RecvBufferSender {lane};
 	assert(respError == Error::success && "Unexpected mbus transaction");
 	managarm::mbus::SvrResponse<KernelAlloc> resp(*kernelAlloc);
 	resp.ParseFromArray(respBuffer.data(), respBuffer.size());
 	assert(resp.error() == managarm::mbus::Error::SUCCESS && "Unexpected mbus transaction");
 
-	auto [objectError, objectDescriptor] = co_await PullDescriptorSender { lane };
+	auto [objectError, objectDescriptor] = co_await PullDescriptorSender {lane};
 	assert(objectError == Error::success && "Unexpected mbus transaction");
 	assert(objectDescriptor.is<LaneDescriptor>() && "Unexpected mbus transaction");
 	auto objectLane = objectDescriptor.get<LaneDescriptor>().handle;
@@ -243,16 +236,15 @@ coroutine<void> initializeAtaDevice() {
 }
 
 static initgraph::Task initAtaTask {
-	&globalInitEngine,
-	"legacy_pc.init-ata",
-	initgraph::Requires { getFibersAvailableStage() },
-	[] {
-	        // For now, we only need the kernel fiber to make sure mbusClient is already
-	        // initialized.
-	        KernelFiber::run([=] {
-		        async::detach_with_allocator(*kernelAlloc, initializeAtaDevice());
-	        });
-	}
-};
+  &globalInitEngine,
+  "legacy_pc.init-ata",
+  initgraph::Requires {getFibersAvailableStage()},
+  [] {
+	  // For now, we only need the kernel fiber to make sure mbusClient is already
+	  // initialized.
+	  KernelFiber::run([=] {
+		  async::detach_with_allocator(*kernelAlloc, initializeAtaDevice());
+	  });
+  }};
 
 }  // namespace thor::legacy_pc

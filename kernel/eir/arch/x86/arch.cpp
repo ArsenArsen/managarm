@@ -8,7 +8,7 @@
 namespace eir {
 
 void debugPrintChar(char c) {
-	constexpr static arch::scalar_register<uint8_t> data { 0 };
+	constexpr static arch::scalar_register<uint8_t> data {0};
 	auto base = arch::global_io.subspace(0xe9);
 
 	base.store(data, c);
@@ -43,10 +43,10 @@ void setupPaging() {
 }
 
 void mapSingle4kPage(
-        address_t address,
-        address_t physical,
-        uint32_t flags,
-        CachingMode caching_mode
+  address_t address,
+  address_t physical,
+  uint32_t flags,
+  CachingMode caching_mode
 ) {
 	assert(address % pageSize == 0);
 	assert(physical % pageSize == 0);
@@ -92,8 +92,8 @@ void mapSingle4kPage(
 
 	// setup the new pt entry
 	if (pt_entry & kPagePresent)
-		eir::panicLogger() << "eir: Trying to map 0x" << frg::hex_fmt { address }
-		                   << " twice!" << frg::endlog;
+		eir::panicLogger()
+		  << "eir: Trying to map 0x" << frg::hex_fmt {address} << " twice!" << frg::endlog;
 
 	uint64_t new_entry = physical | kPagePresent;
 	if (flags & PageFlags::write)

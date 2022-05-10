@@ -38,11 +38,12 @@ async::result<void> Table::parse() {
 		if (entry->typeGuid == type_guids::null)
 			continue;
 
-		partitions.push_back(Partition { *this,
-		                                 entry->uniqueGuid,
-		                                 entry->typeGuid,
-		                                 entry->firstLba,
-		                                 entry->lastLba - entry->firstLba + 1 });
+		partitions.push_back(Partition {
+		  *this,
+		  entry->uniqueGuid,
+		  entry->typeGuid,
+		  entry->firstLba,
+		  entry->lastLba - entry->firstLba + 1});
 	}
 
 	free(header_buffer);
@@ -66,12 +67,12 @@ Partition &Table::getPartition(int index) {
 // --------------------------------------------------------
 
 Partition::Partition(Table &table, Guid id, Guid type, uint64_t start_lba, uint64_t num_sectors)
-        : BlockDevice(table.getDevice()->sectorSize, table.getDevice()->parentId)
-        , _table(table)
-        , _id(id)
-        , _type(type)
-        , _startLba(start_lba)
-        , _numSectors(num_sectors) {}
+: BlockDevice(table.getDevice()->sectorSize, table.getDevice()->parentId)
+, _table(table)
+, _id(id)
+, _type(type)
+, _startLba(start_lba)
+, _numSectors(num_sectors) {}
 
 Guid Partition::type() {
 	return _type;

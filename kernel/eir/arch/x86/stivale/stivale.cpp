@@ -127,8 +127,8 @@ extern "C" void eirEnterKernel(uintptr_t, uint64_t, uint64_t);
 
 extern "C" void eirStivaleMain(Stivale2Struct *data) {
 	const char *cmdline = "";
-	frg::span<MmapEntry> mmap { nullptr, 0 };
-	frg::span<Stivale2Module> modules { nullptr, 0 };
+	frg::span<MmapEntry> mmap {nullptr, 0};
+	frg::span<Stivale2Module> modules {nullptr, 0};
 	uint64_t fbAddr = 0, fbWidth = 0, fbHeight = 0, fbPitch = 0;
 	uint64_t rsdp = 0, dtbAddr = 0, dtbSize = 0;
 
@@ -144,7 +144,7 @@ extern "C" void eirStivaleMain(Stivale2Struct *data) {
 
 			if (t.bpp != 32) {
 				eir::infoLogger()
-				        << "eir: Framebuffer does not use 32 bpp!" << frg::endlog;
+				  << "eir: Framebuffer does not use 32 bpp!" << frg::endlog;
 				break;
 			}
 
@@ -167,18 +167,18 @@ extern "C" void eirStivaleMain(Stivale2Struct *data) {
 		case TagIds::memoryMap: {
 			Stivale2TagMemoryMap t;
 			memcpy(&t, reinterpret_cast<void *>(ptr), sizeof(Stivale2TagMemoryMap));
-			mmap = { reinterpret_cast<MmapEntry *>(ptr + sizeof(Stivale2TagMemoryMap)),
-				 t.nEntries };
+			mmap = {
+			  reinterpret_cast<MmapEntry *>(ptr + sizeof(Stivale2TagMemoryMap)),
+			  t.nEntries};
 			break;
 		}
 
 		case TagIds::modules: {
 			Stivale2TagModules t;
 			memcpy(&t, reinterpret_cast<void *>(ptr), sizeof(Stivale2TagModules));
-			modules = { reinterpret_cast<Stivale2Module *>(
-				            ptr + sizeof(Stivale2TagModules)
-				    ),
-				    t.nEntries };
+			modules = {
+			  reinterpret_cast<Stivale2Module *>(ptr + sizeof(Stivale2TagModules)),
+			  t.nEntries};
 			break;
 		}
 
@@ -211,8 +211,8 @@ extern "C" void eirStivaleMain(Stivale2Struct *data) {
 		auto ent = mmap.data()[i];
 
 		eir::infoLogger() << "    Type: " << mmapEntryString(ent.type) << ", Base: 0x"
-		                  << frg::hex_fmt { ent.base } << ", length: 0x"
-		                  << frg::hex_fmt { ent.length } << frg::endlog;
+		                  << frg::hex_fmt {ent.base} << ", length: 0x"
+		                  << frg::hex_fmt {ent.length} << frg::endlog;
 
 		if (ent.type == MmapEntryType::usable)
 			createInitialRegion(ent.base, ent.length);
@@ -225,14 +225,13 @@ extern "C" void eirStivaleMain(Stivale2Struct *data) {
 		if (regions[i].regionType == RegionType::null)
 			continue;
 		eir::infoLogger() << "    Memory region [" << i << "]."
-		                  << " Base: 0x" << frg::hex_fmt { regions[i].address }
-		                  << ", length: 0x" << frg::hex_fmt { regions[i].size }
+		                  << " Base: 0x" << frg::hex_fmt {regions[i].address}
+		                  << ", length: 0x" << frg::hex_fmt {regions[i].size}
 		                  << frg::endlog;
 		if (regions[i].regionType == RegionType::allocatable)
-			eir::infoLogger()
-			        << "        Buddy tree at 0x"
-			        << frg::hex_fmt { regions[i].buddyTree } << ", overhead: 0x"
-			        << frg::hex_fmt { regions[i].buddyOverhead } << frg::endlog;
+			eir::infoLogger() << "        Buddy tree at 0x"
+			                  << frg::hex_fmt {regions[i].buddyTree} << ", overhead: 0x"
+			                  << frg::hex_fmt {regions[i].buddyOverhead} << frg::endlog;
 	}
 
 	assert(modules.size() >= 2);
@@ -288,10 +287,10 @@ extern "C" void eirStivaleMain(Stivale2Struct *data) {
 	assert(fbAddr & ~(pageSize - 1));
 	for (address_t pg = 0; pg < fbPitch * fbHeight; pg += 0x1000)
 		mapSingle4kPage(
-		        0xFFFF'FE00'4000'0000 + pg,
-		        fbAddr + pg,
-		        PageFlags::write,
-		        CachingMode::writeCombine
+		  0xFFFF'FE00'4000'0000 + pg,
+		  fbAddr + pg,
+		  PageFlags::write,
+		  CachingMode::writeCombine
 		);
 	mapKasanShadow(0xFFFF'FE00'4000'0000, fbPitch * fbHeight);
 	unpoisonKasanShadow(0xFFFF'FE00'4000'0000, fbPitch * fbHeight);

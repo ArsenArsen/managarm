@@ -15,10 +15,10 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 		helix::RecvInline recv_req;
 
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&accept, kHelItemAncillary),
-		        helix::action(&recv_req)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&accept, kHelItemAncillary),
+		  helix::action(&recv_req)
 		);
 		co_await header.async_wait();
 		if (accept.error() == kHelErrEndOfLane)
@@ -37,8 +37,8 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 			helix::SendBuffer send_data;
 
 			// FIXME: Fill in the correct DMA pool.
-			arch::dma_buffer buffer { nullptr, static_cast<size_t>(req.length()) };
-			InterruptTransfer transfer { XferFlags::kXferToHost, buffer };
+			arch::dma_buffer buffer {nullptr, static_cast<size_t>(req.length())};
+			InterruptTransfer transfer {XferFlags::kXferToHost, buffer};
 			transfer.allowShortPackets = req.allow_short();
 			transfer.lazyNotification = req.lazy_notification();
 			auto outcome = co_await endpoint.transfer(transfer);
@@ -50,10 +50,10 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_data, buffer.data(), length)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_data, buffer.data(), length)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -63,16 +63,16 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 			helix::SendBuffer send_resp;
 
 			// FIXME: Fill in the correct DMA pool.
-			arch::dma_buffer buffer { nullptr, static_cast<size_t>(req.length()) };
+			arch::dma_buffer buffer {nullptr, static_cast<size_t>(req.length())};
 			auto &&payload = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&recv_buffer, buffer.data(), buffer.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&recv_buffer, buffer.data(), buffer.size())
 			);
 			co_await payload.async_wait();
 			HEL_CHECK(recv_buffer.error());
 
-			BulkTransfer transfer { XferFlags::kXferToDevice, buffer };
+			BulkTransfer transfer {XferFlags::kXferToDevice, buffer};
 			transfer.lazyNotification = req.lazy_notification();
 			auto outcome = co_await endpoint.transfer(transfer);
 			assert(outcome);
@@ -84,9 +84,9 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -95,8 +95,8 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 			helix::SendBuffer send_data;
 
 			// FIXME: Fill in the correct DMA pool.
-			arch::dma_buffer buffer { nullptr, static_cast<size_t>(req.length()) };
-			BulkTransfer transfer { XferFlags::kXferToHost, buffer };
+			arch::dma_buffer buffer {nullptr, static_cast<size_t>(req.length())};
+			BulkTransfer transfer {XferFlags::kXferToHost, buffer};
 			transfer.allowShortPackets = req.allow_short();
 			transfer.lazyNotification = req.lazy_notification();
 			auto outcome = co_await endpoint.transfer(transfer);
@@ -108,10 +108,10 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_data, buffer.data(), length)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_data, buffer.data(), length)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -124,9 +124,9 @@ async::detached serveEndpoint(Endpoint endpoint, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -140,10 +140,10 @@ async::detached serveInterface(Interface interface, helix::UniqueLane lane) {
 		helix::RecvInline recv_req;
 
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&accept, kHelItemAncillary),
-		        helix::action(&recv_req)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&accept, kHelItemAncillary),
+		  helix::action(&recv_req)
 		);
 		co_await header.async_wait();
 		if (accept.error() == kHelErrEndOfLane)
@@ -162,8 +162,8 @@ async::detached serveInterface(Interface interface, helix::UniqueLane lane) {
 			helix::PushDescriptor send_lane;
 
 			auto outcome = co_await interface.getEndpoint(
-			        static_cast<PipeType>(req.pipetype()),
-			        req.number()
+			  static_cast<PipeType>(req.pipetype()),
+			  req.number()
 			);
 			assert(outcome);
 			auto endpoint = std::move(outcome.value());
@@ -178,10 +178,10 @@ async::detached serveInterface(Interface interface, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_lane, remote_lane)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_lane, remote_lane)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -194,9 +194,9 @@ async::detached serveInterface(Interface interface, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -210,10 +210,10 @@ async::detached serveConfiguration(Configuration configuration, helix::UniqueLan
 		helix::RecvInline recv_req;
 
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&accept, kHelItemAncillary),
-		        helix::action(&recv_req)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&accept, kHelItemAncillary),
+		  helix::action(&recv_req)
 		);
 		co_await header.async_wait();
 		if (accept.error() == kHelErrEndOfLane)
@@ -231,10 +231,8 @@ async::detached serveConfiguration(Configuration configuration, helix::UniqueLan
 			helix::SendBuffer send_resp;
 			helix::PushDescriptor send_lane;
 
-			auto outcome = co_await configuration.useInterface(
-			        req.number(),
-			        req.alternative()
-			);
+			auto outcome =
+			  co_await configuration.useInterface(req.number(), req.alternative());
 			assert(outcome);
 			auto interface = std::move(outcome.value());
 
@@ -247,10 +245,10 @@ async::detached serveConfiguration(Configuration configuration, helix::UniqueLan
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_lane, remote_lane)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_lane, remote_lane)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -263,9 +261,9 @@ async::detached serveConfiguration(Configuration configuration, helix::UniqueLan
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -279,10 +277,10 @@ async::detached serve(Device device, helix::UniqueLane lane) {
 		helix::RecvInline recv_req;
 
 		auto &&header = helix::submitAsync(
-		        lane,
-		        helix::Dispatcher::global(),
-		        helix::action(&accept, kHelItemAncillary),
-		        helix::action(&recv_req)
+		  lane,
+		  helix::Dispatcher::global(),
+		  helix::action(&accept, kHelItemAncillary),
+		  helix::action(&recv_req)
 		);
 		co_await header.async_wait();
 		if (accept.error() == kHelErrEndOfLane)
@@ -309,10 +307,10 @@ async::detached serve(Device device, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_data, data.data(), data.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_data, data.data(), data.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -324,15 +322,15 @@ async::detached serve(Device device, helix::UniqueLane lane) {
 
 			arch::dma_object<SetupPacket> setup(nullptr);
 			auto &&payload = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&recv_buffer, setup.data(), sizeof(SetupPacket))
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&recv_buffer, setup.data(), sizeof(SetupPacket))
 			);
 			co_await payload.async_wait();
 			HEL_CHECK(recv_buffer.error());
-			arch::dma_buffer buffer { nullptr, static_cast<size_t>(req.length()) };
+			arch::dma_buffer buffer {nullptr, static_cast<size_t>(req.length())};
 			auto outcome = co_await device.transfer(
-			        ControlTransfer { XferFlags::kXferToHost, setup, buffer }
+			  ControlTransfer {XferFlags::kXferToHost, setup, buffer}
 			);
 			assert(outcome);
 
@@ -341,10 +339,10 @@ async::detached serve(Device device, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_data, buffer.data(), buffer.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_data, buffer.data(), buffer.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -366,10 +364,10 @@ async::detached serve(Device device, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
-			        helix::action(&send_lane, remote_lane)
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size(), kHelItemChain),
+			  helix::action(&send_lane, remote_lane)
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
@@ -382,9 +380,9 @@ async::detached serve(Device device, helix::UniqueLane lane) {
 
 			auto ser = resp.SerializeAsString();
 			auto &&transmit = helix::submitAsync(
-			        conversation,
-			        helix::Dispatcher::global(),
-			        helix::action(&send_resp, ser.data(), ser.size())
+			  conversation,
+			  helix::Dispatcher::global(),
+			  helix::action(&send_resp, ser.data(), ser.size())
 			);
 			co_await transmit.async_wait();
 			HEL_CHECK(send_resp.error());
