@@ -17,7 +17,7 @@ eir_includes = [include_directories(
 eir_c_args = []
 eir_cpp_args = ['-fno-threadsafe-statics']
 eir_link_args = ['-nostdlib']
-eir_dependencies = [cxxshim_dep, frigg, libarch]
+eir_dependencies = [frigg, libarch]
 
 if get_option('kernel_kasan')
 	eir_c_args += [

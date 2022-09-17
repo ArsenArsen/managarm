@@ -146,11 +146,10 @@ endif
 link_with += static_library('cralgo', cralgo_sources,
 	include_directories : [klibc_inc, cralgo_includes],
 	cpp_args : cpp_args + args,
-	dependencies : cxxshim_dep,
 	pic : false
 )
 
-deps = [ coroutines, cxxshim_dep, frigg, libsmarter, bragi_dep, libasync_dep ]
+deps = [ frigg, libsmarter, bragi_dep, libasync_dep ]
 
 # TODO: also build thor on RISC-V.
 if arch != 'riscv64'

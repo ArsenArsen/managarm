@@ -6,7 +6,7 @@ headers = [
 	'include/helix/memory.hpp'
 ]
 
-deps = [ coroutines, bragi_dep, frigg ]
+deps = [ bragi_dep, frigg ]
 inc = [ 'include' ]
 
 helix = shared_library('helix', 'src/globals.cpp',
