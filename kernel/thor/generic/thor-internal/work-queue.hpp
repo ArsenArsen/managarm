@@ -51,6 +51,9 @@ struct WorkQueue {
 		ScheduleOperation(WorkQueue *wq, Receiver r)
 		: wq_{wq}, r_{std::move(r)} { }
 
+		ScheduleOperation(const ScheduleOperation &) = delete;
+		ScheduleOperation &operator=(const ScheduleOperation &) = delete;
+
 		void start() {
 			worklet_.setup([] (Worklet *base) {
 				auto self = frg::container_of(base, &ScheduleOperation::worklet_);
