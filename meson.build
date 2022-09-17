@@ -59,6 +59,7 @@ if flavor == 'kernel'
 	if not meson.is_cross_build()
 		error('Kernel can only be cross-compiled')
 	endif
+	add_project_arguments('-ffreestanding', language: 'cpp')
 elif flavor == 'userspace'
 	summary({'System' : build_drivers,
 			'Tools' : build_tools},
