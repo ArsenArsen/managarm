@@ -7,6 +7,7 @@
 #include <variant>
 #include <vector>
 #include <memory>
+#include <functional>
 
 #include <async/result.hpp>
 #include <helix/ipc.hpp>

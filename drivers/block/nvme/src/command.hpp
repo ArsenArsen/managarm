@@ -4,6 +4,7 @@
 #include <async/promise.hpp>
 #include <frg/std_compat.hpp>
 #include <arch/dma_structs.hpp>
+#include <vector>
 
 #include "spec.hpp"
 
