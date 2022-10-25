@@ -1,5 +1,5 @@
-.section .header
-.align 4
+.section multiboot, "a", @progbits
+.align 32
 header_start:
 	.long 0xE85250D6 # Magic
 	.long 0 # Architecture: i386
@@ -25,9 +25,10 @@ header_start:
 header_end:
 
 .section .text
-.global eirEntry
+.type _start, @function
+.global _start
 
-eirEntry:
+_start:
 	cld
 	
 	.extern eirStackTop
@@ -37,6 +38,7 @@ eirEntry:
 	push %ebx
 	
 	.extern eirMultiboot2Main
+	xor %ebx, %ebx
 	call eirMultiboot2Main
 halt_kernel:
 	hlt

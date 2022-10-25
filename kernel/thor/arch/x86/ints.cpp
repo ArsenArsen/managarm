@@ -6,8 +6,6 @@
 #include <thor-internal/arch/pmc-amd.hpp>
 #include <thor-internal/arch/pmc-intel.hpp>
 
-extern char stubsPtr[], stubsLimit[];
-
 extern "C" void earlyStubDivideByZero();
 extern "C" void earlyStubOpcode();
 extern "C" void earlyStubDouble();
@@ -284,8 +282,9 @@ void setupIdt(uint32_t *table) {
 //			0x8, (void *)&thorRtIsrPreempted, 0);
 }
 
+extern "C" char __start__text_stubs[], __stop__text_stubs[];
 bool inStub(uintptr_t ip) {
-	return ip >= (uintptr_t)stubsPtr && ip < (uintptr_t)stubsLimit;
+  return ip >= (uintptr_t)__start__text_stubs && ip < (uintptr_t)__stop__text_stubs;
 }
 
 void handlePageFault(FaultImageAccessor image, uintptr_t address, Word errorCode);

@@ -49,7 +49,7 @@
 .set .L_typeCall, 3
 
 .macro MAKE_FAULT_STUB type, name, number=0
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global \name
 \name:
 	# This is a "signal frame", i.e., the return address must *not* be adjust to find
@@ -209,7 +209,7 @@ MAKE_FAULT_STUB .L_typeFaultNoCode, faultStubSimdException, 19
 # ---------------------------------------------------------
 
 .macro MAKE_IRQ_STUB name, number
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global \name
 \name:
 	# Swap GS if we interrupted user-space.
@@ -265,7 +265,7 @@ MAKE_FAULT_STUB .L_typeFaultNoCode, faultStubSimdException, 19
 .endm
 
 .macro MAKE_LEGACY_IRQ_STUB name, number
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global \name
 \name:
 	# Swap GS if we interrupted user-space.
@@ -321,7 +321,7 @@ MAKE_FAULT_STUB .L_typeFaultNoCode, faultStubSimdException, 19
 .endm
 
 .macro MAKE_IPI_STUB name, handler
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global \name
 \name:
 	# Swap GS if we interrupted user-space.
@@ -450,7 +450,7 @@ MAKE_IPI_STUB thorRtPreemption, onPlatformPreemption
 # Syscall stubs
 # ---------------------------------------------------------
 
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global syscallStub
 syscallStub:
 	# rsp still contains the user-space stack pointer
@@ -520,7 +520,7 @@ syscallStub:
 # ---------------------------------------------------------
 
 # TODO: It would be sufficient to only save callee-saved registers.
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global workStub
 workStub:
 	push %rbp
@@ -563,7 +563,7 @@ workStub:
 	swapgs
 	iretq
 
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global nmiStub
 nmiStub:
 	# We're pushing 15 registers here.
@@ -657,7 +657,7 @@ doForkExecutor:
 	ud2
 
 # arguments: void *pointer
-.section .text.stubs
+	.section _text_stubs, "ax", @progbits
 .global _restoreExecutorRegisters
 _restoreExecutorRegisters:
 	# setup the IRET frame

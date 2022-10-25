@@ -32,7 +32,8 @@ address_t getSingle4kPage(address_t address);
 void initProcessorEarly();
 void initProcessorPaging(void *kernel_start, uint64_t &kernel_entry);
 
-extern "C" char eirImageFloor;
-extern "C" char eirImageCeiling;
-
+extern "C" {
+extern void *_end;
+extern void *__executable_start;
+} // extern "C"
 } // namespace eir

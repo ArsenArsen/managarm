@@ -137,7 +137,7 @@ extern "C" void eirMultiboot1Main(uint32_t info, uint32_t magic){
 	InitialRegion reservedRegions[32];
 	size_t nReservedRegions = 0;
 
-	uintptr_t eirEnd = reinterpret_cast<uintptr_t>(&eirImageCeiling);
+	uintptr_t eirEnd = reinterpret_cast<uintptr_t>(&_end);
 	reservedRegions[nReservedRegions++] = {0, eirEnd};
 
 	if((mb_info->flags & kMbInfoModules) != 0) {

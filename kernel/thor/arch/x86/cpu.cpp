@@ -242,7 +242,7 @@ void workOnExecutor(Executor *executor) {
 
 extern "C" [[ noreturn ]] void _restoreExecutorRegisters(void *pointer);
 
-[[ gnu::section(".text.stubs") ]] void restoreExecutor(Executor *executor) {
+[[ gnu::section("_text_stubs") ]] void restoreExecutor(Executor *executor) {
 	if(executor->_tss) {
 		activateTss(executor->_tss);
 	}else{

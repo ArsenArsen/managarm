@@ -141,7 +141,7 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic){
 	InitialRegion reservedRegions[32];
 	size_t nReservedRegions = 0;
 
-	uintptr_t eirEnd = reinterpret_cast<uintptr_t>(&eirImageCeiling);
+	uintptr_t eirEnd = reinterpret_cast<uintptr_t>(&_end);
 	reservedRegions[nReservedRegions++] = {0, eirEnd};
 
 	Mb2Info* mb_info = reinterpret_cast<Mb2Info*>(info);
@@ -245,6 +245,8 @@ extern "C" void eirMultiboot2Main(uint32_t info, uint32_t magic){
 			}
 		}
 	}
+
+	eir::infoLogger() << "Parsed MB." << frg::endlog;
 
 	initProcessorEarly();
 

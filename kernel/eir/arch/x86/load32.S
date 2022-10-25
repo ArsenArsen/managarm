@@ -40,7 +40,7 @@ eirLoadGdt:
 	mov %ax, %gs
 	ret
 
-.section .trampoline
+.section .text.trampoline
 .global eirEnterKernel
 eirEnterKernel:
 	# enable PAE paging

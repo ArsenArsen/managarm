@@ -4,6 +4,7 @@ thorBootInfoPtr:
 	.quad 0
 
 .text
+.type thorRtEntry, @function
 .global thorRtEntry
 thorRtEntry:
 	mov %rdi, (thorBootInfoPtr)
