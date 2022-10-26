@@ -17,6 +17,10 @@ int main() {
 
 	std::cout <<"init: Entering first stage" << std::endl;
 
+	std::cout << "Booted to stage1 with mold." << std::endl;
+	std::cout << "That's pretty far!" << std::endl;
+	for (;;) asm volatile ("");
+
 #if defined (__x86_64__)
 	auto uart = fork();
 	if(!uart) {
