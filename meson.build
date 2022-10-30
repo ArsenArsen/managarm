@@ -36,10 +36,11 @@ endif
 build_kernel = get_option('build_kernel')
 build_drivers = get_option('build_drivers')
 build_tools = get_option('build_tools')
+build_hel = get_option('build_hel')
 
 any_userspace = build_drivers or build_tools
 
-if build_kernel and any_userspace
+if build_kernel and (any_userspace or build_hel)
 	error('Cannot build kernel and userspace components at the same time')
 endif
 
@@ -47,6 +48,9 @@ endif
 # Use this variable below if we need conflicting settings in each of the cases.
 if build_kernel
 	flavor = 'kernel'
+elif build_hel
+	flavor = 'hel'
+	# userspace takes precedence over "hel only", a subtype of userspace
 elif any_userspace
 	flavor = 'userspace'
 else
@@ -63,6 +67,8 @@ elif flavor == 'userspace'
 	summary({'System' : build_drivers,
 			'Tools' : build_tools},
 		section : 'Userspace Components', bool_yn : true)
+elif flavor == 'hel'
+	subdir('hel')
 endif
 
 if not build_kernel and not build_drivers and not build_tools

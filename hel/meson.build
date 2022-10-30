@@ -6,19 +6,21 @@ headers = [
 	'include/helix/memory.hpp'
 ]
 
-deps = [ coroutines, bragi_dep, frigg ]
-inc = [ 'include' ]
+if any_userspace
+	deps = [ coroutines, bragi_dep, frigg ]
+	inc = [ 'include' ]
 
-helix = shared_library('helix', 'src/globals.cpp',
-	dependencies : deps,
-	include_directories : inc,
-	install : true
-)
+	helix = shared_library('helix', 'src/globals.cpp',
+		dependencies : deps,
+		include_directories : inc,
+		install : true
+		)
 
-helix_dep = declare_dependency(
-	link_with : helix,
-	dependencies : deps,
-	include_directories : inc
-)
+	helix_dep = declare_dependency(
+		link_with : helix,
+		dependencies : deps,
+		include_directories : inc
+		)
+endif
 
 install_headers(headers)
